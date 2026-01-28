@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: lightchip-lab-website
+    runtime: python
+    env: python
+    region: oregon          # 可选 singapore, frankfurt 等
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python app.py"
+    envVars:
+      - key: PORT
+        value: "10000"
+      - key: FLASK_APP
+        value: app.py
+    disk:
+      - mountPath: /opt/render/project/src/private_downloads
+        name: private_downloads
+        sizeGB: 1
+      - mountPath: /opt/render/project/src/downloads.csv
+        name: downloads_csv
+        sizeGB: 0.1

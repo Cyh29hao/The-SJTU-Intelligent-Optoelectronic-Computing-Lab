@@ -1,0 +1,19 @@
+<!-- templates/resource_detail.html -->
+{% extends "base.html" %}
+{% block title %}{{ item.title }} - 资源详情{% endblock %}
+{% block content %}
+<h2>🧩 {{ item.title }}</h2>
+
+<div style="text-align: left; max-width: 750px; margin: 0 auto;">
+  <p><strong>作者：</strong>{{ item.authors|join(', ') }}</p>
+  <p><strong>类型：</strong>{{ item.type }} | <strong>年份：</strong>{{ item.year }}</p>
+
+  <div style="margin-top: 20px; padding: 16px; background: #f8fafc; border-radius: 8px;">
+    <p style="margin: 0; white-space: pre-wrap;">{{ item.readme }}</p>
+  </div>
+
+  <div style="margin-top: 30px; text-align: center;">
+    <a href="/download_file/{{ item.id }}" class="btn">⬇️ 直接下载</a>
+  </div>
+</div>
+{% endblock %}

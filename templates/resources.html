@@ -1,0 +1,25 @@
+<!-- templates/resources.html -->
+{% extends "base.html" %}
+{% block title %}代码与数据集 - 陈一彤课题组{% endblock %}
+{% block content %}
+<h2>🧩 公开资源（代码与数据集）</h2>
+
+<div style="text-align: left; max-width: 750px; margin: 0 auto;">
+  {% for resource in resources %}
+  <div style="margin-bottom: 28px; padding-bottom: 20px; border-bottom: 1px solid #eee;">
+    <h3 style="margin: 0 0 10px; font-size: 1.3em;">
+      <a href="{{ url_for('resource_detail', id=resource.id) }}" 
+         style="color: #2c3e50; text-decoration: none;">
+        {{ resource.title }}
+      </a>
+    </h3>
+    <p style="margin: 6px 0; color: #555;">
+      <strong>{{ resource.authors|join(', ') }}</strong>
+    </p>
+    <p style="margin: 6px 0; color: #7f8c8d;">
+      类型：{{ resource.type }} | 年份：{{ resource.year }}
+    </p>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

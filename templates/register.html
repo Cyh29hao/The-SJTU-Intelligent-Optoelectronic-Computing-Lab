@@ -1,0 +1,24 @@
+<!-- templates/register.html -->
+{% extends "base.html" %}
+{% block title %}注册个人信息 - 陈一彤课题组{% endblock %}
+{% block content %}
+<h2>📝 请先注册个人信息</h2>
+<p style="text-align: center; color: #7f8c8d; margin-bottom: 20px;">
+  填写以下信息后，您将可直接下载课题组所有公开资源。
+</p>
+
+<div style="max-width: 500px; margin: 0 auto;">
+  <form action="/submit_register" method="post">
+    <label for="name">姓名 *</label>
+    <input type="text" id="name" name="name" required />
+
+    <label for="affiliation">单位 *</label>
+    <input type="text" id="affiliation" name="affiliation" required />
+
+    <label for="email">邮箱 *</label>
+    <input type="email" id="email" name="email" required />
+
+    <button type="submit">提交并启用下载权限</button>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,25 @@
+<!-- templates/articles.html -->
+{% extends "base.html" %}
+{% block title %}论文发表 - 陈一彤课题组{% endblock %}
+{% block content %}
+<h2>📄 已发表论文</h2>
+
+<div style="text-align: left; max-width: 750px; margin: 0 auto;">
+  {% for article in articles %}
+  <div style="margin-bottom: 28px; padding-bottom: 20px; border-bottom: 1px solid #eee;">
+    <h3 style="margin: 0 0 10px; font-size: 1.3em;">
+      <a href="{{ url_for('article_detail', id=article.id) }}" 
+         style="color: #2c3e50; text-decoration: none;">
+        {{ article.title }}
+      </a>
+    </h3>
+    <p style="margin: 6px 0; color: #555;">
+      <strong>{{ article.authors|join(', ') }}</strong>
+    </p>
+    <p style="margin: 6px 0; color: #7f8c8d; font-style: italic;">
+      {{ article.venue }}, {{ article.year }}
+    </p>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}
