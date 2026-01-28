@@ -1,0 +1,4 @@
+secret_key.bin 
+downloads.csv 
+__pycache__/ 
+"*.pyc" 
