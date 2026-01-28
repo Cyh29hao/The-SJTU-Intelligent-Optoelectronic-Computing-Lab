@@ -281,4 +281,7 @@ if __name__ == '__main__':
     print(" 当前时间："+datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     print("💡 提示：修改代码后会自动重载（debug=True）\n")
     
-    app.run(host='127.0.0.1', port=5000, debug=True, use_reloader=True)
+    #app.run(host='127.0.0.1', port=5000, debug=True, use_reloader=True)
+    
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
