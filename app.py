@@ -33,7 +33,7 @@ os.makedirs('private_downloads', exist_ok=True)
 
 
 # 持久化数据根目录（Render 上是 /var/data，本地可回退到项目目录）
-PERSISTENT_ROOT = os.environ.get('PERSISTENT_ROOT', '.')  # 本地默认为当前目录
+PERSISTENT_ROOT = os.environ.get('PERSISTENT_ROOT', '.').strip()  # 本地默认为当前目录
 
 PRIVATE_DOWNLOADS_DIR = os.path.join(PERSISTENT_ROOT, 'private_downloads')
 DATA_LOGS_DIR = os.path.join(PERSISTENT_ROOT, 'data_logs')
