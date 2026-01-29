@@ -20,7 +20,7 @@ print = debug_print
 print("🚀 Application started, loading routes...")
 
 
-IS_LOCAL = 0
+IS_LOCAL = 1
 
 
 app = Flask(__name__)
@@ -162,9 +162,14 @@ def download_file(resource_id):
     if not actual_path:
         return "❌ Requested resource not found.", 404
 
-    # Log download
+    # === 🔒 SAFE CSV LOGGING WITH DIRECTORY CREATION ===
+    LOG_DIR = 'data_logs'
+    csv_file = os.path.join(LOG_DIR, 'downloads.csv')
+
+    # ✅ 确保日志目录存在（关键！）
+    os.makedirs(LOG_DIR, exist_ok=True)
+
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    csv_file = 'data_logs/downloads.csv'
     file_exists = os.path.isfile(csv_file)
 
     try:
@@ -386,15 +391,13 @@ def admin_upload_file(resource_id):
 def download_logs_csv():
     if not session.get('is_admin'):
         return "Unauthorized", 403
-
-    csv_path = 'data_logs/downloads.csv'
+    LOG_DIR = 'data_logs'
+    csv_path = os.path.join(LOG_DIR, 'downloads.csv')
+    os.makedirs(LOG_DIR, exist_ok=True)
     if not os.path.exists(csv_path):
-        # Create empty file with header if not exists
         with open(csv_path, 'w', encoding='utf-8') as f:
-            f.write('timestamp,name,affiliation,email,resource_id,ip_address\n')
-    
+            f.write('time,name,affiliation,email,resource_id\n')
     return send_file(csv_path, as_attachment=True, download_name='lightchip_download_logs.csv')
-
 
 
 
