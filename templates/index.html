@@ -1,30 +1,39 @@
 {% extends "base.html" %}
 {% block content %}
-<p>本课题组致力于全光神经网络、衍射深度学习与智能光子芯片研究。</p>
+<p>Our lab focuses on research in all-optical neural networks, diffractive deep learning, and intelligent photonic chips.</p>
 
 <p>
-  本网站提供课题组已公开的代码和数据集，<br>
-  例如：<strong>全光芯片 LightGen 的相关代码及数据集</strong>。
+  This website provides publicly available publications, code, and datasets from our group,<br>
+  e.g., <strong>code and datasets for the all-optical chip LightGen</strong>.
 </p>
 
-<!-- <p>
-  如果您希望下载资源，请点击下方按钮填写基本信息<br>
-  （姓名、单位、联系方式），我们将为您生成下载链接。
+<p>
+  Note: To download resources, please first fill in your information on the 
+  <a href="{{ url_for('register') }}">LOGIN page</a>.
 </p>
 
-<a href="/download" class="btn">申请下载资源</a> -->
+<p>
+  LAST EDITED ON : 2026-01-29 17:21:00
+</p>
+
+{% if session.user_info %}
+  <p>Current user: {{ session.user_info.name }} ({{ session.user_info.affiliation }}) {{ session.user_info.email }}</p>
+  <a href="{{ url_for('logout') }}">🔄 Switch User</a>
+{% else %}
+  <p>User not logged in</p>
+{% endif %}
 
 <script>
-  console.log("%c❤️ 欢迎探索我们的科研世界！", "color: #9b59b6; font-size: 18px; font-weight: bold;");
-  console.log("开发者：一位热爱编程的本科生");
-  console.log("说明：这个网站正在建设中，欢迎提建议！");
-  console.log("GitHub 开源地址：https://github.com/yourname/lightgen-website");
+  console.log("%c❤️ Welcome to our research world!", "color: #9b59b6; font-size: 18px; font-weight: bold;");
+  console.log("Developer: An undergraduate student passionate about coding");
+  console.log("Note: This site is under construction — suggestions are welcome!");
+  console.log("GitHub Repository: https://github.com/yourname/lightgen-website");
 
   function team() {
     console.clear();
-    console.log("🧪 陈一彤教授 AI 光计算芯片课题组");
-    console.log("📍 研究方向：D²NN · MZI · Metasurface · Photonic AI");
-    console.log("📩 联系方式：contact@lightchip-lab.org");
+    console.log("🧪 Prof. Yitong Chen - AI Photonic Computing Lab");
+    console.log("📍 Research Areas: D²NN · MZI · Metasurface · Photonic AI");
+    console.log("📩 Contact: contact@lightchip-lab.org");
   }
 </script>
 {% endblock %}

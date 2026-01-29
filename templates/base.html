@@ -1,38 +1,37 @@
 <!-- templates/base.html -->
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>{% block title %}陈一彤教授 AI 光计算芯片课题组{% endblock %}</title>
+  <title>{% block title %}Prof. Yitong Chen - AI Photonic Computing Lab{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
   <div class="container">
-    <!-- 顶部标题 -->
+    <!-- Top Header -->
     <header class="site-header">
-      <h1>陈一彤教授 AI 光计算芯片课题组</h1>
+      <h1>Prof. Yitong Chen - AI Photonic Computing Lab</h1>
     </header>
 
-    <!-- 顶部导航栏 -->
+    <!-- Main Navigation -->
     <nav class="main-nav">
-        <a href="/">首页</a>
-        <a href="/articles">论文发表</a>
-        <a href="/resources">代码与数据集</a>
-        <a href="/team">成员介绍</a>
-        <!-- <a href="/research">研究方向</a>  -->
-         
+        <a href="/">Home</a>
+        <a href="/articles">Publications</a>
+        <a href="/resources">Code & Datasets</a>
+        <a href="/team">Team</a>
+        <!-- <a href="/research">Research</a> -->
     </nav>
 
-    <!-- 页面内容 -->
+    <!-- Page Content -->
     <div class="content-card">
       {% block content %}{% endblock %}
     </div>
 
-    <!-- 底部版权 -->
+    <!-- Footer -->
     <footer>
-      &copy; 2025 陈一彤课题组 | 
-      <a href="mailto:yitongchen@sjtu.edu.cn">联系我们</a>
+      &copy; 2026 AI Photonic Computing Lab | 
+      <a href="mailto:yitongchen@sjtu.edu.cn">Contact Us</a>
     </footer>
   </div>
 </body>

@@ -1,24 +1,37 @@
 <!-- templates/register.html -->
 {% extends "base.html" %}
-{% block title %}注册个人信息 - 陈一彤课题组{% endblock %}
 {% block content %}
-<h2>📝 请先注册个人信息</h2>
-<p style="text-align: center; color: #7f8c8d; margin-bottom: 20px;">
-  填写以下信息后，您将可直接下载课题组所有公开资源。
-</p>
+<h2>🔐 User Registration</h2>
+<p>Please provide your information to access downloadable resources.</p>
 
-<div style="max-width: 500px; margin: 0 auto;">
-  <form action="/submit_register" method="post">
-    <label for="name">姓名 *</label>
-    <input type="text" id="name" name="name" required />
+<form method="POST" action="{{ url_for('submit_register') }}" style="max-width: 500px; margin-top: 20px;">
+  <div style="margin-bottom: 15px;">
+    <label for="name" style="display: block; margin-bottom: 5px; font-weight: bold;">Name *</label>
+    <input type="text" id="name" name="name" required 
+           style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px;">
+  </div>
 
-    <label for="affiliation">单位 *</label>
-    <input type="text" id="affiliation" name="affiliation" required />
+  <div style="margin-bottom: 15px;">
+    <label for="affiliation" style="display: block; margin-bottom: 5px; font-weight: bold;">Affiliation *</label>
+    <input type="text" id="affiliation" name="affiliation" required 
+           style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px;">
+  </div>
 
-    <label for="email">邮箱 *</label>
-    <input type="email" id="email" name="email" required />
+  <div style="margin-bottom: 20px;">
+    <label for="email" style="display: block; margin-bottom: 5px; font-weight: bold;">Email *</label>
+    <input type="email" id="email" name="email" required 
+           style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px;">
+  </div>
 
-    <button type="submit">提交并启用下载权限</button>
-  </form>
+  <button type="submit" 
+          style="background-color: #3498db; color: white; border: none; padding: 12px 24px; 
+                 font-size: 16px; border-radius: 4px; cursor: pointer; width: 100%;">
+    ✅ Submit and Access Resources
+  </button>
+</form>
+
+<div style="margin-top: 30px; padding: 15px; background-color: #f8f9fa; border-left: 4px solid #3498db; font-size: 14px;">
+  <strong>🔒 Privacy Notice:</strong><br>
+  Your information is used solely for research collaboration tracking and will not be shared or used commercially.
 </div>
 {% endblock %}

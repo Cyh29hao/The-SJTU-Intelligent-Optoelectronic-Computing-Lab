@@ -2,7 +2,7 @@
 {% extends "base.html" %}
 {% block title %}代码与数据集 - 陈一彤课题组{% endblock %}
 {% block content %}
-<h2>🧩 公开资源（代码与数据集）</h2>
+<h2>🧩 RESOURCES ( CODE AND DATASETS )</h2>
 
 <div style="text-align: left; max-width: 750px; margin: 0 auto;">
   {% for resource in resources %}
@@ -17,7 +17,7 @@
       <strong>{{ resource.authors|join(', ') }}</strong>
     </p>
     <p style="margin: 6px 0; color: #7f8c8d;">
-      类型：{{ resource.type }} | 年份：{{ resource.year }}
+      Type：{{ resource.type }} | Year：{{ resource.year }}
     </p>
   </div>
   {% endfor %}

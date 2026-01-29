@@ -5,15 +5,15 @@
 <h2>📄 {{ item.title }}</h2>
 
 <div style="text-align: left; max-width: 750px; margin: 0 auto;">
-  <p><strong>作者：</strong>{{ item.authors|join(', ') }}</p>
-  <p><strong>发表于：</strong>{{ item.venue }}, {{ item.year }}</p>
+  <p><strong>Author：</strong>{{ item.authors|join(', ') }}</p>
+  <p><strong>On：</strong>{{ item.venue }}, {{ item.year }}</p>
 
   <div style="margin-top: 20px; padding: 16px; background: #f8fafc; border-radius: 8px;">
     <p style="margin: 0; white-space: pre-wrap;">{{ item.abstract }}</p>
   </div>
 
   <div style="margin-top: 30px; text-align: center;">
-    <a href="/download_file/{{ item.id }}" class="btn">⬇️ 直接下载</a>
+    <a href="/download_file/{{ item.id }}" class="btn">⬇️ DOWNLOAD NOW</a>
   </div>
 </div>
 {% endblock %}

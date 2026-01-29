@@ -1,0 +1,14 @@
+[
+  {
+    "id": "art_001",
+    "title": "LightGen: A Fully-Optical Neural Network for Real-Time Inference",
+    "authors": [
+      "Yitong Chen",
+      "Ming Li",
+      "Xue Wang"
+    ],
+    "venue": "Nature Photonics",
+    "year": 2025,
+    "abstract": "We present LightGen—the first fully-optical neural network that leverages diffractive deep learning for light-speed inference. The system requires no electronic computation and achieves 98.2% and 76.5% accuracy on MNIST and CIFAR-10, respectively, with inference latency below 1 nanosecond."
+  }
+]

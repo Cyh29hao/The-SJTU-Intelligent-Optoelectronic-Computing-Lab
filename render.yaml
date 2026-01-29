@@ -1,21 +1,27 @@
 services:
   - type: web
-    name: lightchip-lab-website
+    name: lightchip-lab
     runtime: python
-    env: python
-    region: oregon          # 可选 singapore, frankfurt 等
+    region: oregon
     plan: free
     buildCommand: "pip install -r requirements.txt"
     startCommand: "python app.py"
     envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ADMIN_PASSWORD
+        sync: false
       - key: PORT
         value: "10000"
-      - key: FLASK_APP
-        value: app.py
+
+    # 👇 关键：持久化磁盘配置 👇
     disk:
+      # 挂载上传的文件目录
       - mountPath: /opt/render/project/src/private_downloads
-        name: private_downloads
+        name: private-downloads
         sizeGB: 1
-      - mountPath: /opt/render/project/src/downloads.csv
-        name: downloads_csv
-        sizeGB: 0.1
+
+      # 挂载下载日志目录
+      - mountPath: /opt/render/project/src/data_logs
+        name: data-logs
+        sizeGB: 1

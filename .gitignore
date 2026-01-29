@@ -1,4 +1,14 @@
+# Python
+__pycache__/
+*.pyc
+.env
 secret_key.bin 
-downloads.csv 
-__pycache__/ 
-"*.pyc" 
+
+# Data that should NOT be in Git (Render handles persistence)
+data_logs/
+private_downloads/
+
+# Logs or temp files
+*.log
+.DS_Store
+Thumbs.db
