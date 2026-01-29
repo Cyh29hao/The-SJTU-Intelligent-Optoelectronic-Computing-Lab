@@ -1,14 +1,13 @@
 [
   {
     "id": "art_001",
-    "title": "LightGen: A Fully-Optical Neural Network for Real-Time Inference",
+    "title": "All optical synthesis chip for large scale intelligent semantic vision generation",
     "authors": [
       "Yitong Chen",
-      "Ming Li",
-      "Xue Wang"
+      "..."
     ],
-    "venue": "Nature Photonics",
+    "venue": "Science",
     "year": 2025,
-    "abstract": "We present LightGen—the first fully-optical neural network that leverages diffractive deep learning for light-speed inference. The system requires no electronic computation and achieves 98.2% and 76.5% accuracy on MNIST and CIFAR-10, respectively, with inference latency below 1 nanosecond."
+    "abstract": "Deep learning has been transforming our ability to execute advanced inference tasks using computers. Here we introduce a physical mechanism to perform machine learning by demonstrating an all-optical diffractive deep neural network (D2NN) architecture that can implement various functions following the deep learning–based design of passive diffractive layers that work collectively. We created 3D-printed D2NNs that implement classification of images of handwritten digits and fashion products, as well as the function of an imaging lens at a terahertz spectrum. Our all-optical deep learning framework can perform, at the speed of light, various complex functions that computer-based neural networks can execute; will find applications in all-optical image analysis, feature detection, and object classification; and will also enable new camera designs and optical components that perform distinctive tasks using D2NNs."
   }
 ]

@@ -193,13 +193,19 @@
     <details>
         <summary>
             {{ item.title }} ({{ item.venue }}, {{ item.year }})
+            
+            <!-- 显示 ID（灰色小字） -->
+            <span style="color: #95a5a6; font-size: 0.85em; margin: 0 8px;">{{ item.id }}</span>
+            
+            <!-- Download count -->
             {% set count = download_counts.get(item.id, 0) %}
             {% if count > 0 %}
-                <span style="color: #27ae60; font-weight: bold; margin-left: 10px;">📥 {{ count }} downloads</span>
+                <span style="color: #27ae60; font-weight: bold;">📥 {{ count }} downloads</span>
             {% else %}
-                <span style="color: #bdc3c7; margin-left: 10px;">(0 downloads)</span>
+                <span style="color: #bdc3c7;">(0 downloads)</span>
             {% endif %}
         </summary>
+        
         <div class="form-section">
             <form method="POST">
                 <input type="hidden" name="action" value="edit">
@@ -222,6 +228,22 @@
                     🗑️ Delete
                 </a>
             </form>
+
+            <!-- File Upload Section for Publications -->
+            <div class="upload-section" style="margin-top: 12px; padding: 12px; background-color: #f9f9f9; border-radius: 6px;">
+                <hr>
+                <h4>📎 Upload Associated File</h4>
+                <p>Upload a file linked to this publication (e.g., PDF, supplementary ZIP, code).</p>
+                <form method="POST" enctype="multipart/form-data" action="{{ url_for('admin_upload_file', resource_id=item.id) }}">
+                    <input type="file" name="file" accept=".pdf,.zip,.tar.gz,.npz,.mat,.pptx" required>
+                    <button type="submit" style="background-color: #2ecc71; margin-top: 10px;">📤 Upload Publication File</button>
+                </form>
+                <p style="font-size: 14px; color: #7f8c8d; margin-top: 12px;">
+                    <strong>Note:</strong> The file will be saved as <code>{{ item.id }}.&lt;ext&gt;</code> 
+                    and can be downloaded from the public Publications page.
+                </p>
+            </div>
+            
         </div>
     </details>
     {% endfor %}
@@ -260,14 +282,19 @@
     </div>
 
     {% for item in resources %}
-    <details id="resource-{{ item.id }}">
+    <details>
         <summary>
-            {{ item.title }} ({{ item.type }}, {{ item.year }})
+            {{ item.title }}
+            
+            <!-- 显示 resource ID (e.g., res_001) in gray -->
+            <span style="color: #95a5a6; font-size: 0.85em; margin: 0 8px;">{{ item.id }}</span>
+            
+            <!-- Download count -->
             {% set count = download_counts.get(item.id, 0) %}
             {% if count > 0 %}
-                <span style="color: #27ae60; font-weight: bold; margin-left: 10px;">📥 {{ count }} downloads</span>
+                <span style="color: #27ae60; font-weight: bold;">📥 {{ count }} downloads</span>
             {% else %}
-                <span style="color: #bdc3c7; margin-left: 10px;">(0 downloads)</span>
+                <span style="color: #bdc3c7;">(0 downloads)</span>
             {% endif %}
         </summary>
         <div class="form-section">

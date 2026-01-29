@@ -365,17 +365,23 @@ def _delete_item(item_type, item_id):
     save_json_data(filename, data)
     print(f"🗑️ Deleted {item_type}: {item_id}")
 
-# ADMIN UPLOAD 
+
+
+# ADMIN UPLOAD (supports both resources and articles)
 @app.route('/admin/upload/<resource_id>', methods=['POST'])
 def admin_upload_file(resource_id):
     if not session.get('is_admin'):
         return "Unauthorized", 403
 
-    # Check if resource exists
+    # Check if resource_id exists in EITHER resources.json OR articles.json
     resources = load_json_data('resources.json')
-    target = next((r for r in resources if r['id'] == resource_id), None)
-    if not target:
-        return "Resource not found", 404
+    articles = load_json_data('articles.json')
+    
+    target_in_resources = next((r for r in resources if r['id'] == resource_id), None)
+    target_in_articles = next((a for a in articles if a['id'] == resource_id), None)
+
+    if not target_in_resources and not target_in_articles:
+        return f"ID '{resource_id}' not found in resources.json or articles.json", 404
 
     file = request.files.get('file')
     if not file or not file.filename:
@@ -399,6 +405,8 @@ def admin_upload_file(resource_id):
     print(f"✅ Admin uploaded file for {resource_id} -> {save_path}")
 
     return redirect(url_for('admin_dashboard') + '#resource-' + resource_id)
+
+
 
 #ADMIN DOWNLOAD LOGS
 @app.route('/admin/download-logs.csv')
