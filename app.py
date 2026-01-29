@@ -20,7 +20,7 @@ print = debug_print
 print("🚀 Application started, loading routes...")
 
 
-IS_LOCAL = 1
+IS_LOCAL = 0
 
 
 app = Flask(__name__)
