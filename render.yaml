@@ -3,25 +3,22 @@ services:
     name: lightchip-lab
     runtime: python
     region: oregon
-    plan: free
+    plan: starter  # 必须是 starter 或更高
     buildCommand: "pip install -r requirements.txt"
     startCommand: "python app.py"
     envVars:
       - key: SECRET_KEY
         generateValue: true
-      - key: ADMIN_PASSWORD
+      - key: ADMIN_NAME
+        sync: false
+      - key: ADMIN_AFFILIATION
+        sync: false
+      - key: ADMIN_EMAIL
         sync: false
       - key: PORT
         value: "10000"
 
-    # 👇 关键：持久化磁盘配置 👇
     disk:
-      # 挂载上传的文件目录
-      - mountPath: /opt/render/project/src/private_downloads
-        name: private-downloads
-        sizeGB: 1
-
-      # 挂载下载日志目录
-      - mountPath: /opt/render/project/src/data_logs
-        name: data-logs
+      - mountPath: /var/data
+        name: persistent-data
         sizeGB: 1

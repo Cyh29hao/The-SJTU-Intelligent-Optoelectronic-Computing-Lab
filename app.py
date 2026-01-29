@@ -31,6 +31,20 @@ app.config['DEBUG'] = True
 
 os.makedirs('private_downloads', exist_ok=True)
 
+
+# 持久化数据根目录（Render 上是 /var/data，本地可回退到项目目录）
+PERSISTENT_ROOT = os.environ.get('PERSISTENT_ROOT', '.')  # 本地默认为当前目录
+
+PRIVATE_DOWNLOADS_DIR = os.path.join(PERSISTENT_ROOT, 'private_downloads')
+DATA_LOGS_DIR = os.path.join(PERSISTENT_ROOT, 'data_logs')
+
+# 确保目录存在（每次启动都创建，安全）
+os.makedirs(PRIVATE_DOWNLOADS_DIR, exist_ok=True)
+os.makedirs(DATA_LOGS_DIR, exist_ok=True)
+
+
+
+
 # Load .env file (for local dev only; Render uses env vars directly)
 load_dotenv()
 
@@ -163,12 +177,11 @@ def download_file(resource_id):
         return "❌ Requested resource not found.", 404
 
     # === 🔒 SAFE CSV LOGGING WITH DIRECTORY CREATION ===
-    LOG_DIR = 'data_logs'
-    csv_file = os.path.join(LOG_DIR, 'downloads.csv')
+    csv_file = os.path.join(DATA_LOGS_DIR, 'downloads.csv')
+    # ✅ 目录已在启动时创建，这里可省略 os.makedirs（但保留也无妨）
+    os.makedirs(DATA_LOGS_DIR, exist_ok=True)  # 保留更安全
 
-    # ✅ 确保日志目录存在（关键！）
-    os.makedirs(LOG_DIR, exist_ok=True)
-
+    
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     file_exists = os.path.isfile(csv_file)
 
@@ -379,8 +392,8 @@ def admin_upload_file(resource_id):
         return f"File type not allowed. Allowed: {', '.join(ALLOWED_EXTENSIONS)}", 400
 
     # Save as {resource_id}{ext}
-    os.makedirs('private_downloads', exist_ok=True)
-    save_path = os.path.join('private_downloads', f"{resource_id}{ext}")
+    os.makedirs(PRIVATE_DOWNLOADS_DIR, exist_ok=True)
+    save_path = os.path.join(PRIVATE_DOWNLOADS_DIR, f"{resource_id}{ext}")
     file.save(save_path)
     print(f"✅ Admin uploaded file for {resource_id} -> {save_path}")
 
@@ -391,9 +404,8 @@ def admin_upload_file(resource_id):
 def download_logs_csv():
     if not session.get('is_admin'):
         return "Unauthorized", 403
-    LOG_DIR = 'data_logs'
-    csv_path = os.path.join(LOG_DIR, 'downloads.csv')
-    os.makedirs(LOG_DIR, exist_ok=True)
+    csv_path = os.path.join(DATA_LOGS_DIR, 'downloads.csv')
+    os.makedirs(DATA_LOGS_DIR, exist_ok=True)
     if not os.path.exists(csv_path):
         with open(csv_path, 'w', encoding='utf-8') as f:
             f.write('time,name,affiliation,email,resource_id\n')
