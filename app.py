@@ -42,7 +42,9 @@ DATA_LOGS_DIR = os.path.join(PERSISTENT_ROOT, 'data_logs')
 os.makedirs(PRIVATE_DOWNLOADS_DIR, exist_ok=True)
 os.makedirs(DATA_LOGS_DIR, exist_ok=True)
 
-
+print(PERSISTENT_ROOT)
+print(PRIVATE_DOWNLOADS_DIR)
+print(DATA_LOGS_DIR)
 
 
 # Load .env file (for local dev only; Render uses env vars directly)
@@ -165,7 +167,7 @@ def download_file(resource_id):
         print(user_info)
 
     # Locate file
-    DOWNLOAD_DIR = "private_downloads"
+    DOWNLOAD_DIR = PRIVATE_DOWNLOADS_DIR
     actual_path = None
     for ext in ['.zip', '.pdf', '.npz', '.tar.gz', '']:
         candidate = os.path.join(DOWNLOAD_DIR, f"{resource_id}{ext}")
@@ -181,7 +183,6 @@ def download_file(resource_id):
     # ✅ 目录已在启动时创建，这里可省略 os.makedirs（但保留也无妨）
     os.makedirs(DATA_LOGS_DIR, exist_ok=True)  # 保留更安全
 
-    
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     file_exists = os.path.isfile(csv_file)
 
@@ -275,7 +276,7 @@ def admin_dashboard():
     
         # === Load download logs and count per item ===
     download_counts = {}
-    csv_path = 'data_logs/downloads.csv'
+    csv_path = os.path.join(DATA_LOGS_DIR, 'downloads.csv')
     if os.path.exists(csv_path):
         try:
             with open(csv_path, 'r', encoding='utf-8') as f:

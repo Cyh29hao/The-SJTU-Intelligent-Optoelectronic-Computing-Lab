@@ -11,24 +11,23 @@
     "readme": "This repository contains the complete simulation framework for the LightGen chip, built on PyTorch and the Angular Spectrum Method. It supports forward modeling, inverse design, and example datasets for MNIST/CIFAR-10. Suitable for both beginners and advanced researchers in diffractive optical neural networks. This is edited on 1640 20260129."
   },
   {
-    "id": "res_002",
-    "title": "D²NN Experimental Dataset (Optical MNIST)",
-    "authors": [
-      "Ming Li",
-      "Yitong Chen"
-    ],
-    "type": "Dataset",
-    "year": 2025,
-    "readme": "This dataset includes raw optical measurements from our D²NN experiments on Optical MNIST. It contains input plane light fields, output plane intensity distributions, and corresponding labels. Available in .mat (MATLAB) and .npz (NumPy) formats, with 10,000 samples in total."
-  },
-  {
     "id": "res_003",
-    "title": "0129 NEW CODE",
+    "title": "0129 NEW CODEEEEEEEEEEEE",
     "authors": [
-      "Yunhai Chen"
+      "Yunhai Chennnnnnnnnnnnnnnnnn"
     ],
     "year": 2026,
     "type": "Code",
     "readme": "This is a new code updated by Yunhai Chen on 16:26 20260129. For Test."
+  },
+  {
+    "id": "res_004",
+    "title": "Today is Thursday V me 50",
+    "authors": [
+      "Hungry Frank"
+    ],
+    "year": 2026,
+    "type": "Dataset",
+    "readme": "KFC CRAZY THURSDAY V ME 50"
   }
 ]
