@@ -120,24 +120,81 @@ input[type="email"]:focus {
 }
 
 footer {
-  text-align: center;
   margin-top: 50px;
   padding-top: 20px;
   border-top: 1px solid #edf2f7;
   color: var(--text-light);
   font-size: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end; /* 底部对齐 */
+  flex-wrap: wrap;
+  gap: 20px;
 }
 
-footer a {
+.footer-left {
+  text-align: left;
+}
+
+.footer-right {
+  text-align: right;
+  line-height: 1.5;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.footer-text {
+  color: var(--text-light);
+  font-size: 14px;
+}
+
+.footer-logos {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  margin-top: 5px;
+}
+
+.footer-logo {
+  height: 40px; /* 控制Logo大小 */
+  width: auto;
+  opacity: 0.9;
+  transition: opacity 0.3s ease;
+}
+
+.footer-logo:hover {
+  opacity: 1;
+}
+
+.separator {
+  margin: 0 8px;
+  color: #cbd5e0;
+}
+
+footer a:not(.footer-link) {
   color: var(--secondary);
   text-decoration: none;
-  margin: 0 8px;
   transition: color 0.2s;
 }
 
-footer a:hover {
+footer a:not(.footer-link):hover {
   color: var(--accent);
   text-decoration: underline;
+}
+
+/* 响应式：手机适配 */
+@media (max-width: 600px) {
+  footer {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  
+  .footer-left, .footer-right {
+    text-align: center;
+  }
 }
 
 /* 响应式：手机适配 */
@@ -165,18 +222,37 @@ footer a:hover {
 
 .main-nav a {
   display: inline-block;
-  margin: 0 12px;
-  padding: 8px 16px;
+  margin: 0 16px;
+  padding: 8px 12px;
   color: var(--primary);
   text-decoration: none;
   font-weight: 600;
-  border-radius: 8px;
-  transition: all 0.2s;
+  position: relative; /* 为伪元素定位做准备 */
+  transition: color 0.3s ease;
 }
 
+/* 悬停时文字颜色变深 */
 .main-nav a:hover {
-  background: #f1f8ff;
   color: var(--secondary);
+}
+
+/* 使用伪元素制作下方的小圆点 */
+.main-nav a::after {
+  content: '';
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background-color: var(--secondary);
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%) scale(0); /* 默认隐藏（缩放为0） */
+  border-radius: 50%;
+  transition: transform 0.3s ease;
+}
+
+/* 悬停时小圆点浮现 */
+.main-nav a:hover::after {
+  transform: translateX(-50%) scale(1);
 }
 
 /* 小屏设备适配 */

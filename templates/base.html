@@ -11,14 +11,13 @@
   <div class="container">
     <!-- Top Header -->
     <header class="site-header">
-      <h1>Prof. Yitong Chen - AI Photonic Computing Lab</h1>
+      <h1><a href="/" style="text-decoration: none; color: inherit;">Prof. Yitong Chen - Intelligent Optoelectronic Computing Lab</a></h1>
     </header>
 
     <!-- Main Navigation -->
     <nav class="main-nav">
         <a href="/">Home</a>
         <a href="/articles">Publications</a>
-        <a href="/resources">Code & Datasets</a>
         <a href="/team">Team</a>
         <!-- <a href="/research">Research</a> -->
     </nav>
@@ -29,9 +28,24 @@
     </div>
 
     <!-- Footer -->
-    <footer>
-      &copy; 2026 AI Photonic Computing Lab | 
-      <a href="mailto:yitongchen@sjtu.edu.cn">Contact Us</a>
+    <footer class="site-footer">
+      <div class="footer-left">
+        &copy; 2026 AI Intelligent Optoelectronic Computing Lab
+        <span class="separator">|</span>
+        <a href="mailto:yitongchen@sjtu.edu.cn">Contact Us</a>
+      </div>
+      <div class="footer-right">
+        <div class="footer-text">
+          School of Integrated Circuits<br>
+          (School of Information Science and Electronic Engineering)<br>
+          (ICISEE), Shanghai Jiao Tong University<br>
+          800 Dong Chuan Road, Minhang District, Shanghai, China 200240
+        </div>
+        <!-- <div class="footer-logos">
+          <img src="{{ url_for('static', filename='images/sjtu_logo.png') }}" alt="SJTU Logo" class="footer-logo">
+          <img src="{{ url_for('static', filename='images/ic_logo.png') }}" alt="School of Integrated Circuits Logo" class="footer-logo">
+        </div> -->
+      </div>
     </footer>
   </div>
 </body>

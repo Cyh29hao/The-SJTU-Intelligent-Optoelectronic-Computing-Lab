@@ -1,15 +1,72 @@
 # app.py - English Version (Fully Internationalized)
-# 1. Preparation
-from flask import Flask, render_template, request, redirect, url_for, send_file, session
+# Refactored for readability and structure
+
+# ==============================================================================
+# 1. Imports
+# ==============================================================================
 import csv
-import os
-from datetime import datetime
-import sys
 import json
 import logging
+import os
+import sys
+from datetime import datetime
+
+from flask import Flask, render_template, request, redirect, url_for, send_file, session
 from dotenv import load_dotenv
 
-# === Safely redefine print with flush=True ===
+# ==============================================================================
+# 2. Configuration & Setup
+# ==============================================================================
+
+# --- Load Environment Variables ---
+# Load .env file (for local dev only; Render uses env vars directly)
+load_dotenv()
+
+# --- Global Settings ---
+IS_LOCAL = 0  # Set to 0 for production/deployment
+BASE_ROOT = os.environ.get('PERSISTENT_ROOT', '.').strip()
+PERSISTENT_ROOT = os.path.join(BASE_ROOT, 'render_data')
+
+# --- Directory Paths ---
+PRIVATE_DOWNLOADS_DIR = os.path.join(PERSISTENT_ROOT, 'private_downloads')
+DATA_LOGS_DIR = os.path.join(PERSISTENT_ROOT, 'data_logs')
+
+# Ensure directories exist (Safety check on every launch)
+os.makedirs(PRIVATE_DOWNLOADS_DIR, exist_ok=True)
+os.makedirs(DATA_LOGS_DIR, exist_ok=True)
+
+# --- Admin Credentials ---
+# In production, these should be set in environment variables
+ADMIN_CREDENTIALS = {
+    'name': os.environ.get('ADMIN_NAME', 'Admin'),
+    'affiliation': os.environ.get('ADMIN_AFFILIATION', 'Your Lab'),
+    'email': os.environ.get('ADMIN_EMAIL', 'admin@example.com')
+}
+
+# --- Flask App Initialization ---
+app = Flask(__name__)
+app.config['ENV'] = 'development'
+app.config['DEBUG'] = True
+
+# --- Security Configuration ---
+# Generate/Load secret key for session management
+SECRET_KEY_FILE = 'secret_key.bin'
+if IS_LOCAL:
+    # Regenerate secret key on every launch in local mode (invalidates old sessions)
+    app.secret_key = os.urandom(24)
+else:
+    # Use persistent secret key for production
+    if os.path.exists(SECRET_KEY_FILE):
+        with open(SECRET_KEY_FILE, 'rb') as f:
+            secret_key = f.read()
+    else:
+        secret_key = os.urandom(24)
+        with open(SECRET_KEY_FILE, 'wb') as f:
+            f.write(secret_key)
+    app.secret_key = secret_key
+
+# --- Logging Configuration ---
+# Safely redefine print with flush=True to avoid log buffering
 original_print = print
 def debug_print(*args, **kwargs):
     """Print with auto-flush to avoid log buffering"""
@@ -17,40 +74,20 @@ def debug_print(*args, **kwargs):
     original_print(*args, **kwargs)
 
 print = debug_print
+
+if not app.debug:
+    app.logger.addHandler(logging.StreamHandler())
+    app.logger.setLevel(logging.DEBUG)
+
 print("🚀 Application started, loading routes...")
+print(f"📂 Persistent Root: {PERSISTENT_ROOT}")
+print(f"📂 Downloads Dir: {PRIVATE_DOWNLOADS_DIR}")
+print(f"📂 Logs Dir: {DATA_LOGS_DIR}")
 
 
-IS_LOCAL = 0
-
-
-app = Flask(__name__)
-app.config['ENV'] = 'development'
-app.config['DEBUG'] = True
-
-# ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'default123')
-
-os.makedirs('private_downloads', exist_ok=True)
-
-
-# 持久化数据根目录（Render 上是 /var/data，本地可回退到项目目录）
-PERSISTENT_ROOT = os.environ.get('PERSISTENT_ROOT', '.').strip()  # 本地默认为当前目录
-
-PRIVATE_DOWNLOADS_DIR = os.path.join(PERSISTENT_ROOT, 'private_downloads')
-DATA_LOGS_DIR = os.path.join(PERSISTENT_ROOT, 'data_logs')
-
-# 确保目录存在（每次启动都创建，安全）
-os.makedirs(PRIVATE_DOWNLOADS_DIR, exist_ok=True)
-os.makedirs(DATA_LOGS_DIR, exist_ok=True)
-
-print(PERSISTENT_ROOT)
-print(PRIVATE_DOWNLOADS_DIR)
-print(DATA_LOGS_DIR)
-
-
-# Load .env file (for local dev only; Render uses env vars directly)
-load_dotenv()
-
-
+# ==============================================================================
+# 3. Helper Functions
+# ==============================================================================
 
 def load_json_data(filename):
     """Safely load JSON list from data/ directory"""
@@ -71,66 +108,127 @@ def save_json_data(filename, data):
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
+def get_file_status(item_id):
+    """Check if paper and resource files exist for an item"""
+    status = {'paper': False, 'resource': False}
+    # Check paper
+    for ext in ['.pdf', '.zip']:
+        if os.path.exists(os.path.join(PRIVATE_DOWNLOADS_DIR, f"{item_id}_paper{ext}")):
+            status['paper'] = True
+            break
+    # Check resource
+    for ext in ['.zip', '.tar.gz', '.npz', '.h5', '.mat', '.txt', '.pdf']:
+        if os.path.exists(os.path.join(PRIVATE_DOWNLOADS_DIR, f"{item_id}_resource{ext}")):
+            status['resource'] = True
+            break
+    return status
+
+def _add_item(item_type, form_data):
+    """Helper to add new article"""
+    # We only support articles now (merged resources)
+    filename = 'articles.json'
+    data = load_json_data(filename)
+    
+    # Generate new ID
+    ids = [int(item['id'].split('_')[-1]) for item in data if '_' in item['id']]
+    new_id_num = max(ids) + 1 if ids else 1
+    new_id = f"art_{new_id_num:03d}"
+
+    # Parse authors
+    authors_str = form_data.get('authors', '').strip()
+    authors = [a.strip() for a in authors_str.split(',')] if authors_str else []
+
+    new_item = {
+        'id': new_id,
+        'title': form_data.get('title', '').strip(),
+        'authors': authors,
+        'venue': form_data.get('venue', '').strip(),
+        'year': int(form_data.get('year', 2025)),
+        'abstract': form_data.get('abstract', '').strip(),
+        'last_edited': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }
+
+    data.append(new_item)
+    save_json_data(filename, data)
+    print(f"✅ Added article: {new_id}")
+
+def _update_item(item_type, item_id, form_data):
+    """Helper to update existing article"""
+    filename = 'articles.json'
+    data = load_json_data(filename)
+    for item in data:
+        if item['id'] == item_id:
+            item['title'] = form_data.get('title', item['title']).strip()
+            authors_str = form_data.get('authors', ', '.join(item['authors'])).strip()
+            item['authors'] = [a.strip() for a in authors_str.split(',')] if authors_str else []
+            item['year'] = int(form_data.get('year', item['year']))
+            item['venue'] = form_data.get('venue', item.get('venue', '')).strip()
+            item['abstract'] = form_data.get('abstract', item.get('abstract', '')).strip()
+            item['last_edited'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            break
+    save_json_data(filename, data)
+    print(f"✏️ Updated article: {item_id}")
+
+def _delete_item(item_type, item_id):
+    """Helper to delete article"""
+    filename = 'articles.json'
+    data = load_json_data(filename)
+    data = [item for item in data if item['id'] != item_id]
+    save_json_data(filename, data)
+    print(f"🗑️ Deleted article: {item_id}")
 
 
-# Admin credentials (from environment variables)
-ADMIN_CREDENTIALS = {
-    'name': os.environ.get('ADMIN_NAME', 'Admin'),
-    'affiliation': os.environ.get('ADMIN_AFFILIATION', 'Your Lab'),
-    'email': os.environ.get('ADMIN_EMAIL', 'admin@example.com')
-}
+# ==============================================================================
+# 4. Route Definitions - Public Pages
+# ==============================================================================
 
-# Generate and reuse secret key (for production)
-SECRET_KEY_FILE = 'secret_key.bin'
-if os.path.exists(SECRET_KEY_FILE):
-    with open(SECRET_KEY_FILE, 'rb') as f:
-        secret_key = f.read()
-else:
-    secret_key = os.urandom(24)
-    with open(SECRET_KEY_FILE, 'wb') as f:
-        f.write(secret_key)
-app.secret_key = secret_key
-
-# ONLY_LOCAL: regenerate secret key on every launch → invalidate old sessions
-if IS_LOCAL:
-    app.secret_key = os.urandom(24)
-
-# Optional: enable Flask built-in logger (for debugging)
-if not app.debug:
-    app.logger.addHandler(logging.StreamHandler())
-    app.logger.setLevel(logging.DEBUG)
-
-# 2. Route Definitions
-
-# HOME
 @app.route('/')
 def index():
     return render_template('index.html')
 
-# REGISTER / LOGIN
+@app.route('/team')
+def team():
+    print("🔍 Visiting /team")
+    return render_template('team.html')
+
+@app.route('/articles')
+def articles():
+    ARTICLES = load_json_data('articles.json')
+    sorted_articles = sorted(ARTICLES, key=lambda x: x['year'], reverse=True)
+    return render_template('articles.html', articles=sorted_articles)
+
+@app.route('/article/<id>')
+def article_detail(id):
+    ARTICLES = load_json_data('articles.json')
+    article = next((a for a in ARTICLES if a['id'] == id), None)
+    if not article:
+        return "Article not found", 404
+    
+    status = get_file_status(id)
+    return render_template('article_detail.html', item=article, file_status=status)
+
+# Resources route removed/merged into articles
+
+@app.route('/test')
+def test():
+    print("\n🎉 /test page accessed! Flask is running.\n")
+    return "✅ Test OK! Check console for real-time output."
+
+
+# ==============================================================================
+# 5. Route Definitions - Authentication
+# ==============================================================================
+
 @app.route('/register')
 def register():
+    """User Login/Register page"""
     session.pop('user_info', None)
     session.pop('registered_at', None)
-    return render_template('register.html')  # renamed to login.html
+    return render_template('register.html')
 
-# LOGOUT (user)
-@app.route('/logout')
-def logout():
-    session.pop('user_info', None)
-    session.pop('registered_at', None)
-    session.pop('resource_id', None)  # if exists
-    return redirect(url_for('index'))
-
-# ADMIN LOGOUT
-@app.route('/admin/logout')
-def admin_logout():
-    session.pop('is_admin', None)
-    return redirect(url_for('index'))
-
-# === Submit registration/login info ===
 @app.route('/submit_register', methods=['POST'])
 def submit_register():
+    """Handle login/register form submission"""
     name = request.form.get('name', '').strip()
     affiliation = request.form.get('affiliation', '').strip()
     email = request.form.get('email', '').strip()
@@ -146,7 +244,7 @@ def submit_register():
         print("✅ Admin login successful")
         return redirect(url_for('admin_dashboard'))
 
-    # Save to session
+    # === User session ===
     session['user_info'] = {
         'name': name,
         'affiliation': affiliation,
@@ -156,21 +254,46 @@ def submit_register():
     print(f"✅ User registered: {name} | {affiliation} | {email}")
     return redirect(url_for('index'))
 
-# === Secure download endpoint (unified entry) ===
-@app.route('/download_file/<resource_id>')
-def download_file(resource_id):
+@app.route('/logout')
+def logout():
+    """User logout"""
+    session.pop('user_info', None)
+    session.pop('registered_at', None)
+    session.pop('resource_id', None)  # if exists
+    return redirect(url_for('index'))
+
+@app.route('/admin/logout')
+def admin_logout():
+    """Admin logout"""
+    session.pop('is_admin', None)
+    return redirect(url_for('index'))
+
+
+# ==============================================================================
+# 6. Route Definitions - Protected/User Features
+# ==============================================================================
+
+@app.route('/download_file/<file_type>/<resource_id>')
+def download_file(file_type, resource_id):
+    """Secure download endpoint with logging
+       file_type: 'paper' or 'resource'
+    """
     user_info = session.get('user_info')
     if not user_info:
         print(f"⚠️ Unregistered user attempted to download {resource_id}, redirecting to login")
         return redirect(url_for('register'))
-    else:
-        print(user_info)
+    
+    # Validate file_type
+    if file_type not in ['paper', 'resource']:
+        return "Invalid file type", 400
 
     # Locate file
+    base_name = f"{resource_id}_{file_type}"
     DOWNLOAD_DIR = PRIVATE_DOWNLOADS_DIR
     actual_path = None
-    for ext in ['.zip', '.pdf', '.npz', '.tar.gz', '']:
-        candidate = os.path.join(DOWNLOAD_DIR, f"{resource_id}{ext}")
+    # Prioritize certain extensions?
+    for ext in ['.pdf', '.zip', '.npz', '.tar.gz', '.h5', '.mat', '.txt']:
+        candidate = os.path.join(DOWNLOAD_DIR, base_name + ext)
         if os.path.isfile(candidate):
             actual_path = candidate
             break
@@ -178,10 +301,9 @@ def download_file(resource_id):
     if not actual_path:
         return "❌ Requested resource not found.", 404
 
-    # === 🔒 SAFE CSV LOGGING WITH DIRECTORY CREATION ===
+    # === Safe CSV Logging ===
     csv_file = os.path.join(DATA_LOGS_DIR, 'downloads.csv')
-    # ✅ 目录已在启动时创建，这里可省略 os.makedirs（但保留也无妨）
-    os.makedirs(DATA_LOGS_DIR, exist_ok=True)  # 保留更安全
+    os.makedirs(DATA_LOGS_DIR, exist_ok=True)
 
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     file_exists = os.path.isfile(csv_file)
@@ -190,16 +312,16 @@ def download_file(resource_id):
         with open(csv_file, 'a', encoding='utf-8-sig', newline='') as f:
             writer = csv.writer(f)
             if not file_exists:
-                # Use English headers
-                writer.writerow(['time', 'name', 'affiliation', 'email', 'resource_id'])
+                writer.writerow(['time', 'name', 'affiliation', 'email', 'resource_id', 'type'])
             writer.writerow([
                 timestamp,
                 user_info['name'],
                 user_info['affiliation'],
                 user_info['email'],
-                resource_id
+                resource_id,
+                file_type
             ])
-        print(f"📥 Download logged: {user_info['name']} -> {resource_id}")
+        print(f"📥 Download logged: {user_info['name']} -> {resource_id} ({file_type})")
     except Exception as e:
         print(f"🔴 CSV write failed: {e}")
 
@@ -208,57 +330,19 @@ def download_file(resource_id):
     return send_file(actual_path, as_attachment=True, download_name=filename)
 
 
+# ==============================================================================
+# 7. Route Definitions - Admin Dashboard
+# ==============================================================================
 
-# === Articles Page ===
-@app.route('/articles')
-def articles():
-    ARTICLES = load_json_data('articles.json')
-    sorted_articles = sorted(ARTICLES, key=lambda x: x['year'], reverse=True)
-    return render_template('articles.html', articles=sorted_articles)
-
-# === Article Detail ===
-@app.route('/article/<id>')
-def article_detail(id):
-    ARTICLES = load_json_data('articles.json')
-    article = next((a for a in ARTICLES if a['id'] == id), None)
-    if not article:
-        return "Article not found", 404
-    return render_template('article_detail.html', item=article)
-
-# === Resources Page ===
-@app.route('/resources')
-def resources():
-    RESOURCES = load_json_data('resources.json')
-    sorted_resources = sorted(RESOURCES, key=lambda x: x['year'], reverse=True)
-    return render_template('resources.html', resources=sorted_resources)
-
-# === Resource Detail ===
-@app.route('/resource/<id>')
-def resource_detail(id):
-    RESOURCES = load_json_data('resources.json')
-    resource = next((r for r in RESOURCES if r['id'] == id), None)
-    if not resource:
-        return "Resource not found", 404
-    return render_template('resource_detail.html', item=resource)
-
-# === Team Page ===
-@app.route('/team')
-def team():
-    print("🔍 Visiting /team")
-    return render_template('team.html')
-
-
-
-
-# ==== ADMIN =====
 @app.route('/admin', methods=['GET', 'POST'])
 def admin_dashboard():
+    """Admin Dashboard for managing content"""
     if not session.get('is_admin'):
         return redirect(url_for('register'))
 
     # === Handle form submissions (add/edit/delete) ===
     action = request.form.get('action') or request.args.get('action')
-    item_type = request.form.get('item_type') or request.args.get('item_type')  # 'article' or 'resource'
+    item_type = request.form.get('item_type') or request.args.get('item_type')  # 'article' only
 
     if action == 'add':
         _add_item(item_type, request.form)
@@ -274,7 +358,7 @@ def admin_dashboard():
 
     # === Load data for display ===
     
-        # === Load download logs and count per item ===
+    # Load download counts (simplified logic, maybe aggregated by ID)
     download_counts = {}
     csv_path = os.path.join(DATA_LOGS_DIR, 'downloads.csv')
     if os.path.exists(csv_path):
@@ -282,135 +366,86 @@ def admin_dashboard():
             with open(csv_path, 'r', encoding='utf-8') as f:
                 reader = csv.DictReader(f)
                 for row in reader:
-                    item_id = row.get('resource_id')  # 假设字段名是 'resource_id'
+                    item_id = row.get('resource_id')
                     if item_id:
                         download_counts[item_id] = download_counts.get(item_id, 0) + 1
         except Exception as e:
             print(f"CSV read error: {e}")
 
-    # Load articles and resources
+    # Load articles
     articles = load_json_data('articles.json')
-    resources = load_json_data('resources.json')
-
-    articles = load_json_data('articles.json')
-    resources = load_json_data('resources.json')
+    
+    # Get file statuses for all articles
+    file_statuses = {item['id']: get_file_status(item['id']) for item in articles}
 
     return render_template(
         'admin.html',
-        downloads=[],  # 不再需要原始日志列表（因为我们只提供下载按钮）
         articles=articles,
-        resources=resources,
-        download_counts=download_counts  # 👈 新增这一行
+        download_counts=download_counts,
+        file_statuses=file_statuses
     )
 
-# ADD DEL UPD for ADMIN
-def _add_item(item_type, form_data):
-    filename = 'articles.json' if item_type == 'article' else 'resources.json'
-    data = load_json_data(filename)
-    
-    # Generate new ID (simple increment)
-    ids = [int(item['id'].split('_')[-1]) for item in data if '_' in item['id']]
-    new_id_num = max(ids) + 1 if ids else 1
-    prefix = 'art' if item_type == 'article' else 'res'
-    new_id = f"{prefix}_{new_id_num:03d}"
-
-    # Parse authors (comma-separated string → list)
-    authors_str = form_data.get('authors', '').strip()
-    authors = [a.strip() for a in authors_str.split(',')] if authors_str else []
-
-    new_item = {
-        'id': new_id,
-        'title': form_data.get('title', '').strip(),
-        'authors': authors,
-        'year': int(form_data.get('year', 2025)),
-    }
-
-    if item_type == 'article':
-        new_item['venue'] = form_data.get('venue', '').strip()
-        new_item['abstract'] = form_data.get('abstract', '').strip()
-    else:  # resource
-        new_item['type'] = form_data.get('type', 'Code').strip()
-        new_item['readme'] = form_data.get('readme', '').strip()
-
-    data.append(new_item)
-    save_json_data(filename, data)
-    print(f"✅ Added {item_type}: {new_id}")
-
-
-def _update_item(item_type, item_id, form_data):
-    filename = 'articles.json' if item_type == 'article' else 'resources.json'
-    data = load_json_data(filename)
-    for item in data:
-        if item['id'] == item_id:
-            item['title'] = form_data.get('title', item['title']).strip()
-            authors_str = form_data.get('authors', ', '.join(item['authors'])).strip()
-            item['authors'] = [a.strip() for a in authors_str.split(',')] if authors_str else []
-            item['year'] = int(form_data.get('year', item['year']))
-            
-            if item_type == 'article':
-                item['venue'] = form_data.get('venue', item.get('venue', '')).strip()
-                item['abstract'] = form_data.get('abstract', item.get('abstract', '')).strip()
-            else:
-                item['type'] = form_data.get('type', item.get('type', 'Code')).strip()
-                item['readme'] = form_data.get('readme', item.get('readme', '')).strip()
-            break
-    save_json_data(filename, data)
-    print(f"✏️ Updated {item_type}: {item_id}")
-
-
-def _delete_item(item_type, item_id):
-    filename = 'articles.json' if item_type == 'article' else 'resources.json'
-    data = load_json_data(filename)
-    data = [item for item in data if item['id'] != item_id]
-    save_json_data(filename, data)
-    print(f"🗑️ Deleted {item_type}: {item_id}")
-
-
-
-# ADMIN UPLOAD (supports both resources and articles)
-@app.route('/admin/upload/<resource_id>', methods=['POST'])
-def admin_upload_file(resource_id):
+@app.route('/admin/upload/<file_type>/<resource_id>', methods=['POST'])
+def admin_upload_file(file_type, resource_id):
+    """Admin file upload handler"""
     if not session.get('is_admin'):
         return "Unauthorized", 403
 
-    # Check if resource_id exists in EITHER resources.json OR articles.json
-    resources = load_json_data('resources.json')
-    articles = load_json_data('articles.json')
-    
-    target_in_resources = next((r for r in resources if r['id'] == resource_id), None)
-    target_in_articles = next((a for a in articles if a['id'] == resource_id), None)
+    if file_type not in ['paper', 'resource']:
+        return "Invalid file type", 400
 
-    if not target_in_resources and not target_in_articles:
-        return f"ID '{resource_id}' not found in resources.json or articles.json", 404
+    # Check if article exists
+    articles = load_json_data('articles.json')
+    target = next((a for a in articles if a['id'] == resource_id), None)
+
+    if not target:
+        return f"ID '{resource_id}' not found", 404
 
     file = request.files.get('file')
     if not file or not file.filename:
         return "No file selected", 400
 
     # Allow only safe extensions
-    ALLOWED_EXTENSIONS = {'.zip', '.pdf', '.npz', '.tar.gz', '.h5', '.mat'}
+    ALLOWED_EXTENSIONS = {'.zip', '.pdf', '.npz', '.tar.gz', '.h5', '.mat', '.txt'}
     filename = file.filename
     ext = ''
-    for allowed in sorted(ALLOWED_EXTENSIONS, key=len, reverse=True):  # match .tar.gz before .gz
+    for allowed in sorted(ALLOWED_EXTENSIONS, key=len, reverse=True):
         if filename.lower().endswith(allowed):
             ext = allowed
             break
     if not ext:
         return f"File type not allowed. Allowed: {', '.join(ALLOWED_EXTENSIONS)}", 400
 
-    # Save as {resource_id}{ext}
+    # Save file
     os.makedirs(PRIVATE_DOWNLOADS_DIR, exist_ok=True)
-    save_path = os.path.join(PRIVATE_DOWNLOADS_DIR, f"{resource_id}{ext}")
+    # Naming convention: {id}_{type}.{ext}
+    save_path = os.path.join(PRIVATE_DOWNLOADS_DIR, f"{resource_id}_{file_type}{ext}")
+    
+    # Remove existing files of same type (different extensions) to avoid ambiguity
+    # e.g. if uploading .pdf, remove existing .zip for the same type slot
+    base_name = f"{resource_id}_{file_type}"
+    for e in ALLOWED_EXTENSIONS:
+        p = os.path.join(PRIVATE_DOWNLOADS_DIR, base_name + e)
+        if os.path.exists(p):
+            os.remove(p)
+            
     file.save(save_path)
-    print(f"✅ Admin uploaded file for {resource_id} -> {save_path}")
+    print(f"✅ Admin uploaded {file_type} for {resource_id} -> {save_path}")
 
-    return redirect(url_for('admin_dashboard') + '#resource-' + resource_id)
+    target['last_edited'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # Save back
+    # We need to find index
+    for i, item in enumerate(articles):
+        if item['id'] == resource_id:
+            articles[i] = target
+            break
+    save_json_data('articles.json', articles)
 
+    return redirect(url_for('admin_dashboard') + '#article-' + resource_id)
 
-
-#ADMIN DOWNLOAD LOGS
 @app.route('/admin/download-logs.csv')
 def download_logs_csv():
+    """Export download logs as CSV"""
     if not session.get('is_admin'):
         return "Unauthorized", 403
     csv_path = os.path.join(DATA_LOGS_DIR, 'downloads.csv')
@@ -421,18 +456,15 @@ def download_logs_csv():
     return send_file(csv_path, as_attachment=True, download_name='lightchip_download_logs.csv')
 
 
+# ==============================================================================
+# 8. Main Entry Point
+# ==============================================================================
 
-# === Test Page ===
-@app.route('/test')
-def test():
-    print("\n🎉 /test page accessed! Flask is running.\n")
-    return "✅ Test OK! Check console for real-time output."
-
-# 3. Launch
 if __name__ == '__main__':
     print(" Current time: " + datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     print("🔧 Starting Flask development server...")
     print("🛑 Press Ctrl+C to stop")
+    
     if IS_LOCAL:
         app.run(host='127.0.0.1', port=5000, debug=True, use_reloader=True)
     else:

@@ -197,6 +197,11 @@
             <!-- 显示 ID（灰色小字） -->
             <span style="color: #95a5a6; font-size: 0.85em; margin: 0 8px;">{{ item.id }}</span>
             
+            <!-- Last Edited Time -->
+            {% if item.last_edited %}
+                <span style="color: #95a5a6; font-size: 0.85em; margin: 0 8px;">Last edited: {{ item.last_edited }}</span>
+            {% endif %}
+            
             <!-- Download count -->
             {% set count = download_counts.get(item.id, 0) %}
             {% if count > 0 %}
@@ -232,114 +237,46 @@
             <!-- File Upload Section for Publications -->
             <div class="upload-section" style="margin-top: 12px; padding: 12px; background-color: #f9f9f9; border-radius: 6px;">
                 <hr>
-                <h4>📎 Upload Associated File</h4>
-                <p>Upload a file linked to this publication (e.g., PDF, supplementary ZIP, code).</p>
-                <form method="POST" enctype="multipart/form-data" action="{{ url_for('admin_upload_file', resource_id=item.id) }}">
-                    <input type="file" name="file" accept=".pdf,.zip,.tar.gz,.npz,.mat,.pptx" required>
-                    <button type="submit" style="background-color: #2ecc71; margin-top: 10px;">📤 Upload Publication File</button>
-                </form>
+                
+                <div style="display: flex; gap: 20px;">
+                    <!-- Paper Upload -->
+                    <div style="flex: 1;">
+                        <h4>
+                            📄 Upload Paper (PDF)
+                            {% if file_statuses[item.id]['paper'] %}
+                                <span style="font-size: 0.8em; color: white; background: #27ae60; padding: 2px 6px; border-radius: 4px;">Uploaded</span>
+                            {% else %}
+                                <span style="font-size: 0.8em; color: white; background: #95a5a6; padding: 2px 6px; border-radius: 4px;">Missing</span>
+                            {% endif %}
+                        </h4>
+                        <form method="POST" enctype="multipart/form-data" action="{{ url_for('admin_upload_file', file_type='paper', resource_id=item.id) }}">
+                            <input type="file" name="file" accept=".pdf,.zip" required>
+                            <button type="submit" style="background-color: #2980b9; margin-top: 10px; width: 100%;">📤 Upload Paper</button>
+                        </form>
+                    </div>
+
+                    <!-- Resource Upload -->
+                    <div style="flex: 1;">
+                        <h4>
+                            💾 Upload Code/Data
+                            {% if file_statuses[item.id]['resource'] %}
+                                <span style="font-size: 0.8em; color: white; background: #27ae60; padding: 2px 6px; border-radius: 4px;">Uploaded</span>
+                            {% else %}
+                                <span style="font-size: 0.8em; color: white; background: #95a5a6; padding: 2px 6px; border-radius: 4px;">Missing</span>
+                            {% endif %}
+                        </h4>
+                        <form method="POST" enctype="multipart/form-data" action="{{ url_for('admin_upload_file', file_type='resource', resource_id=item.id) }}">
+                            <input type="file" name="file" accept=".zip,.tar.gz,.npz,.mat,.h5,.txt" required>
+                            <button type="submit" style="background-color: #8e44ad; margin-top: 10px; width: 100%;">📤 Upload Resources</button>
+                        </form>
+                    </div>
+                </div>
+
                 <p style="font-size: 14px; color: #7f8c8d; margin-top: 12px;">
-                    <strong>Note:</strong> The file will be saved as <code>{{ item.id }}.&lt;ext&gt;</code> 
-                    and can be downloaded from the public Publications page.
+                    <strong>Note:</strong> Files are saved as <code>{{ item.id }}_paper.&lt;ext&gt;</code> and <code>{{ item.id }}_resource.&lt;ext&gt;</code>.
                 </p>
             </div>
             
-        </div>
-    </details>
-    {% endfor %}
-
-    <!-- Manage Resources -->
-    <h2>
-        🧰 Manage Resources
-        <button onclick="document.getElementById('add-resource-form').style.display='block'">
-            + Add New
-        </button>
-    </h2>
-    
-    <div id="add-resource-form" class="form-section" style="display:none;">
-        <h3>Add New Resource</h3>
-        <form method="POST">
-            <input type="hidden" name="action" value="add">
-            <input type="hidden" name="item_type" value="resource">
-            <label>Title</label>
-            <input name="title" required>
-            <label>Authors (comma-separated)</label>
-            <input name="authors" placeholder="Yitong Chen, Siqi Liu" required>
-            <label>Type</label>
-            <select name="type" required>
-                <option value="Code">Code</option>
-                <option value="Dataset">Dataset</option>
-                <option value="Model">Model</option>
-                <option value="Other">Other</option>
-            </select>
-            <label>Year</label>
-            <input name="year" type="number" value="2025" min="2000" max="2030" required>
-            <label>Description (README)</label>
-            <textarea name="readme" rows="5" required></textarea>
-            <button type="submit">✅ Add Resource</button>
-            <button type="button" onclick="this.closest('.form-section').style.display='none'" style="background: #95a5a6;">Cancel</button>
-        </form>
-    </div>
-
-    {% for item in resources %}
-    <details>
-        <summary>
-            {{ item.title }}
-            
-            <!-- 显示 resource ID (e.g., res_001) in gray -->
-            <span style="color: #95a5a6; font-size: 0.85em; margin: 0 8px;">{{ item.id }}</span>
-            
-            <!-- Download count -->
-            {% set count = download_counts.get(item.id, 0) %}
-            {% if count > 0 %}
-                <span style="color: #27ae60; font-weight: bold;">📥 {{ count }} downloads</span>
-            {% else %}
-                <span style="color: #bdc3c7;">(0 downloads)</span>
-            {% endif %}
-        </summary>
-        <div class="form-section">
-            <!-- Edit Form -->
-            <form method="POST">
-                <input type="hidden" name="action" value="edit">
-                <input type="hidden" name="item_type" value="resource">
-                <input type="hidden" name="id" value="{{ item.id }}">
-                <label>Title</label>
-                <input name="title" value="{{ item.title }}" required>
-                <label>Authors</label>
-                <input name="authors" value="{{ item.authors|join(', ') }}" required>
-                <label>Type</label>
-                <select name="type" required>
-                    <option value="Code" {% if item.type == 'Code' %}selected{% endif %}>Code</option>
-                    <option value="Dataset" {% if item.type == 'Dataset' %}selected{% endif %}>Dataset</option>
-                    <option value="Model" {% if item.type == 'Model' %}selected{% endif %}>Model</option>
-                    <option value="Other" {% if item.type == 'Other' %}selected{% endif %}>Other</option>
-                </select>
-                <label>Year</label>
-                <input name="year" type="number" value="{{ item.year }}" min="2000" max="2030" required>
-                <label>Description (README)</label>
-                <textarea name="readme" rows="5" required>{{ item.readme }}</textarea>
-                <button type="submit">💾 Save Changes</button>
-                <a href="{{ url_for('admin_dashboard', action='delete', item_type='resource', id=item.id) }}"
-                   class="actions"
-                   onclick="return confirm('⚠️ Delete this resource? This cannot be undone.')">
-                    🗑️ Delete
-                </a>
-            </form>
-
-            <!-- File Upload Section -->
-            <div class="upload-section">
-                <hr>
-                <h4>📎 Upload Associated File</h4>
-                <p>Upload a file that users can download (e.g., code ZIP, dataset NPZ, model weights).</p>
-                <form method="POST" enctype="multipart/form-data" action="{{ url_for('admin_upload_file', resource_id=item.id) }}">
-                    <input type="file" name="file" accept=".zip,.pdf,.npz,.tar.gz,.h5,.mat,.pth" required>
-                    <button type="submit" style="background-color: #9b59b6; margin-top: 10px;">📤 Upload File</button>
-                </form>
-                <p style="font-size: 14px; color: #7f8c8d; margin-top: 12px;">
-                    <strong>Note:</strong> The uploaded file will be named automatically as <code>{{ item.id }}.&lt;ext&gt;</code> 
-                    and linked to this resource. Users can download it from the public Resources page.
-                </p>
-            </div>
         </div>
     </details>
     {% endfor %}
@@ -349,9 +286,9 @@
     </footer>
 
     <script>
-        // Auto-scroll to resource after upload redirect (via anchor)
+        // Auto-scroll to article after upload redirect (via anchor)
         document.addEventListener('DOMContentLoaded', () => {
-            if (window.location.hash.startsWith('#resource-')) {
+            if (window.location.hash.startsWith('#article-')) {
                 const el = document.querySelector(window.location.hash);
                 if (el) {
                     el.open = true;
