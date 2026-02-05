@@ -23,7 +23,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # --- Global Settings ---
-IS_LOCAL = 1  # Set to 0 for production/deployment
+IS_LOCAL = 0  # Set to 0 for production/deployment
 BASE_ROOT = os.environ.get('PERSISTENT_ROOT', '.').strip()
 PERSISTENT_ROOT = os.path.join(BASE_ROOT, 'render_data')
 
