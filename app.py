@@ -10,15 +10,7 @@ import logging
 import os
 import sys
 from datetime import datetime
-import requests
-import mimetypes
-
-import boto3
-from botocore.config import Config
-from botocore.auth import SigV4Auth
-from botocore.awsrequest import AWSRequest
-from botocore.credentials import Credentials
-from flask import Flask, render_template, request, redirect, url_for, send_file, session,jsonify
+from flask import Flask, render_template, request, redirect, url_for, send_file, session
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 
@@ -31,7 +23,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # --- Global Settings ---
-IS_LOCAL = 0  # Set to 0 for production/deployment
+IS_LOCAL = 1  # Set to 0 for production/deployment
 BASE_ROOT = os.environ.get('PERSISTENT_ROOT', '.').strip()
 PERSISTENT_ROOT = os.path.join(BASE_ROOT, 'render_data')
 
@@ -73,19 +65,7 @@ else:
             f.write(secret_key)
     app.secret_key = secret_key
 
-R2_ACCOUNT_ID = os.getenv('R2_ACCOUNT_ID')
-R2_ACCESS_KEY_ID = os.getenv('R2_ACCESS_KEY_ID')
-R2_SECRET_ACCESS_KEY = os.getenv('R2_SECRET_ACCESS_KEY')
-R2_BUCKET_NAME = os.getenv('R2_BUCKET_NAME')
-
-s3_client = boto3.client(
-    's3',
-    endpoint_url=f'https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com',
-    aws_access_key_id=R2_ACCESS_KEY_ID,
-    aws_secret_access_key=R2_SECRET_ACCESS_KEY,
-    config=Config(signature_version='s3v4'),
-    region_name='auto'
-)
+# Cloudflare/R2 disabled — local-only storage and download
 
 # --- Logging Configuration ---
 # Safely redefine print with flush=True to avoid log buffering
@@ -114,46 +94,13 @@ print(f"📂 Logs Dir: {DATA_LOGS_DIR}")
 def _build_key(resource_id, file_type, ext):
     return f"{resource_id}_{file_type}{ext}"
 
-def _r2_exists(key):
-    try:
-        s3_client.head_object(Bucket=R2_BUCKET_NAME, Key=key)
-        return True
-    except Exception:
-        return False
-
-def _pick_existing_ext(resource_id, file_type):
+def _find_existing_ext(resource_id, file_type):
     for ext in ['.pdf', '.zip', '.npz', '.tar.gz', '.h5', '.mat', '.txt']:
         key = _build_key(resource_id, file_type, ext)
-        if _r2_exists(key):
-            return ext, 'r2'
         local_path = os.path.join(PRIVATE_DOWNLOADS_DIR, key)
         if os.path.isfile(local_path):
-            return ext, 'local'
-    return None, None
-
-def _r2_public_url(key):
-    base = os.getenv('R2_PUBLIC_URL', '').strip()
-    return (base.rstrip('/') + '/' + key) if base else None
-
-def _r2_presigned_url(key, expires=3600):
-    try:
-        return s3_client.generate_presigned_url(
-            'get_object',
-            Params={'Bucket': R2_BUCKET_NAME, 'Key': key},
-            ExpiresIn=expires
-        )
-    except Exception:
-        return None
-
-def _r2_upload(key, file_storage):
-    try:
-        file_storage.stream.seek(0)
-        body = file_storage.read()
-        content_type = mimetypes.guess_type(file_storage.filename)[0] or 'application/octet-stream'
-        s3_client.put_object(Bucket=R2_BUCKET_NAME, Key=key, Body=body, ContentType=content_type)
-        return True
-    except Exception:
-        return False
+            return ext
+    return None
 
 def load_json_data(filename):
     """Safely load JSON list from data/ directory"""
@@ -177,7 +124,7 @@ def save_json_data(filename, data):
 def get_file_status(item_id):
     status = {'paper': False, 'resource': False}
     for t in ['paper', 'resource']:
-        ext, where = _pick_existing_ext(item_id, t)
+        ext = _find_existing_ext(item_id, t)
         if ext:
             status[t] = True
     return status
@@ -354,14 +301,7 @@ def test():
     print("\n🎉 /test page accessed! Flask is running.\n")
     return "✅ Test OK! Check console for real-time output."
 
-@app.route('/test-r2')
-def test_r2():
-    try:
-        response = s3_client.list_objects_v2(Bucket=R2_BUCKET_NAME)
-        files = [obj['Key'] for obj in response.get('Contents', [])]
-        return f"R2 连接成功！文件列表: {files}"
-    except Exception as e:
-        return f"R2 错误: {str(e)}", 500
+# Cloudflare test route removed
 
 
 # ==============================================================================
@@ -436,9 +376,8 @@ def download_file(file_type, resource_id):
     if file_type not in ['paper', 'resource']:
         return "Invalid file type", 400
 
-    # Locate file
-    ext, where = _pick_existing_ext(resource_id, file_type)
-
+    # Locate file locally
+    ext = _find_existing_ext(resource_id, file_type)
     if not ext:
         return "❌ Requested resource not found.", 404
 
@@ -467,11 +406,6 @@ def download_file(file_type, resource_id):
         print(f"🔴 CSV write failed: {e}")
 
     key = _build_key(resource_id, file_type, ext)
-    if where == 'r2':
-        url = _r2_public_url(key) or _r2_presigned_url(key)
-        if url:
-            return redirect(url)
-        return "❌ Unable to generate Cloudflare URL.", 500
     actual_path = os.path.join(PRIVATE_DOWNLOADS_DIR, key)
     filename = os.path.basename(actual_path)
     return send_file(actual_path, as_attachment=True, download_name=filename)
@@ -575,20 +509,15 @@ def admin_upload_file(file_type, resource_id):
         return f"File type not allowed. Allowed: {', '.join(ALLOWED_EXTENSIONS)}", 400
 
     key = _build_key(resource_id, file_type, ext)
-    uploaded = _r2_upload(key, file)
-    if not uploaded:
-        os.makedirs(PRIVATE_DOWNLOADS_DIR, exist_ok=True)
-        base_name = f"{resource_id}_{file_type}"
-        for e in ALLOWED_EXTENSIONS:
-            p = os.path.join(PRIVATE_DOWNLOADS_DIR, base_name + e)
-            if os.path.exists(p):
-                os.remove(p)
-        save_path = os.path.join(PRIVATE_DOWNLOADS_DIR, key)
-        file.stream.seek(0)
-        file.save(save_path)
-        print(f"✅ Admin uploaded {file_type} for {resource_id} -> {save_path}")
-    else:
-        print(f"✅ Admin uploaded {file_type} to R2 for {resource_id} -> {key}")
+    os.makedirs(PRIVATE_DOWNLOADS_DIR, exist_ok=True)
+    base_name = f"{resource_id}_{file_type}"
+    for e in ALLOWED_EXTENSIONS:
+        p = os.path.join(PRIVATE_DOWNLOADS_DIR, base_name + e)
+        if os.path.exists(p):
+            os.remove(p)
+    save_path = os.path.join(PRIVATE_DOWNLOADS_DIR, key)
+    file.save(save_path)
+    print(f"✅ Admin uploaded {file_type} for {resource_id} -> {save_path}")
 
     target['last_edited'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     # Save back
@@ -617,73 +546,7 @@ def download_logs_csv():
 
 
 
-def upload_file_to_r2(file_data, object_key):
-    """
-    上传文件到 Cloudflare R2 使用原生 API
-    :param file_data: bytes 数据（来自 file.read()）
-    :param object_key: R2 中的路径，如 'uploads/paper.pdf'
-    :return: True if success, False otherwise
-    """
-    account_id = os.getenv('R2_ACCOUNT_ID')
-    token = os.getenv('R2_ACCESS_KEY_ID')  # 你的 API Token
-    bucket_name = os.getenv('R2_BUCKET_NAME')
-
-    url = f"https://api.cloudflare.com/client/v4/accounts/{account_id}/r2/buckets/{bucket_name}/objects/{object_key}"
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/octet-stream"
-    }
-
-    try:
-        response = requests.put(url, data=file_data, headers=headers)
-        return response.status_code == 200
-    except Exception as e:
-        print(f"[ERROR] Upload failed: {e}")
-        return False
-
-
-# 允许的文件类型（按需修改）
-ALLOWED_EXTENSIONS = {'pdf', 'txt', 'png', 'jpg', 'jpeg', 'zip'}
-
-def allowed_file(filename):
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-@app.route('/api/upload', methods=['POST'])
-def upload_publication():
-    if 'file' not in request.files:
-        return jsonify({"error": "No file provided"}), 400
-    
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({"error": "Empty filename"}), 400
-    if not allowed_file(file.filename):
-        return jsonify({"error": "File type not allowed"}), 400
-
-    # 安全文件名
-    filename = secure_filename(file.filename)
-    
-    # 上传到 R2（路径：uploads/xxx.pdf）
-    object_key = f"uploads/{filename}"
-    if upload_file_to_r2(file.read(), object_key):
-        # 生成公开链接
-        public_url = f"{os.getenv('R2_PUBLIC_URL')}/{object_key}"
-        return jsonify({
-            "message": "Upload successful",
-            "url": public_url
-        })
-    else:
-        return jsonify({"error": "Upload failed"}), 500
-
-@app.route('/upload-test')
-def upload_test():
-    return '''
-    <h2>Upload Test</h2>
-    <form action="/api/upload" method="post" enctype="multipart/form-data">
-        <input type="file" name="file" required>
-        <button type="submit">Upload</button>
-    </form>
-    '''
+# Cloudflare upload API removed — using only local admin upload
 
 
 # ==============================================================================
