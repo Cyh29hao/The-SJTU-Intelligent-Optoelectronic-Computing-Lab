@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}{{ person.name }} - Profile{% endblock %}
+{% block content %}
+<h2>👤 {{ person.name }}</h2>
+
+<div style="max-width: 800px; margin: 0 auto; display: grid; grid-template-columns: 220px 1fr; gap: 24px; align-items: start;">
+  <div>
+    <img src="{{ url_for('static', filename='images/people/' ~ person.photo_filename) if person.photo_filename else 'https://via.placeholder.com/200' }}" alt="{{ person.name }}" style="width: 200px; height: 200px; object-fit: cover; border-radius: 8px;">
+  </div>
+  <div>
+    <p style="margin: 4px 0;"><strong>Email:</strong> <a href="mailto:{{ person.email }}">{{ person.email }}</a></p>
+    <p style="margin: 12px 0; white-space: pre-wrap;">{{ person.bio or 'Profile will be updated.' }}</p>
+    {% if person.last_edited %}
+    <p style="color: #999; font-size: 0.9em;">Last edited: {{ person.last_edited }}</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -10,8 +10,16 @@ import logging
 import os
 import sys
 from datetime import datetime
+import requests
+import mimetypes
 
-from flask import Flask, render_template, request, redirect, url_for, send_file, session
+import boto3
+from botocore.config import Config
+from botocore.auth import SigV4Auth
+from botocore.awsrequest import AWSRequest
+from botocore.credentials import Credentials
+from flask import Flask, render_template, request, redirect, url_for, send_file, session,jsonify
+from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 
 # ==============================================================================
@@ -65,6 +73,20 @@ else:
             f.write(secret_key)
     app.secret_key = secret_key
 
+R2_ACCOUNT_ID = os.getenv('R2_ACCOUNT_ID')
+R2_ACCESS_KEY_ID = os.getenv('R2_ACCESS_KEY_ID')
+R2_SECRET_ACCESS_KEY = os.getenv('R2_SECRET_ACCESS_KEY')
+R2_BUCKET_NAME = os.getenv('R2_BUCKET_NAME')
+
+s3_client = boto3.client(
+    's3',
+    endpoint_url=f'https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com',
+    aws_access_key_id=R2_ACCESS_KEY_ID,
+    aws_secret_access_key=R2_SECRET_ACCESS_KEY,
+    config=Config(signature_version='s3v4'),
+    region_name='auto'
+)
+
 # --- Logging Configuration ---
 # Safely redefine print with flush=True to avoid log buffering
 original_print = print
@@ -89,6 +111,50 @@ print(f"📂 Logs Dir: {DATA_LOGS_DIR}")
 # 3. Helper Functions
 # ==============================================================================
 
+def _build_key(resource_id, file_type, ext):
+    return f"{resource_id}_{file_type}{ext}"
+
+def _r2_exists(key):
+    try:
+        s3_client.head_object(Bucket=R2_BUCKET_NAME, Key=key)
+        return True
+    except Exception:
+        return False
+
+def _pick_existing_ext(resource_id, file_type):
+    for ext in ['.pdf', '.zip', '.npz', '.tar.gz', '.h5', '.mat', '.txt']:
+        key = _build_key(resource_id, file_type, ext)
+        if _r2_exists(key):
+            return ext, 'r2'
+        local_path = os.path.join(PRIVATE_DOWNLOADS_DIR, key)
+        if os.path.isfile(local_path):
+            return ext, 'local'
+    return None, None
+
+def _r2_public_url(key):
+    base = os.getenv('R2_PUBLIC_URL', '').strip()
+    return (base.rstrip('/') + '/' + key) if base else None
+
+def _r2_presigned_url(key, expires=3600):
+    try:
+        return s3_client.generate_presigned_url(
+            'get_object',
+            Params={'Bucket': R2_BUCKET_NAME, 'Key': key},
+            ExpiresIn=expires
+        )
+    except Exception:
+        return None
+
+def _r2_upload(key, file_storage):
+    try:
+        file_storage.stream.seek(0)
+        body = file_storage.read()
+        content_type = mimetypes.guess_type(file_storage.filename)[0] or 'application/octet-stream'
+        s3_client.put_object(Bucket=R2_BUCKET_NAME, Key=key, Body=body, ContentType=content_type)
+        return True
+    except Exception:
+        return False
+
 def load_json_data(filename):
     """Safely load JSON list from data/ directory"""
     path = os.path.join('data', filename)
@@ -109,18 +175,11 @@ def save_json_data(filename, data):
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 def get_file_status(item_id):
-    """Check if paper and resource files exist for an item"""
     status = {'paper': False, 'resource': False}
-    # Check paper
-    for ext in ['.pdf', '.zip']:
-        if os.path.exists(os.path.join(PRIVATE_DOWNLOADS_DIR, f"{item_id}_paper{ext}")):
-            status['paper'] = True
-            break
-    # Check resource
-    for ext in ['.zip', '.tar.gz', '.npz', '.h5', '.mat', '.txt', '.pdf']:
-        if os.path.exists(os.path.join(PRIVATE_DOWNLOADS_DIR, f"{item_id}_resource{ext}")):
-            status['resource'] = True
-            break
+    for t in ['paper', 'resource']:
+        ext, where = _pick_existing_ext(item_id, t)
+        if ext:
+            status[t] = True
     return status
 
 def _add_item(item_type, form_data):
@@ -145,6 +204,8 @@ def _add_item(item_type, form_data):
         'venue': form_data.get('venue', '').strip(),
         'year': int(form_data.get('year', 2025)),
         'abstract': form_data.get('abstract', '').strip(),
+        'paper_url': form_data.get('paper_url', '').strip(),
+        'resource_url': form_data.get('resource_url', '').strip(),
         'last_edited': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
 
@@ -164,6 +225,13 @@ def _update_item(item_type, item_id, form_data):
             item['year'] = int(form_data.get('year', item['year']))
             item['venue'] = form_data.get('venue', item.get('venue', '')).strip()
             item['abstract'] = form_data.get('abstract', item.get('abstract', '')).strip()
+            # Optional source links
+            paper_url_in = form_data.get('paper_url')
+            resource_url_in = form_data.get('resource_url')
+            if paper_url_in is not None:
+                item['paper_url'] = paper_url_in.strip()
+            if resource_url_in is not None:
+                item['resource_url'] = resource_url_in.strip()
             item['last_edited'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             break
     save_json_data(filename, data)
@@ -177,6 +245,71 @@ def _delete_item(item_type, item_id):
     save_json_data(filename, data)
     print(f"🗑️ Deleted article: {item_id}")
 
+PEOPLE_IMAGES_DIR = os.path.join('static', 'images', 'people')
+os.makedirs(PEOPLE_IMAGES_DIR, exist_ok=True)
+
+def _add_person(form_data, photo_file=None):
+    filename = 'people.json'
+    data = load_json_data(filename)
+    ids = [int(item['id'].split('_')[-1]) for item in data if '_' in item['id']]
+    new_id_num = max(ids) + 1 if ids else 1
+    new_id = f"person_{new_id_num:03d}"
+    photo_filename = ''
+    if photo_file and photo_file.filename:
+        ext = os.path.splitext(secure_filename(photo_file.filename))[1].lower()
+        if ext in ['.png', '.jpg', '.jpeg', '.gif']:
+            photo_filename = f"{new_id}{ext}"
+            save_path = os.path.join(PEOPLE_IMAGES_DIR, photo_filename)
+            photo_file.save(save_path)
+    item = {
+        'id': new_id,
+        'name': form_data.get('name', '').strip(),
+        'category': form_data.get('category', '').strip(),
+        'email': form_data.get('email', '').strip(),
+        'photo_filename': photo_filename,
+        'bio': form_data.get('bio', '').strip(),
+        'last_edited': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }
+    data.append(item)
+    save_json_data(filename, data)
+    print(f"✅ Added person: {new_id}")
+
+def _update_person(person_id, form_data, photo_file=None):
+    filename = 'people.json'
+    data = load_json_data(filename)
+    for item in data:
+        if item['id'] == person_id:
+            item['name'] = form_data.get('name', item.get('name', '')).strip()
+            item['category'] = form_data.get('category', item.get('category', '')).strip()
+            item['email'] = form_data.get('email', item.get('email', '')).strip()
+            if photo_file and photo_file.filename:
+                # remove previous files with any common image ext
+                for ext in ['.png', '.jpg', '.jpeg', '.gif']:
+                    p = os.path.join(PEOPLE_IMAGES_DIR, f"{person_id}{ext}")
+                    if os.path.exists(p):
+                        try:
+                            os.remove(p)
+                        except Exception:
+                            pass
+                ext = os.path.splitext(secure_filename(photo_file.filename))[1].lower()
+                if ext in ['.png', '.jpg', '.jpeg', '.gif']:
+                    photo_filename = f"{person_id}{ext}"
+                    save_path = os.path.join(PEOPLE_IMAGES_DIR, photo_filename)
+                    photo_file.save(save_path)
+                    item['photo_filename'] = photo_filename
+            item['bio'] = form_data.get('bio', item.get('bio', '')).strip()
+            item['last_edited'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            break
+    save_json_data(filename, data)
+    print(f"✏️ Updated person: {person_id}")
+
+def _delete_person(person_id):
+    filename = 'people.json'
+    data = load_json_data(filename)
+    data = [item for item in data if item['id'] != person_id]
+    save_json_data(filename, data)
+    print(f"🗑️ Deleted person: {person_id}")
+
 
 # ==============================================================================
 # 4. Route Definitions - Public Pages
@@ -188,8 +321,8 @@ def index():
 
 @app.route('/team')
 def team():
-    print("🔍 Visiting /team")
-    return render_template('team.html')
+    people = load_json_data('people.json')
+    return render_template('team.html', people=people)
 
 @app.route('/articles')
 def articles():
@@ -207,12 +340,28 @@ def article_detail(id):
     status = get_file_status(id)
     return render_template('article_detail.html', item=article, file_status=status)
 
+@app.route('/person/<id>')
+def person_detail(id):
+    people = load_json_data('people.json')
+    person = next((p for p in people if p['id'] == id), None)
+    if not person:
+        return "Person not found", 404
+    return render_template('person_detail.html', person=person)
 # Resources route removed/merged into articles
 
 @app.route('/test')
 def test():
     print("\n🎉 /test page accessed! Flask is running.\n")
     return "✅ Test OK! Check console for real-time output."
+
+@app.route('/test-r2')
+def test_r2():
+    try:
+        response = s3_client.list_objects_v2(Bucket=R2_BUCKET_NAME)
+        files = [obj['Key'] for obj in response.get('Contents', [])]
+        return f"R2 连接成功！文件列表: {files}"
+    except Exception as e:
+        return f"R2 错误: {str(e)}", 500
 
 
 # ==============================================================================
@@ -288,17 +437,9 @@ def download_file(file_type, resource_id):
         return "Invalid file type", 400
 
     # Locate file
-    base_name = f"{resource_id}_{file_type}"
-    DOWNLOAD_DIR = PRIVATE_DOWNLOADS_DIR
-    actual_path = None
-    # Prioritize certain extensions?
-    for ext in ['.pdf', '.zip', '.npz', '.tar.gz', '.h5', '.mat', '.txt']:
-        candidate = os.path.join(DOWNLOAD_DIR, base_name + ext)
-        if os.path.isfile(candidate):
-            actual_path = candidate
-            break
+    ext, where = _pick_existing_ext(resource_id, file_type)
 
-    if not actual_path:
+    if not ext:
         return "❌ Requested resource not found.", 404
 
     # === Safe CSV Logging ===
@@ -325,7 +466,13 @@ def download_file(file_type, resource_id):
     except Exception as e:
         print(f"🔴 CSV write failed: {e}")
 
-    # Send file
+    key = _build_key(resource_id, file_type, ext)
+    if where == 'r2':
+        url = _r2_public_url(key) or _r2_presigned_url(key)
+        if url:
+            return redirect(url)
+        return "❌ Unable to generate Cloudflare URL.", 500
+    actual_path = os.path.join(PRIVATE_DOWNLOADS_DIR, key)
     filename = os.path.basename(actual_path)
     return send_file(actual_path, as_attachment=True, download_name=filename)
 
@@ -345,15 +492,24 @@ def admin_dashboard():
     item_type = request.form.get('item_type') or request.args.get('item_type')  # 'article' only
 
     if action == 'add':
-        _add_item(item_type, request.form)
+        if item_type == 'person':
+            _add_person(request.form, request.files.get('photo'))
+        else:
+            _add_item(item_type, request.form)
         return redirect(url_for('admin_dashboard'))
     elif action == 'edit':
         item_id = request.form.get('id')
-        _update_item(item_type, item_id, request.form)
+        if item_type == 'person':
+            _update_person(item_id, request.form, request.files.get('photo'))
+        else:
+            _update_item(item_type, item_id, request.form)
         return redirect(url_for('admin_dashboard'))
     elif action == 'delete':
         item_id = request.args.get('id')
-        _delete_item(item_type, item_id)
+        if item_type == 'person':
+            _delete_person(item_id)
+        else:
+            _delete_item(item_type, item_id)
         return redirect(url_for('admin_dashboard'))
 
     # === Load data for display ===
@@ -374,6 +530,7 @@ def admin_dashboard():
 
     # Load articles
     articles = load_json_data('articles.json')
+    people = load_json_data('people.json')
     
     # Get file statuses for all articles
     file_statuses = {item['id']: get_file_status(item['id']) for item in articles}
@@ -382,7 +539,8 @@ def admin_dashboard():
         'admin.html',
         articles=articles,
         download_counts=download_counts,
-        file_statuses=file_statuses
+        file_statuses=file_statuses,
+        people=people
     )
 
 @app.route('/admin/upload/<file_type>/<resource_id>', methods=['POST'])
@@ -416,21 +574,21 @@ def admin_upload_file(file_type, resource_id):
     if not ext:
         return f"File type not allowed. Allowed: {', '.join(ALLOWED_EXTENSIONS)}", 400
 
-    # Save file
-    os.makedirs(PRIVATE_DOWNLOADS_DIR, exist_ok=True)
-    # Naming convention: {id}_{type}.{ext}
-    save_path = os.path.join(PRIVATE_DOWNLOADS_DIR, f"{resource_id}_{file_type}{ext}")
-    
-    # Remove existing files of same type (different extensions) to avoid ambiguity
-    # e.g. if uploading .pdf, remove existing .zip for the same type slot
-    base_name = f"{resource_id}_{file_type}"
-    for e in ALLOWED_EXTENSIONS:
-        p = os.path.join(PRIVATE_DOWNLOADS_DIR, base_name + e)
-        if os.path.exists(p):
-            os.remove(p)
-            
-    file.save(save_path)
-    print(f"✅ Admin uploaded {file_type} for {resource_id} -> {save_path}")
+    key = _build_key(resource_id, file_type, ext)
+    uploaded = _r2_upload(key, file)
+    if not uploaded:
+        os.makedirs(PRIVATE_DOWNLOADS_DIR, exist_ok=True)
+        base_name = f"{resource_id}_{file_type}"
+        for e in ALLOWED_EXTENSIONS:
+            p = os.path.join(PRIVATE_DOWNLOADS_DIR, base_name + e)
+            if os.path.exists(p):
+                os.remove(p)
+        save_path = os.path.join(PRIVATE_DOWNLOADS_DIR, key)
+        file.stream.seek(0)
+        file.save(save_path)
+        print(f"✅ Admin uploaded {file_type} for {resource_id} -> {save_path}")
+    else:
+        print(f"✅ Admin uploaded {file_type} to R2 for {resource_id} -> {key}")
 
     target['last_edited'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     # Save back
@@ -454,6 +612,78 @@ def download_logs_csv():
         with open(csv_path, 'w', encoding='utf-8') as f:
             f.write('time,name,affiliation,email,resource_id\n')
     return send_file(csv_path, as_attachment=True, download_name='lightchip_download_logs.csv')
+
+
+
+
+
+def upload_file_to_r2(file_data, object_key):
+    """
+    上传文件到 Cloudflare R2 使用原生 API
+    :param file_data: bytes 数据（来自 file.read()）
+    :param object_key: R2 中的路径，如 'uploads/paper.pdf'
+    :return: True if success, False otherwise
+    """
+    account_id = os.getenv('R2_ACCOUNT_ID')
+    token = os.getenv('R2_ACCESS_KEY_ID')  # 你的 API Token
+    bucket_name = os.getenv('R2_BUCKET_NAME')
+
+    url = f"https://api.cloudflare.com/client/v4/accounts/{account_id}/r2/buckets/{bucket_name}/objects/{object_key}"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/octet-stream"
+    }
+
+    try:
+        response = requests.put(url, data=file_data, headers=headers)
+        return response.status_code == 200
+    except Exception as e:
+        print(f"[ERROR] Upload failed: {e}")
+        return False
+
+
+# 允许的文件类型（按需修改）
+ALLOWED_EXTENSIONS = {'pdf', 'txt', 'png', 'jpg', 'jpeg', 'zip'}
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@app.route('/api/upload', methods=['POST'])
+def upload_publication():
+    if 'file' not in request.files:
+        return jsonify({"error": "No file provided"}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"error": "Empty filename"}), 400
+    if not allowed_file(file.filename):
+        return jsonify({"error": "File type not allowed"}), 400
+
+    # 安全文件名
+    filename = secure_filename(file.filename)
+    
+    # 上传到 R2（路径：uploads/xxx.pdf）
+    object_key = f"uploads/{filename}"
+    if upload_file_to_r2(file.read(), object_key):
+        # 生成公开链接
+        public_url = f"{os.getenv('R2_PUBLIC_URL')}/{object_key}"
+        return jsonify({
+            "message": "Upload successful",
+            "url": public_url
+        })
+    else:
+        return jsonify({"error": "Upload failed"}), 500
+
+@app.route('/upload-test')
+def upload_test():
+    return '''
+    <h2>Upload Test</h2>
+    <form action="/api/upload" method="post" enctype="multipart/form-data">
+        <input type="file" name="file" required>
+        <button type="submit">Upload</button>
+    </form>
+    '''
 
 
 # ==============================================================================

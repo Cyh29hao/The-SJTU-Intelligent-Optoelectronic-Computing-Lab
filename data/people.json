@@ -1,0 +1,20 @@
+[
+  {
+    "id": "person_001",
+    "name": "Prof. Yitong Chen",
+    "category": "Professor",
+    "email": "yitongchen@sjtu.edu.cn",
+    "photo_filename": "",
+    "bio": "Research Interests: Photonic neural networks, intelligent photonic integrated circuits.",
+    "last_edited": "2026-02-05 09:30:00"
+  },
+  {
+    "id": "person_004",
+    "name": "Yunhai Chen",
+    "category": "Undergraduate",
+    "email": "cyh29hao@sjtu.edu.cn",
+    "photo_filename": "person_004.jpg",
+    "bio": "Dataset curation and testing, web development.",
+    "last_edited": "2026-02-05 15:18:19"
+  }
+]

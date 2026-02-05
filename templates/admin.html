@@ -184,10 +184,90 @@
             <input name="year" type="number" value="2025" min="2000" max="2030" required>
             <label>Abstract</label>
             <textarea name="abstract" rows="5" required></textarea>
+            <label>Paper URL (optional)</label>
+            <input name="paper_url" placeholder="https://...">
+            <label>Code/Data URL (optional)</label>
+            <input name="resource_url" placeholder="https://...">
             <button type="submit">✅ Add Publication</button>
             <button type="button" onclick="this.closest('.form-section').style.display='none'" style="background: #95a5a6;">Cancel</button>
         </form>
     </div>
+
+    <!-- Manage People -->
+    <h2>
+        👥 Manage People
+        <button onclick="document.getElementById('add-person-form').style.display='block'">
+            + Add New
+        </button>
+    </h2>
+    <div id="add-person-form" class="form-section" style="display:none;">
+        <h3>Add New Person</h3>
+        <form method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="action" value="add">
+            <input type="hidden" name="item_type" value="person">
+            <label>Name</label>
+            <input name="name" required>
+            <label>Category</label>
+            <select name="category" required>
+                <option>Professor</option>
+                <option>Postdoc & PhD</option>
+                <option>Master</option>
+                <option>Undergraduate</option>
+            </select>
+            <label>Email</label>
+            <input name="email" placeholder="name@example.com">
+            <label>Photo</label>
+            <input type="file" name="photo" accept="image/png,image/jpeg,image/jpg,image/gif">
+            <label>Bio</label>
+            <textarea name="bio" rows="5"></textarea>
+            <button type="submit">✅ Add Person</button>
+            <button type="button" onclick="this.closest('.form-section').style.display='none'" style="background: #95a5a6;">Cancel</button>
+        </form>
+    </div>
+
+    {% for p in people %}
+    <details id="person-{{ p.id }}">
+        <summary>
+            {{ p.name }} — {{ p.category }}
+            <span style="color: #95a5a6; font-size: 0.85em; margin: 0 8px;">{{ p.id }}</span>
+            {% if p.last_edited %}
+                <span style="color: #95a5a6; font-size: 0.85em; margin: 0 8px;">Last edited: {{ p.last_edited }}</span>
+            {% endif %}
+        </summary>
+        <div class="form-section">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                    <h4>Edit</h4>
+                    <form method="POST" enctype="multipart/form-data">
+                        <input type="hidden" name="action" value="edit">
+                        <input type="hidden" name="item_type" value="person">
+                        <input type="hidden" name="id" value="{{ p.id }}">
+                        <label>Name</label>
+                        <input name="name" value="{{ p.name }}" required>
+                        <label>Category</label>
+                        <select name="category" required>
+                            <option {% if p.category == 'Professor' %}selected{% endif %}>Professor</option>
+                            <option {% if p.category == 'Postdoc & PhD' %}selected{% endif %}>Postdoc & PhD</option>
+                            <option {% if p.category == 'Master' %}selected{% endif %}>Master</option>
+                            <option {% if p.category == 'Undergraduate' %}selected{% endif %}>Undergraduate</option>
+                        </select>
+                        <label>Email</label>
+                        <input name="email" value="{{ p.email }}">
+                        <label>Photo (replace)</label>
+                        <input type="file" name="photo" accept="image/png,image/jpeg,image/jpg,image/gif">
+                        <label>Bio</label>
+                        <textarea name="bio" rows="5">{{ p.bio }}</textarea>
+                        <button type="submit">💾 Save</button>
+                    </form>
+                </div>
+                <div>
+                    <h4>Delete</h4>
+                    <a href="{{ url_for('admin_dashboard', action='delete', item_type='person', id=p.id) }}" class="btn delete" style="display:inline-block;background:#e74c3c;color:white;padding:10px 14px;border-radius:4px;text-decoration:none;">🗑️ Delete</a>
+                </div>
+            </div>
+        </div>
+    </details>
+    {% endfor %}
 
     {% for item in articles %}
     <details>
@@ -275,6 +355,27 @@
                 <p style="font-size: 14px; color: #7f8c8d; margin-top: 12px;">
                     <strong>Note:</strong> Files are saved as <code>{{ item.id }}_paper.&lt;ext&gt;</code> and <code>{{ item.id }}_resource.&lt;ext&gt;</code>.
                 </p>
+
+                <div class="upload-section">
+                    <h4>🔗 Source Links (Optional)</h4>
+                    <form method="POST">
+                        <input type="hidden" name="action" value="edit">
+                        <input type="hidden" name="item_type" value="article">
+                        <input type="hidden" name="id" value="{{ item.id }}">
+                        <label>Paper URL</label>
+                        <input name="paper_url" value="{{ item.paper_url }}">
+                        <label>Code/Data URL</label>
+                        <input name="resource_url" value="{{ item.resource_url }}">
+                        <button type="submit" style="background:#2c3e50;">💾 Save Links</button>
+                    </form>
+                    {% if item.paper_url or item.resource_url %}
+                    <p style="font-size: 13px; color:#7f8c8d; margin-top:8px;">
+                        Current: 
+                        {% if item.paper_url %}<a href="{{ item.paper_url }}" target="_blank">Paper URL</a>{% endif %}
+                        {% if item.resource_url %} | <a href="{{ item.resource_url }}" target="_blank">Code/Data URL</a>{% endif %}
+                    </p>
+                    {% endif %}
+                </div>
             </div>
             
         </div>

@@ -1,35 +1,31 @@
 <!-- templates/team.html -->
 {% extends "base.html" %}
-{% block title %}Team - LightChip Lab{% endblock %}
+{% block title %}People - LightChip Lab{% endblock %}
 {% block content %}
-<h2>👥 Team</h2>
+<h2>👥 People</h2>
 
-<div style="text-align: left; max-width: 700px; margin: 0 auto;">
+<div style="text-align: left; max-width: 900px; margin: 0 auto;">
 
-  <h3>👤 Principal Investigator</h3>
-  <p><strong>Prof. Yitong Chen</strong><br>
-  Research Interests: Photonic neural networks, intelligent photonic integrated circuits<br>
-  Email: <code>yitongchen@sjtu.edu.cn</code></p>
+  {% set categories = ['Professor', 'Postdoc & PhD', 'Master', 'Undergraduate'] %}
+  {% for cat in categories %}
+    <h3 style="margin-top: 24px;">{{ cat }}</h3>
+    <div style="display: flex; flex-wrap: wrap; gap: 20px;">
+      {% for p in people if p.category == cat %}
+      <div style="flex: 0 0 calc(50% - 10px); display: flex; align-items: center; gap: 14px; padding: 10px; border: 1px solid #eee; border-radius: 8px; background: #fff;">
+        <img src="{{ url_for('static', filename='images/people/' ~ p.photo_filename) if p.photo_filename else 'https://via.placeholder.com/120' }}" alt="{{ p.name }}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 6px;">
+        <div>
+          <a href="{{ url_for('person_detail', id=p.id) }}" style="font-weight: bold; color: #2c3e50; text-decoration: none;">{{ p.name }}</a>
+          {% if p.email %}
+          <div style="color: #7f8c8d; font-size: 0.95em; margin-top: 4px;">{{ p.email }}</div>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+      {% if not people|selectattr('category', 'equalto', cat)|list %}
+        <p style="color: #95a5a6;">No entries yet.</p>
+      {% endif %}
+    </div>
+  {% endfor %}
 
-  <hr style="margin: 25px 0; border: 0; border-top: 1px solid #eee;">
-
-  <h3>👨‍🔬 Postdocs & PhD Students</h3>
-  <ul>
-    <li><strong>Name</strong> (Postdoc) — Photonic computing architectures</li>
-    <li><strong>Name</strong> (PhD Year 3) — Programmable silicon photonics</li>
-    <li><strong>Name</strong> (PhD Year 2) — Inverse design of metasurfaces</li>
-  </ul>
-
-  <h3>👩‍🎓 Master’s & Undergraduate Researchers</h3>
-  <ul>
-    <li><strong>Name</strong> (Master’s Year 2) — Software stack for photonic AI</li>
-    <li><strong>Name</strong> (Undergrad Year 4) — Web development & deployment</li>
-    <li><strong>Name</strong> (Undergrad Year 3) — Dataset curation and testing</li>
-  </ul>
-
-  <p style="margin-top: 30px;">
-    We welcome students interested in <strong>photonic AI, integrated optics, or hardware-aware machine learning</strong> to join our team!<br>
-    Please send your CV to: <code>yitongchen@sjtu.edu.cn</code>
-  </p>
 </div>
 {% endblock %}

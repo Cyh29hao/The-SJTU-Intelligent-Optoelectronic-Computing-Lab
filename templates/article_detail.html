@@ -8,8 +8,8 @@
   <p><strong>Author：</strong>{{ item.authors|join(', ') }}</p>
   <p><strong>On：</strong>{{ item.venue }}, {{ item.year }}</p>
 
-  <div style="margin-top: 20px; padding: 16px; background: #f8fafc; border-radius: 8px;">
-    <p style="margin: 0; white-space: pre-wrap;">{{ item.abstract }}</p>
+  <div style="margin-top: 20px; padding: 16px; background: #f8fafc; border-radius: 8px; text-align: left;">
+    <p style="margin: 0; white-space: pre-wrap; text-align: left;">{{ item.abstract }}</p>
   </div>
 
   <div style="margin-top: 30px; display: flex; gap: 15px; justify-content: center;">
@@ -25,6 +25,16 @@
       <button class="btn btn-disabled" disabled style="background: #ccc; cursor: not-allowed; opacity: 0.6;">⬇️ Download Code & Data</button>
     {% endif %}
   </div>
+  {% if item.paper_url or item.resource_url %}
+  <div style="margin-top: 12px; display: flex; gap: 15px; justify-content: center; font-size: 0.95em;">
+    {% if item.paper_url %}
+      <a href="{{ item.paper_url }}" target="_blank" style="color:#2c3e50;">Paper Source Link ↗</a>
+    {% endif %}
+    {% if item.resource_url %}
+      <a href="{{ item.resource_url }}" target="_blank" style="color:#2c3e50;">Code/Data Source Link ↗</a>
+    {% endif %}
+  </div>
+  {% endif %}
 
   {% if item.last_edited %}
   <p style="margin-top: 20px; color: #999; font-size: 0.9em; text-align: center;">
