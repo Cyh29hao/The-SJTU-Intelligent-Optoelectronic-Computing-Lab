@@ -10,7 +10,11 @@
             max-width: 1200px; margin: 0 auto; padding: 20px;
             background: #f9f9f9; color: #333;
         }
-        h1 { text-align: center; color: #2c3e50; margin-bottom: 30px; }
+        h1 { text-align: center; color: #2c3e50; margin-bottom: 30px; position: relative; }
+        .header-right {
+            position: absolute; right: 0; top: 0; font-size: 12px; color: #7f8c8d;
+            text-align: right;
+        }
         h2 { 
             color: #2c3e50; 
             margin-top: 40px; 
@@ -64,6 +68,20 @@
             margin: 12px 0 6px; 
             font-weight: bold; 
             color: #2c3e50;
+        }
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 6px 0;
+            justify-content: flex-start;
+            text-align: left;
+        }
+        .checkbox-list {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            text-align: left;
         }
         input, textarea, select { 
             width: 100%; 
@@ -142,7 +160,9 @@
     </style>
 </head>
 <body>
-    <h1>Admin Dashboard</h1>
+    <h1>Admin Dashboard
+        <span class="header-right">{{ lab_name }}<br>Started at: {{ start_time }}</span>
+    </h1>
 
 
     <!-- Download Logs -->
@@ -162,7 +182,13 @@
     
 
     <!-- Manage Articles -->
-    <h2>
+    <div style="display:flex; gap:12px; align-items:center; margin: 10px 0 20px;">
+        <button id="tab-pub" style="background:#3498db;color:white;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;">📚 Publications</button>
+        <button id="tab-people" style="background:#7f8c8d;color:white;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;">👥 People</button>
+        <button id="tab-site" style="background:#95a5a6;color:white;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;">🏠 Home Welcome</button>
+        <a href="{{ url_for('admin_view_as_user') }}" style="margin-left:auto; background:#f39c12; color:white; text-decoration:none; padding:6px 12px; border-radius:4px;">🔁 View as User</a>
+    </div>
+    <h2 id="pub-header">
         📚 Manage Publications
         <button onclick="document.getElementById('add-article-form').style.display='block'">
             + Add New
@@ -171,13 +197,15 @@
     
     <div id="add-article-form" class="form-section" style="display:none;">
         <h3>Add New Publication</h3>
-        <form method="POST">
+        <form method="POST" enctype="multipart/form-data">
             <input type="hidden" name="action" value="add">
             <input type="hidden" name="item_type" value="article">
             <label>Title</label>
             <input name="title" required>
             <label>Authors (comma-separated)</label>
             <input name="authors" placeholder="Yitong Chen, Ming Li" required>
+            <label>Authors Display Count</label>
+            <input name="authors_display_count" type="number" min="1" value="3">
             <label>Venue</label>
             <input name="venue" required>
             <label>Year</label>
@@ -188,13 +216,21 @@
             <input name="paper_url" placeholder="https://...">
             <label>Code/Data URL (optional)</label>
             <input name="resource_url" placeholder="https://...">
+            <h4 style="margin-top:10px;">🧩 Resource Type</h4>
+            <div class="checkbox-list">
+              <label class="checkbox-label"><input type="checkbox" name="resource_kinds" value="Supplementary Material"> <span>Supplementary Material</span></label>
+              <label class="checkbox-label"><input type="checkbox" name="resource_kinds" value="Code" checked> <span>Code</span></label>
+              <label class="checkbox-label"><input type="checkbox" name="resource_kinds" value="Dataset"> <span>Dataset</span></label>
+            </div>
+            <h4 style="margin-top:10px;">🖼️ Thumbnail</h4>
+            <input type="file" name="thumbnail" accept="image/png,image/jpeg,image/jpg,image/gif">
             <button type="submit">✅ Add Publication</button>
             <button type="button" onclick="this.closest('.form-section').style.display='none'" style="background: #95a5a6;">Cancel</button>
         </form>
     </div>
 
     <!-- Manage People -->
-    <h2>
+    <h2 id="people-header">
         👥 Manage People
         <button onclick="document.getElementById('add-person-form').style.display='block'">
             + Add New
@@ -213,11 +249,39 @@
                 <option>Postdoc & PhD</option>
                 <option>Master</option>
                 <option>Undergraduate</option>
+                <option>Alumni</option>
             </select>
             <label>Email</label>
             <input name="email" placeholder="name@example.com">
             <label>Photo</label>
             <input type="file" name="photo" accept="image/png,image/jpeg,image/jpg,image/gif">
+            <h4>Links (Optional, up to 3)</h4>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <div>
+                <label>Link 1 Name</label>
+                <input name="link_name_1" placeholder="GitHub">
+              </div>
+              <div>
+                <label>Link 1 URL</label>
+                <input name="link_url_1" placeholder="https://github.com/xxx">
+              </div>
+              <div>
+                <label>Link 2 Name</label>
+                <input name="link_name_2" placeholder="Google Scholar">
+              </div>
+              <div>
+                <label>Link 2 URL</label>
+                <input name="link_url_2" placeholder="https://scholar.google.com/...">
+              </div>
+              <div>
+                <label>Link 3 Name</label>
+                <input name="link_name_3" placeholder="Homepage">
+              </div>
+              <div>
+                <label>Link 3 URL</label>
+                <input name="link_url_3" placeholder="https://example.com">
+              </div>
+            </div>
             <label>Bio</label>
             <textarea name="bio" rows="5"></textarea>
             <button type="submit">✅ Add Person</button>
@@ -225,14 +289,24 @@
         </form>
     </div>
 
+    <div id="people-section">
     {% for p in people %}
     <details id="person-{{ p.id }}">
         <summary>
             {{ p.name }} — {{ p.category }}
-            <span style="color: #95a5a6; font-size: 0.85em; margin: 0 8px;">{{ p.id }}</span>
-            {% if p.last_edited %}
-                <span style="color: #95a5a6; font-size: 0.85em; margin: 0 8px;">Last edited: {{ p.last_edited }}</span>
-            {% endif %}
+            <span style="color: #95a5a6; font-size: 0.85em; margin: 0 8px;">{{ p.id }}</span><br>
+            <span style="font-size: 0.85em; color:#7f8c8d;">
+              {% if people_photo_status[p.id] %}
+                🖼️ Photo: <span style="color:#27ae60;font-weight:bold;">Uploaded</span>
+                {% set info = people_photo_info[p.id] %}
+                {% if info and info.exists %}
+                  · {{ info.mtime }} · {{ info.size and (info.size/1024)|round(1) ~ ' KB' or '' }}
+                {% endif %}
+              {% else %}
+                🖼️ Photo: <span style="color:#95a5a6;">Missing</span>
+              {% endif %}
+              {% if p.last_edited %} · Last edited: {{ p.last_edited }}{% endif %}
+            </span>
         </summary>
         <div class="form-section">
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
@@ -250,11 +324,39 @@
                             <option {% if p.category == 'Postdoc & PhD' %}selected{% endif %}>Postdoc & PhD</option>
                             <option {% if p.category == 'Master' %}selected{% endif %}>Master</option>
                             <option {% if p.category == 'Undergraduate' %}selected{% endif %}>Undergraduate</option>
+                            <option {% if p.category == 'Alumni' %}selected{% endif %}>Alumni</option>
                         </select>
                         <label>Email</label>
                         <input name="email" value="{{ p.email }}">
                         <label>Photo (replace)</label>
                         <input type="file" name="photo" accept="image/png,image/jpeg,image/jpg,image/gif">
+                        <h4>Links (Optional, up to 3)</h4>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                          <div>
+                            <label>Link 1 Name</label>
+                            <input name="link_name_1" value="{{ (p.links[0].name if p.links and p.links|length>0) }}">
+                          </div>
+                          <div>
+                            <label>Link 1 URL</label>
+                            <input name="link_url_1" value="{{ (p.links[0].url if p.links and p.links|length>0) }}">
+                          </div>
+                          <div>
+                            <label>Link 2 Name</label>
+                            <input name="link_name_2" value="{{ (p.links[1].name if p.links and p.links|length>1) }}">
+                          </div>
+                          <div>
+                            <label>Link 2 URL</label>
+                            <input name="link_url_2" value="{{ (p.links[1].url if p.links and p.links|length>1) }}">
+                          </div>
+                          <div>
+                            <label>Link 3 Name</label>
+                            <input name="link_name_3" value="{{ (p.links[2].name if p.links and p.links|length>2) }}">
+                          </div>
+                          <div>
+                            <label>Link 3 URL</label>
+                            <input name="link_url_3" value="{{ (p.links[2].url if p.links and p.links|length>2) }}">
+                          </div>
+                        </div>
                         <label>Bio</label>
                         <textarea name="bio" rows="5">{{ p.bio }}</textarea>
                         <button type="submit">💾 Save</button>
@@ -268,31 +370,25 @@
         </div>
     </details>
     {% endfor %}
+    </div>
 
+    <div id="pub-section">
     {% for item in articles %}
     <details>
         <summary>
             {{ item.title }} ({{ item.venue }}, {{ item.year }})
-            
-            <!-- 显示 ID（灰色小字） -->
-            <span style="color: #95a5a6; font-size: 0.85em; margin: 0 8px;">{{ item.id }}</span>
-            
-            <!-- Last Edited Time -->
-            {% if item.last_edited %}
-                <span style="color: #95a5a6; font-size: 0.85em; margin: 0 8px;">Last edited: {{ item.last_edited }}</span>
-            {% endif %}
-            
-            <!-- Download count -->
-            {% set count = download_counts.get(item.id, 0) %}
-            {% if count > 0 %}
-                <span style="color: #27ae60; font-weight: bold;">📥 {{ count }} downloads</span>
-            {% else %}
-                <span style="color: #bdc3c7;">(0 downloads)</span>
-            {% endif %}
+            <span style="color: #95a5a6; font-size: 0.85em; margin: 0 8px;">{{ item.id }}</span><br>
+            <span style="font-size: 0.85em; color:#7f8c8d;">
+              {% set count = download_counts.get(item.id, 0) %}
+              {% set people_count = unique_counts.get(item.id, 0) %}
+              {% if item.last_edited %}Last edited: {{ item.last_edited }} · {% endif %}
+              Last download: {{ (last_download_times[item.id].strftime("%Y-%m-%d %H:%M:%S") if last_download_times.get(item.id)) or 'N/A' }} · 
+              📥 {{ count }} downloads · 👤 {{ people_count }} users
+            </span>
         </summary>
         
         <div class="form-section">
-            <form method="POST">
+            <form method="POST" action="{{ url_for('admin_dashboard') }}">
                 <input type="hidden" name="action" value="edit">
                 <input type="hidden" name="item_type" value="article">
                 <input type="hidden" name="id" value="{{ item.id }}">
@@ -300,13 +396,15 @@
                 <input name="title" value="{{ item.title }}" required>
                 <label>Authors</label>
                 <input name="authors" value="{{ item.authors|join(', ') }}" required>
+                <label>Authors Display Count</label>
+                <input name="authors_display_count" type="number" min="1" value="{{ item.authors_display_count or 1 }}">
                 <label>Venue</label>
                 <input name="venue" value="{{ item.venue }}" required>
                 <label>Year</label>
                 <input name="year" type="number" value="{{ item.year }}" min="2000" max="2030" required>
                 <label>Abstract</label>
                 <textarea name="abstract" rows="5" required>{{ item.abstract }}</textarea>
-                <button type="submit">💾 Save Changes</button>
+                <button type="submit" style="display:none;">💾 Save Changes</button>
                 <a href="{{ url_for('admin_dashboard', action='delete', item_type='article', id=item.id) }}"
                    class="actions" 
                    onclick="return confirm('⚠️ Delete this publication? This cannot be undone.')">
@@ -325,6 +423,12 @@
                             📄 Upload Paper (PDF)
                             {% if file_statuses[item.id]['paper'] %}
                                 <span style="font-size: 0.8em; color: white; background: #27ae60; padding: 2px 6px; border-radius: 4px;">Uploaded</span>
+                                {% set info = file_infos[item.id]['paper'] %}
+                                {% if info and info.exists %}
+                                <div style="font-size: 12px; color:#7f8c8d; margin-top:6px;">
+                                    {{ info.mtime }} · {{ info.size and info.size|int and (info.size/1024/1024)|round(2) ~ ' MB' or '' }}
+                                </div>
+                                {% endif %}
                             {% else %}
                                 <span style="font-size: 0.8em; color: white; background: #95a5a6; padding: 2px 6px; border-radius: 4px;">Missing</span>
                             {% endif %}
@@ -341,6 +445,12 @@
                             💾 Upload Code/Data
                             {% if file_statuses[item.id]['resource'] %}
                                 <span style="font-size: 0.8em; color: white; background: #27ae60; padding: 2px 6px; border-radius: 4px;">Uploaded</span>
+                                {% set info = file_infos[item.id]['resource'] %}
+                                {% if info and info.exists %}
+                                <div style="font-size: 12px; color:#7f8c8d; margin-top:6px;">
+                                    {{ info.mtime }} · {{ info.size and info.size|int and (info.size/1024/1024)|round(2) ~ ' MB' or '' }}
+                                </div>
+                                {% endif %}
                             {% else %}
                                 <span style="font-size: 0.8em; color: white; background: #95a5a6; padding: 2px 6px; border-radius: 4px;">Missing</span>
                             {% endif %}
@@ -357,8 +467,37 @@
                 </p>
 
                 <div class="upload-section">
+                    <h4>🧩 Resource Type</h4>
+                    <form method="POST" class="types-form" action="{{ url_for('admin_dashboard') }}">
+                        <input type="hidden" name="action" value="edit">
+                        <input type="hidden" name="item_type" value="article">
+                        <input type="hidden" name="id" value="{{ item.id }}">
+                        {% set kinds = item.resource_kinds or ['Code'] %}
+                        <div class="checkbox-list">
+                          <label class="checkbox-label"><input type="checkbox" name="resource_kinds" value="Supplementary Material" {% if 'Supplementary Material' in kinds %}checked{% endif %}> <span>Supplementary Material</span></label>
+                          <label class="checkbox-label"><input type="checkbox" name="resource_kinds" value="Code" {% if 'Code' in kinds %}checked{% endif %}> <span>Code</span></label>
+                          <label class="checkbox-label"><input type="checkbox" name="resource_kinds" value="Dataset" {% if 'Dataset' in kinds %}checked{% endif %}> <span>Dataset</span></label>
+                        </div>
+                        <button type="submit" style="display:none;">💾 Save Types</button>
+                    </form>
+                </div>
+
+                <div class="upload-section">
+                    <h4>🖼️ Thumbnail</h4>
+                    <form method="POST" enctype="multipart/form-data" action="{{ url_for('admin_upload_thumbnail', article_id=item.id) }}">
+                        <input type="file" name="thumbnail" accept="image/png,image/jpeg,image/jpg,image/gif">
+                        <button type="submit" style="background:#2980b9; margin-top:8px;">📤 Upload Thumbnail</button>
+                    </form>
+                    {% if item.thumbnail_filename %}
+                    <p style="font-size: 13px; color:#7f8c8d; margin-top:8px;">
+                        Current: <code>{{ item.thumbnail_filename }}</code>
+                    </p>
+                    {% endif %}
+                </div>
+
+                <div class="upload-section">
                     <h4>🔗 Source Links (Optional)</h4>
-                    <form method="POST">
+                    <form method="POST" class="links-form" action="{{ url_for('admin_dashboard') }}">
                         <input type="hidden" name="action" value="edit">
                         <input type="hidden" name="item_type" value="article">
                         <input type="hidden" name="id" value="{{ item.id }}">
@@ -366,7 +505,7 @@
                         <input name="paper_url" value="{{ item.paper_url }}">
                         <label>Code/Data URL</label>
                         <input name="resource_url" value="{{ item.resource_url }}">
-                        <button type="submit" style="background:#2c3e50;">💾 Save Links</button>
+                        <button type="submit" style="display:none;">💾 Save Links</button>
                     </form>
                     {% if item.paper_url or item.resource_url %}
                     <p style="font-size: 13px; color:#7f8c8d; margin-top:8px;">
@@ -376,17 +515,103 @@
                     </p>
                     {% endif %}
                 </div>
+                
+                <div style="margin-top: 12px;">
+                    <button class="save-all" data-article-id="{{ item.id }}" style="background:#2ecc71;">💾 Save All Changes</button>
+                </div>
             </div>
             
         </div>
     </details>
     {% endfor %}
+    </div>
+    
+    <div id="site-section" style="display:none;">
+      <h2 id="site-header">🏠 Manage Home Welcome</h2>
+      <div class="form-section">
+        <form method="POST" action="{{ url_for('admin_dashboard') }}">
+          <input type="hidden" name="action" value="edit_site_welcome">
+          <input type="hidden" name="item_type" value="site">
+          <label>Home Welcome Text</label>
+          <textarea name="home_welcome" rows="4">{{ site_cfg.home_welcome }}</textarea>
+          <button type="submit">💾 Save</button>
+        </form>
+      </div>
+    </div>
 
     <footer>
         <a href="{{ url_for('admin_logout') }}">🚪 Logout Admin</a>
     </footer>
 
     <script>
+        // Tabs toggle
+        const pubHeader = document.getElementById('pub-header');
+        const peopleHeader = document.getElementById('people-header');
+        const pubSection = document.getElementById('pub-section');
+        const peopleSection = document.getElementById('people-section');
+        const tabPub = document.getElementById('tab-pub');
+        const tabPeople = document.getElementById('tab-people');
+        const tabSite = document.getElementById('tab-site');
+        const siteHeader = document.getElementById('site-header');
+        const siteSection = document.getElementById('site-section');
+        function showPub() {
+            pubHeader.style.display = '';
+            pubSection.style.display = '';
+            peopleHeader.style.display = 'none';
+            peopleSection.style.display = 'none';
+            siteHeader.style.display = 'none';
+            siteSection.style.display = 'none';
+        }
+        function showPeople() {
+            pubHeader.style.display = 'none';
+            pubSection.style.display = 'none';
+            peopleHeader.style.display = '';
+            peopleSection.style.display = '';
+            siteHeader.style.display = 'none';
+            siteSection.style.display = 'none';
+        }
+        function showSite() {
+            pubHeader.style.display = 'none';
+            pubSection.style.display = 'none';
+            peopleHeader.style.display = 'none';
+            peopleSection.style.display = 'none';
+            siteHeader.style.display = '';
+            siteSection.style.display = '';
+        }
+        tabPub.addEventListener('click', showPub);
+        tabPeople.addEventListener('click', showPeople);
+        tabSite.addEventListener('click', showSite);
+        showPub();
+
+        // Save All: submit edit + types + links; upload buttons remain manual
+        document.querySelectorAll('.save-all').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                const details = btn.closest('details');
+                const editForm = details.querySelector('form[method="POST"][action*="admin"]:not(.types-form):not(.links-form)');
+                const typesForm = details.querySelector('form.types-form');
+                const linksForm = details.querySelector('form.links-form');
+                async function postForm(form) {
+                    const fd = new FormData(form);
+                    const url = form.getAttribute('action') || (new URL(window.location.href)).pathname;
+                    const res = await fetch(url, { method: form.method || 'POST', body: fd });
+                    return res.status >= 200 && res.status < 400;
+                }
+                let ok = true;
+                if (editForm) ok = ok && await postForm(editForm);
+                if (typesForm) ok = ok && await postForm(typesForm);
+                if (linksForm) ok = ok && await postForm(linksForm);
+                alert(ok ? '✅ All changes saved' : '⚠️ Some changes failed to save');
+            });
+        });
+
+        // Checkbox label alignment
+        document.querySelectorAll('.checkbox-label').forEach(l => {
+            l.style.display = 'flex';
+            l.style.alignItems = 'center';
+            l.style.gap = '8px';
+        });
+
         // Auto-scroll to article after upload redirect (via anchor)
         document.addEventListener('DOMContentLoaded', () => {
             if (window.location.hash.startsWith('#article-')) {

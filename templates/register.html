@@ -3,6 +3,9 @@
 {% block content %}
 <h2>🔐 User Registration</h2>
 <p>Please provide your information to access downloadable resources.</p>
+<div style="margin: 10px 0; padding: 10px; background:#fff7e6; border:1px solid #ffe08a; border-radius:8px; color:#8a6d3b; font-size:14px;">
+  Please fill in your details carefully. After login, personal information cannot be modified.
+</div>
 
 <form method="POST" action="{{ url_for('submit_register') }}" style="max-width: 500px; margin-top: 20px;">
   <div style="margin-bottom: 15px;">
@@ -23,6 +26,12 @@
            style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px;">
   </div>
 
+  <div style="margin-top:10px;">
+    <label style="font-size:14px;">
+      <input type="checkbox" name="consent" required>
+      I confirm the information provided is accurate and all downloads are for academic use only.
+    </label>
+  </div>
   <button type="submit" 
           style="background-color: #3498db; color: white; border: none; padding: 12px 24px; 
                  font-size: 16px; border-radius: 4px; cursor: pointer; width: 100%;">

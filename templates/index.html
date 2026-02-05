@@ -1,15 +1,25 @@
 {% extends "base.html" %}
 {% block content %}
-<p>Our lab focuses on research in all-optical neural networks, diffractive deep learning, and intelligent photonic chips.</p>
+<div style="margin: 12px 0; white-space: pre-wrap;">
+  {{ site_cfg.home_welcome }}
+</div>
 
-<p>
-  This website provides publicly available publications, code, and datasets from our group.
-</p>
-
-<p>
-  <strong>Note:</strong> To download our resources, please first fill in your information on the 
-  <a href="{{ url_for('register') }}">LOGIN page</a>.
-</p>
+{% if not session.user_info %}
+  <p>
+    <strong>Note:</strong> To download our resources, please first fill in your information on the 
+    <a href="{{ url_for('register') }}">LOGIN page</a>.
+    {% if session.admin_shadow %}
+      <br><a href="{{ url_for('admin_return') }}">Return to Admin</a>
+    {% endif %}
+  </p>
+{% else %}
+  <p>
+    <strong>Note:</strong> You are logged in. You can download resources directly.
+    {% if session.admin_shadow %}
+      <br><a href="{{ url_for('admin_return') }}">Return to Admin</a>
+    {% endif %}
+  </p>
+{% endif %}
 
 <!-- <p>
   LAST EDITED ON : 2026-01-29 21:32:00
@@ -17,9 +27,6 @@
 
 {% if session.user_info %}
   <p>Current user: {{ session.user_info.name }} ({{ session.user_info.affiliation }}) {{ session.user_info.email }}</p>
-  <a href="{{ url_for('logout') }}">🔄 Switch User</a>
-{% else %}
-  <p>User not logged in</p>
 {% endif %}
 
 <script>

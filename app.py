@@ -86,21 +86,86 @@ print(f"📂 Persistent Root: {PERSISTENT_ROOT}")
 print(f"📂 Downloads Dir: {PRIVATE_DOWNLOADS_DIR}")
 print(f"📂 Logs Dir: {DATA_LOGS_DIR}")
 
+# Runtime & Lab info
+START_TIME = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+LAB_NAME = "Intelligent Optoelectronic Computing Lab"
+SITE_CONFIG_PATH = os.path.join(PERSISTENT_ROOT, 'site.json')
+
 
 # ==============================================================================
 # 3. Helper Functions
 # ==============================================================================
 
+ALLOWED_FILE_EXTS = ['.pdf', '.zip', '.npz', '.tar.gz', '.h5', '.mat', '.txt']
+
 def _build_key(resource_id, file_type, ext):
     return f"{resource_id}_{file_type}{ext}"
 
 def _find_existing_ext(resource_id, file_type):
-    for ext in ['.pdf', '.zip', '.npz', '.tar.gz', '.h5', '.mat', '.txt']:
+    for ext in ALLOWED_FILE_EXTS:
         key = _build_key(resource_id, file_type, ext)
         local_path = os.path.join(PRIVATE_DOWNLOADS_DIR, key)
         if os.path.isfile(local_path):
             return ext
     return None
+
+def _file_info(resource_id, file_type):
+    ext = _find_existing_ext(resource_id, file_type)
+    if not ext:
+        return {'exists': False}
+    key = _build_key(resource_id, file_type, ext)
+    path = os.path.join(PRIVATE_DOWNLOADS_DIR, key)
+    try:
+        stat = os.stat(path)
+        size = stat.st_size
+        mtime = datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S")
+    except Exception:
+        size = None
+        mtime = None
+    return {
+        'exists': True,
+        'ext': ext,
+        'filename': os.path.basename(path),
+        'size': size,
+        'mtime': mtime,
+        'path': path
+    }
+
+def _human_size(n):
+    try:
+        for unit in ['B','KB','MB','GB','TB']:
+            if n < 1024.0:
+                return f"{n:.1f} {unit}"
+            n /= 1024.0
+    except Exception:
+        pass
+    return None
+
+def load_site_config():
+    os.makedirs(PERSISTENT_ROOT, exist_ok=True)
+    if not os.path.exists(SITE_CONFIG_PATH):
+        default = {
+            "home_welcome": "Our lab focuses on research in all-optical neural networks, diffractive deep learning, and intelligent photonic chips.\n\nThis website provides publicly available publications, code, and datasets from our group.",
+            "lab_name": LAB_NAME
+        }
+        try:
+            with open(SITE_CONFIG_PATH, 'w', encoding='utf-8') as f:
+                json.dump(default, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            print(f"⚠️ Failed to init site config: {e}")
+    try:
+        with open(SITE_CONFIG_PATH, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"⚠️ Failed to load site config: {e}")
+        return {"home_welcome": "", "lab_name": LAB_NAME}
+
+def save_site_config(cfg):
+    try:
+        with open(SITE_CONFIG_PATH, 'w', encoding='utf-8') as f:
+            json.dump(cfg, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"⚠️ Failed to save site config: {e}")
 
 def load_json_data(filename):
     """Safely load JSON list from data/ directory"""
@@ -153,6 +218,8 @@ def _add_item(item_type, form_data):
         'abstract': form_data.get('abstract', '').strip(),
         'paper_url': form_data.get('paper_url', '').strip(),
         'resource_url': form_data.get('resource_url', '').strip(),
+        'authors_display_count': int(form_data.get('authors_display_count', 3)),
+        'resource_kinds': form_data.getlist('resource_kinds') if hasattr(form_data, 'getlist') and form_data.getlist('resource_kinds') else ['Code'],
         'last_edited': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
 
@@ -172,6 +239,12 @@ def _update_item(item_type, item_id, form_data):
             item['year'] = int(form_data.get('year', item['year']))
             item['venue'] = form_data.get('venue', item.get('venue', '')).strip()
             item['abstract'] = form_data.get('abstract', item.get('abstract', '')).strip()
+            adc = form_data.get('authors_display_count')
+            if adc is not None:
+                try:
+                    item['authors_display_count'] = int(adc)
+                except Exception:
+                    pass
             # Optional source links
             paper_url_in = form_data.get('paper_url')
             resource_url_in = form_data.get('resource_url')
@@ -179,6 +252,11 @@ def _update_item(item_type, item_id, form_data):
                 item['paper_url'] = paper_url_in.strip()
             if resource_url_in is not None:
                 item['resource_url'] = resource_url_in.strip()
+            # Resource kinds (multi-select)
+            if hasattr(form_data, 'getlist'):
+                kinds = form_data.getlist('resource_kinds')
+                if kinds:
+                    item['resource_kinds'] = kinds
             item['last_edited'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             break
     save_json_data(filename, data)
@@ -208,6 +286,13 @@ def _add_person(form_data, photo_file=None):
             photo_filename = f"{new_id}{ext}"
             save_path = os.path.join(PEOPLE_IMAGES_DIR, photo_filename)
             photo_file.save(save_path)
+    # Extra links (up to 3)
+    links = []
+    for i in range(1, 4):
+        name = (form_data.get(f'link_name_{i}') or '').strip()
+        url = (form_data.get(f'link_url_{i}') or '').strip()
+        if name and url:
+            links.append({'name': name, 'url': url})
     item = {
         'id': new_id,
         'name': form_data.get('name', '').strip(),
@@ -215,6 +300,7 @@ def _add_person(form_data, photo_file=None):
         'email': form_data.get('email', '').strip(),
         'photo_filename': photo_filename,
         'bio': form_data.get('bio', '').strip(),
+        'links': links,
         'last_edited': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
     data.append(item)
@@ -245,6 +331,14 @@ def _update_person(person_id, form_data, photo_file=None):
                     photo_file.save(save_path)
                     item['photo_filename'] = photo_filename
             item['bio'] = form_data.get('bio', item.get('bio', '')).strip()
+            # Update links (up to 3)
+            links = []
+            for i in range(1, 4):
+                name = (form_data.get(f'link_name_{i}') or '').strip()
+                url = (form_data.get(f'link_url_{i}') or '').strip()
+                if name and url:
+                    links.append({'name': name, 'url': url})
+            item['links'] = links
             item['last_edited'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             break
     save_json_data(filename, data)
@@ -264,7 +358,8 @@ def _delete_person(person_id):
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    site_cfg = load_site_config()
+    return render_template('index.html', site_cfg=site_cfg)
 
 @app.route('/team')
 def team():
@@ -285,7 +380,9 @@ def article_detail(id):
         return "Article not found", 404
     
     status = get_file_status(id)
-    return render_template('article_detail.html', item=article, file_status=status)
+    paper_info = _file_info(id, 'paper')
+    resource_info = _file_info(id, 'resource')
+    return render_template('article_detail.html', item=article, file_status=status, paper_info=paper_info, resource_info=resource_info)
 
 @app.route('/person/<id>')
 def person_detail(id):
@@ -321,9 +418,12 @@ def submit_register():
     name = request.form.get('name', '').strip()
     affiliation = request.form.get('affiliation', '').strip()
     email = request.form.get('email', '').strip()
+    consent = request.form.get('consent')
 
     if not name or not affiliation or not email:
         return "❌ Please fill in all required fields.", 400
+    if consent is None:
+        return "❌ Please confirm the academic-use consent to proceed.", 400
 
     # === Admin verification ===
     if (name == ADMIN_CREDENTIALS['name'] and
@@ -355,6 +455,10 @@ def logout():
 def admin_logout():
     """Admin logout"""
     session.pop('is_admin', None)
+    session.pop('admin_shadow', None)
+    session.pop('user_info', None)
+    session.pop('registered_at', None)
+    session.pop('resource_id', None)
     return redirect(url_for('index'))
 
 
@@ -376,18 +480,48 @@ def download_file(file_type, resource_id):
     if file_type not in ['paper', 'resource']:
         return "Invalid file type", 400
 
-    # Locate file locally
+    # Locate file locally + throttle checks
     ext = _find_existing_ext(resource_id, file_type)
     if not ext:
         return "❌ Requested resource not found.", 404
 
-    # === Safe CSV Logging ===
+    # === Throttle & daily quota ===
     csv_file = os.path.join(DATA_LOGS_DIR, 'downloads.csv')
     os.makedirs(DATA_LOGS_DIR, exist_ok=True)
-
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    now = datetime.now()
+    timestamp = now.strftime("%Y-%m-%d %H:%M:%S")
     file_exists = os.path.isfile(csv_file)
 
+    last_same_download = None
+    today_total = 0
+    if file_exists:
+        try:
+            with open(csv_file, 'r', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    try:
+                        t = datetime.strptime(row.get('time',''), "%Y-%m-%d %H:%M:%S")
+                    except Exception:
+                        continue
+                    same_user = (row.get('name') == user_info['name'] and
+                                 row.get('affiliation') == user_info['affiliation'] and
+                                 row.get('email') == user_info['email'])
+                    if same_user:
+                        if row.get('resource_id') == resource_id and row.get('type') == file_type:
+                            if (now - t).total_seconds() < 60:
+                                last_same_download = t
+                        if t.date() == now.date():
+                            today_total += 1
+        except Exception:
+            pass
+    if today_total >= 10:
+        return f"<script>alert('You have reached today\\'s limit of 10 downloads. Please try again tomorrow.'); history.back();</script>", 429
+    if last_same_download:
+        wait_sec = int(60 - (now - last_same_download).total_seconds())
+        if wait_sec < 0: wait_sec = 0
+        return f"<script>alert('You\\'ve downloaded this resource within the past minute. Please retry in {wait_sec} seconds.'); history.back();</script>", 429
+
+    # === Safe CSV Logging ===
     try:
         with open(csv_file, 'a', encoding='utf-8-sig', newline='') as f:
             writer = csv.writer(f)
@@ -423,7 +557,7 @@ def admin_dashboard():
 
     # === Handle form submissions (add/edit/delete) ===
     action = request.form.get('action') or request.args.get('action')
-    item_type = request.form.get('item_type') or request.args.get('item_type')  # 'article' only
+    item_type = request.form.get('item_type') or request.args.get('item_type')  # 'article' or 'person' or 'site'
 
     if action == 'add':
         if item_type == 'person':
@@ -438,6 +572,12 @@ def admin_dashboard():
         else:
             _update_item(item_type, item_id, request.form)
         return redirect(url_for('admin_dashboard'))
+    elif action == 'edit_site_welcome':
+        note = (request.form.get('home_welcome') or '').strip()
+        cfg = load_site_config()
+        cfg['home_welcome'] = note
+        save_site_config(cfg)
+        return redirect(url_for('admin_dashboard'))
     elif action == 'delete':
         item_id = request.args.get('id')
         if item_type == 'person':
@@ -448,8 +588,10 @@ def admin_dashboard():
 
     # === Load data for display ===
     
-    # Load download counts (simplified logic, maybe aggregated by ID)
+    # Load download counts and unique downloaders
     download_counts = {}
+    unique_downloaders = {}
+    last_download_times = {}
     csv_path = os.path.join(DATA_LOGS_DIR, 'downloads.csv')
     if os.path.exists(csv_path):
         try:
@@ -459,24 +601,90 @@ def admin_dashboard():
                     item_id = row.get('resource_id')
                     if item_id:
                         download_counts[item_id] = download_counts.get(item_id, 0) + 1
+                        key_triplet = (row.get('name',''), row.get('affiliation',''), row.get('email',''))
+                        s = unique_downloaders.get(item_id)
+                        if s is None:
+                            s = set()
+                            unique_downloaders[item_id] = s
+                        s.add(key_triplet)
+                        try:
+                            t = datetime.strptime(row.get('time',''), "%Y-%m-%d %H:%M:%S")
+                            prev = last_download_times.get(item_id)
+                            if (prev is None) or (t > prev):
+                                last_download_times[item_id] = t
+                        except Exception:
+                            pass
         except Exception as e:
             print(f"CSV read error: {e}")
 
     # Load articles
     articles = load_json_data('articles.json')
     people = load_json_data('people.json')
+    # People photo status/info
+    people_photo_status = {}
+    people_photo_info = {}
+    for p in people:
+        fname = (p.get('photo_filename') or '').strip()
+        if not fname:
+            people_photo_status[p['id']] = False
+            people_photo_info[p['id']] = {'exists': False}
+            continue
+        path = os.path.join('static','images','people', fname)
+        exists = os.path.exists(path)
+        people_photo_status[p['id']] = exists
+        info = {'exists': exists}
+        if exists:
+            try:
+                st = os.stat(path)
+                info['size'] = st.st_size
+                info['mtime'] = datetime.fromtimestamp(st.st_mtime).strftime("%Y-%m-%d %H:%M:%S")
+                info['filename'] = fname
+            except Exception:
+                pass
+        people_photo_info[p['id']] = info
     
     # Get file statuses for all articles
     file_statuses = {item['id']: get_file_status(item['id']) for item in articles}
+    file_infos = {item['id']: {'paper': _file_info(item['id'], 'paper'), 'resource': _file_info(item['id'], 'resource')} for item in articles}
+    unique_counts = {aid: len(unique_downloaders.get(aid, set())) for aid in download_counts.keys()}
 
+    site_cfg = load_site_config()
     return render_template(
         'admin.html',
         articles=articles,
         download_counts=download_counts,
         file_statuses=file_statuses,
-        people=people
+        file_infos=file_infos,
+        unique_counts=unique_counts,
+        last_download_times=last_download_times,
+        people=people,
+        people_photo_status=people_photo_status,
+        people_photo_info=people_photo_info,
+        start_time=START_TIME,
+        lab_name=LAB_NAME,
+        site_cfg=site_cfg
     )
 
+@app.route('/admin/view-as-user')
+def admin_view_as_user():
+    if not session.get('is_admin'):
+        return redirect(url_for('register'))
+    session['admin_shadow'] = True
+    session['is_admin'] = False
+    session['user_info'] = {
+        'name': ADMIN_CREDENTIALS.get('name','Admin'),
+        'affiliation': ADMIN_CREDENTIALS.get('affiliation','Intelligent Optoelectronic Computing Lab'),
+        'email': ADMIN_CREDENTIALS.get('email','admin@example.com')
+    }
+    return redirect(url_for('index'))
+
+@app.route('/admin/return')
+def admin_return():
+    if session.get('admin_shadow'):
+        session['is_admin'] = True
+        session['admin_shadow'] = False
+        return redirect(url_for('admin_dashboard'))
+    return redirect(url_for('index'))
 @app.route('/admin/upload/<file_type>/<resource_id>', methods=['POST'])
 def admin_upload_file(file_type, resource_id):
     """Admin file upload handler"""
@@ -498,7 +706,7 @@ def admin_upload_file(file_type, resource_id):
         return "No file selected", 400
 
     # Allow only safe extensions
-    ALLOWED_EXTENSIONS = {'.zip', '.pdf', '.npz', '.tar.gz', '.h5', '.mat', '.txt'}
+    ALLOWED_EXTENSIONS = set(ALLOWED_FILE_EXTS)
     filename = file.filename
     ext = ''
     for allowed in sorted(ALLOWED_EXTENSIONS, key=len, reverse=True):
@@ -529,6 +737,41 @@ def admin_upload_file(file_type, resource_id):
     save_json_data('articles.json', articles)
 
     return redirect(url_for('admin_dashboard') + '#article-' + resource_id)
+
+@app.route('/admin/upload-thumb/<article_id>', methods=['POST'])
+def admin_upload_thumbnail(article_id):
+    if not session.get('is_admin'):
+        return "Unauthorized", 403
+    articles = load_json_data('articles.json')
+    target = next((a for a in articles if a['id'] == article_id), None)
+    if not target:
+        return "Article not found", 404
+    thumb = request.files.get('thumbnail')
+    if not thumb or not thumb.filename:
+        return "No file selected", 400
+    os.makedirs(os.path.join('static','images','articles'), exist_ok=True)
+    # remove previous variants
+    for ext in ['.png','.jpg','.jpeg','.gif']:
+        p = os.path.join('static','images','articles', f"{article_id}{ext}")
+        if os.path.exists(p):
+            try:
+                os.remove(p)
+            except Exception:
+                pass
+    ext = os.path.splitext(secure_filename(thumb.filename))[1].lower()
+    if ext not in ['.png','.jpg','.jpeg','.gif']:
+        return "File type not allowed for thumbnail", 400
+    filename = f"{article_id}{ext}"
+    save_path = os.path.join('static','images','articles', filename)
+    thumb.save(save_path)
+    target['thumbnail_filename'] = filename
+    target['last_edited'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    for i, a in enumerate(articles):
+        if a['id'] == article_id:
+            articles[i] = target
+            break
+    save_json_data('articles.json', articles)
+    return redirect(url_for('admin_dashboard'))
 
 @app.route('/admin/download-logs.csv')
 def download_logs_csv():

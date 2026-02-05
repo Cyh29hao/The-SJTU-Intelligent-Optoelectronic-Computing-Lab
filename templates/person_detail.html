@@ -9,6 +9,16 @@
   </div>
   <div>
     <p style="margin: 4px 0;"><strong>Email:</strong> <a href="mailto:{{ person.email }}">{{ person.email }}</a></p>
+    {% if person.links %}
+    <div style="margin: 6px 0; text-align: center;">
+      {% for l in person.links %}
+        <p style="margin: 4px 0;">
+          <strong>{{ l.name }}:</strong>
+          <a href="{{ l.url }}" target="_blank" style="color:#1a73e8; text-decoration: none;">{{ l.url }}</a>.
+        </p>
+      {% endfor %}
+    </div>
+    {% endif %}
     <p style="margin: 12px 0; white-space: pre-wrap;">{{ person.bio or 'Profile will be updated.' }}</p>
     {% if person.last_edited %}
     <p style="color: #999; font-size: 0.9em;">Last edited: {{ person.last_edited }}</p>

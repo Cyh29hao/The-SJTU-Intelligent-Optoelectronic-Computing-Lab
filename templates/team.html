@@ -2,19 +2,18 @@
 {% extends "base.html" %}
 {% block title %}People - LightChip Lab{% endblock %}
 {% block content %}
-<h2>👥 People</h2>
 
 <div style="text-align: left; max-width: 900px; margin: 0 auto;">
 
-  {% set categories = ['Professor', 'Postdoc & PhD', 'Master', 'Undergraduate'] %}
+  {% set categories = ['Professor', 'Postdoc & PhD', 'Master', 'Undergraduate', 'Alumni'] %}
   {% for cat in categories %}
     <h3 style="margin-top: 24px;">{{ cat }}</h3>
     <div style="display: flex; flex-wrap: wrap; gap: 20px;">
       {% for p in people if p.category == cat %}
-      <div style="flex: 0 0 calc(50% - 10px); display: flex; align-items: center; gap: 14px; padding: 10px; border: 1px solid #eee; border-radius: 8px; background: #fff;">
+      <div style="flex: 0 0 calc(50% - 10px); display: flex; align-items: center; gap: 14px; padding: 12px; border: 1px solid #eee; border-radius: 8px; background: {% if cat == 'Professor' %}#f9fbff{% else %}#fff{% endif %}; box-shadow: {% if cat == 'Professor' %}0 0 0 2px #e8f0fe inset{% else %}none{% endif %};">
         <img src="{{ url_for('static', filename='images/people/' ~ p.photo_filename) if p.photo_filename else 'https://via.placeholder.com/120' }}" alt="{{ p.name }}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 6px;">
         <div>
-          <a href="{{ url_for('person_detail', id=p.id) }}" style="font-weight: bold; color: #2c3e50; text-decoration: none;">{{ p.name }}</a>
+          <a href="{{ url_for('person_detail', id=p.id) }}" style="font-weight: bold; color: #2c3e50; text-decoration: none; transition: color 0.15s, text-decoration-color 0.15s;" onmouseover="this.style.color='#1a73e8'; this.style.textDecoration='underline';" onmouseout="this.style.color='#2c3e50'; this.style.textDecoration='none';">{{ p.name }}</a>
           {% if p.email %}
           <div style="color: #7f8c8d; font-size: 0.95em; margin-top: 4px;">{{ p.email }}</div>
           {% endif %}

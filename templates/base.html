@@ -48,5 +48,26 @@
       </div>
     </footer>
   </div>
+  <script>
+    (function() {
+      function spawnPhoton(x, y) {
+        var d = document.createElement('div');
+        d.className = 'photon';
+        d.style.left = x + 'px';
+        d.style.top = y + 'px';
+        document.body.appendChild(d);
+        d.addEventListener('animationend', function() {
+          if (d && d.parentNode) d.parentNode.removeChild(d);
+        });
+      }
+      function isLeftClick(e) { return (e.button === 0); }
+      document.addEventListener('click', function(e) {
+        var a = e.target.closest('a');
+        if (!a) return;
+        if (!isLeftClick(e)) return;
+        spawnPhoton(e.clientX, e.clientY);
+      }, true);
+    })();
+  </script>
 </body>
 </html>
