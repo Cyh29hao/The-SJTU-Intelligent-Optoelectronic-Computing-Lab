@@ -190,6 +190,16 @@
         <p style="font-size: 14px; color: #7f8c8d; margin-top: 10px;">
             Tip: After downloading, unzip and replace your local <code>render_data/</code> folder to sync changes.
         </p>
+        <form method="POST" action="{{ url_for('upload_render_data_zip') }}" enctype="multipart/form-data" style="margin-top:12px;">
+            <label>Upload render_data_bundle.zip</label>
+            <input type="file" name="bundle" accept=".zip" required>
+            <button type="submit" style="background:#8e44ad;color:white;text-decoration:none;padding:10px 20px;border-radius:4px;font-weight:bold;margin-top:8px;">
+                ⬆️ Upload & Replace
+            </button>
+        </form>
+        <p style="font-size: 14px; color: #7f8c8d; margin-top: 8px;">
+            Tip: This will overwrite files under <code>render_data/</code> on the server with the uploaded ZIP contents.
+        </p>
     </div>
     
 

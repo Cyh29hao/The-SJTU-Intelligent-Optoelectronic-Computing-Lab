@@ -823,6 +823,33 @@ def download_render_data_zip():
     buf.seek(0)
     return send_file(buf, as_attachment=True, download_name='render_data_bundle.zip', mimetype='application/zip')
 
+@app.route('/admin/upload-render-data', methods=['POST'])
+def upload_render_data_zip():
+    if not session.get('is_admin'):
+        return "Unauthorized", 403
+    f = request.files.get('bundle')
+    if not f or not f.filename:
+        return "No file selected", 400
+    name = secure_filename(f.filename)
+    if not name.lower().endswith('.zip'):
+        return "Only .zip allowed", 400
+    import io, zipfile
+    buf = io.BytesIO(f.read())
+    with zipfile.ZipFile(buf, 'r') as zf:
+        root_abs = os.path.abspath(PERSISTENT_ROOT)
+        for member in zf.namelist():
+            if member.endswith('/'):
+                dest_dir = os.path.abspath(os.path.join(PERSISTENT_ROOT, member))
+                if dest_dir.startswith(root_abs):
+                    os.makedirs(dest_dir, exist_ok=True)
+                continue
+            dest_path = os.path.abspath(os.path.join(PERSISTENT_ROOT, member))
+            if not dest_path.startswith(root_abs):
+                continue
+            os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+            with zf.open(member) as src, open(dest_path, 'wb') as out:
+                out.write(src.read())
+    return redirect(url_for('admin_dashboard'))
 
 
 
