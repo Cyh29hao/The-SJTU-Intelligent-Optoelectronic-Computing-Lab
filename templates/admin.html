@@ -179,6 +179,18 @@
         </p>
     </div>
 
+    <!-- Render Data Sync -->
+    <h2>🔄 Render Data Sync</h2>
+    <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);">
+        <p>Package and download all admin-managed data under <code>render_data/</code> (JSON, uploads, logs, thumbnails, photos).</p>
+        <a href="{{ url_for('download_render_data_zip') }}" 
+           style="display:inline-block;background:#27ae60;color:white;text-decoration:none;padding:10px 20px;border-radius:4px;font-weight:bold;margin-top:10px;">
+           🔽 Download render_data_bundle.zip
+        </a>
+        <p style="font-size: 14px; color: #7f8c8d; margin-top: 10px;">
+            Tip: After downloading, unzip and replace your local <code>render_data/</code> folder to sync changes.
+        </p>
+    </div>
     
 
     <!-- Manage Articles -->

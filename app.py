@@ -168,8 +168,9 @@ def save_site_config(cfg):
         print(f"⚠️ Failed to save site config: {e}")
 
 def load_json_data(filename):
-    """Safely load JSON list from data/ directory"""
-    path = os.path.join('data', filename)
+    """Safely load JSON list from render_data/ directory"""
+    os.makedirs(PERSISTENT_ROOT, exist_ok=True)
+    path = os.path.join(PERSISTENT_ROOT, filename)
     if not os.path.exists(path):
         return []
     try:
@@ -180,9 +181,9 @@ def load_json_data(filename):
         return []
 
 def save_json_data(filename, data):
-    """Save data to JSON file (used by admin)"""
-    path = os.path.join('data', filename)
-    os.makedirs('data', exist_ok=True)
+    """Save data to JSON file (used by admin) into render_data/"""
+    os.makedirs(PERSISTENT_ROOT, exist_ok=True)
+    path = os.path.join(PERSISTENT_ROOT, filename)
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
@@ -270,8 +271,10 @@ def _delete_item(item_type, item_id):
     save_json_data(filename, data)
     print(f"🗑️ Deleted article: {item_id}")
 
-PEOPLE_IMAGES_DIR = os.path.join('static', 'images', 'people')
+PEOPLE_IMAGES_DIR = os.path.join(PERSISTENT_ROOT, 'images', 'people')
 os.makedirs(PEOPLE_IMAGES_DIR, exist_ok=True)
+ARTICLE_IMAGES_DIR = os.path.join(PERSISTENT_ROOT, 'images', 'articles')
+os.makedirs(ARTICLE_IMAGES_DIR, exist_ok=True)
 
 def _add_person(form_data, photo_file=None):
     filename = 'people.json'
@@ -629,7 +632,7 @@ def admin_dashboard():
             people_photo_status[p['id']] = False
             people_photo_info[p['id']] = {'exists': False}
             continue
-        path = os.path.join('static','images','people', fname)
+        path = os.path.join(PEOPLE_IMAGES_DIR, fname)
         exists = os.path.exists(path)
         people_photo_status[p['id']] = exists
         info = {'exists': exists}
@@ -749,10 +752,10 @@ def admin_upload_thumbnail(article_id):
     thumb = request.files.get('thumbnail')
     if not thumb or not thumb.filename:
         return "No file selected", 400
-    os.makedirs(os.path.join('static','images','articles'), exist_ok=True)
+    os.makedirs(ARTICLE_IMAGES_DIR, exist_ok=True)
     # remove previous variants
     for ext in ['.png','.jpg','.jpeg','.gif']:
-        p = os.path.join('static','images','articles', f"{article_id}{ext}")
+        p = os.path.join(ARTICLE_IMAGES_DIR, f"{article_id}{ext}")
         if os.path.exists(p):
             try:
                 os.remove(p)
@@ -762,7 +765,7 @@ def admin_upload_thumbnail(article_id):
     if ext not in ['.png','.jpg','.jpeg','.gif']:
         return "File type not allowed for thumbnail", 400
     filename = f"{article_id}{ext}"
-    save_path = os.path.join('static','images','articles', filename)
+    save_path = os.path.join(ARTICLE_IMAGES_DIR, filename)
     thumb.save(save_path)
     target['thumbnail_filename'] = filename
     target['last_edited'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -772,6 +775,25 @@ def admin_upload_thumbnail(article_id):
             break
     save_json_data('articles.json', articles)
     return redirect(url_for('admin_dashboard'))
+
+# ==============================================================================
+# 8. Asset Serving (from render_data)
+# ==============================================================================
+from flask import abort
+
+@app.route('/assets/people/<filename>')
+def asset_people(filename):
+    path = os.path.join(PEOPLE_IMAGES_DIR, filename)
+    if not os.path.exists(path):
+        return abort(404)
+    return send_file(path)
+
+@app.route('/assets/articles/<filename>')
+def asset_article_thumb(filename):
+    path = os.path.join(ARTICLE_IMAGES_DIR, filename)
+    if not os.path.exists(path):
+        return abort(404)
+    return send_file(path)
 
 @app.route('/admin/download-logs.csv')
 def download_logs_csv():
@@ -784,6 +806,22 @@ def download_logs_csv():
         with open(csv_path, 'w', encoding='utf-8') as f:
             f.write('time,name,affiliation,email,resource_id\n')
     return send_file(csv_path, as_attachment=True, download_name='lightchip_download_logs.csv')
+
+@app.route('/admin/download-render-data.zip')
+def download_render_data_zip():
+    """Package the entire render_data folder and download as ZIP"""
+    if not session.get('is_admin'):
+        return "Unauthorized", 403
+    import io, zipfile
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
+        for root, dirs, files in os.walk(PERSISTENT_ROOT):
+            for name in files:
+                fpath = os.path.join(root, name)
+                rel = os.path.relpath(fpath, PERSISTENT_ROOT)
+                zf.write(fpath, arcname=rel)
+    buf.seek(0)
+    return send_file(buf, as_attachment=True, download_name='render_data_bundle.zip', mimetype='application/zip')
 
 
 
