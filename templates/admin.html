@@ -152,6 +152,174 @@
             margin-top: 0;
             color: #2c3e50;
         }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin: 10px 0 24px;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 18px 20px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            border-top: 4px solid #3498db;
+        }
+        .stat-label {
+            font-size: 13px;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-top: 8px;
+        }
+        .stat-subtext {
+            margin-top: 8px;
+            font-size: 13px;
+            color: #7f8c8d;
+            line-height: 1.5;
+        }
+        .insights-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 18px;
+            margin-bottom: 24px;
+        }
+        .insight-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            padding: 18px 20px;
+        }
+        .insight-card h3 {
+            margin: 0 0 14px;
+            color: #2c3e50;
+        }
+        .mini-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .mini-table th, .mini-table td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #eceff3;
+            font-size: 14px;
+            vertical-align: top;
+        }
+        .mini-table th {
+            background: transparent;
+            color: #7f8c8d;
+            padding-top: 0;
+        }
+        .mono {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12px;
+            color: #7f8c8d;
+        }
+        .trend-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .trend-row {
+            display: grid;
+            grid-template-columns: 56px minmax(0, 1fr);
+            gap: 12px;
+            align-items: center;
+        }
+        .trend-label {
+            font-size: 13px;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+        .trend-bars {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .bar-track {
+            position: relative;
+            background: #edf2f7;
+            border-radius: 999px;
+            min-height: 18px;
+            overflow: hidden;
+        }
+        .bar-fill {
+            height: 18px;
+            border-radius: 999px;
+        }
+        .bar-fill.views {
+            background: linear-gradient(90deg, #3498db, #74b9ff);
+        }
+        .bar-fill.downloads {
+            background: linear-gradient(90deg, #27ae60, #6dd5a3);
+        }
+        .bar-value {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 12px;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+        .section-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            padding: 18px 20px;
+            margin-bottom: 24px;
+        }
+        .table-note {
+            font-size: 13px;
+            color: #7f8c8d;
+            margin-top: 10px;
+            text-align: left;
+        }
+        @media (max-width: 720px) {
+            body {
+                padding: 12px;
+            }
+            h1 {
+                margin-bottom: 20px;
+            }
+            .header-right {
+                position: static;
+                display: block;
+                margin-top: 8px;
+                text-align: center;
+            }
+            h2 {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+            .stats-grid,
+            .insights-grid {
+                grid-template-columns: 1fr;
+            }
+            table,
+            .mini-table {
+                display: block;
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+            summary {
+                padding: 12px 14px;
+            }
+            div[style*="grid-template-columns: 1fr 1fr"] {
+                display: block !important;
+            }
+            div[style*="display: flex; gap: 20px;"] {
+                flex-direction: column;
+            }
+            .save-all {
+                width: 100%;
+            }
+        }
         hr {
             border: 0;
             border-top: 1px dashed #ccc;
@@ -164,18 +332,215 @@
         <span class="header-right">{{ lab_name }}<br>Started at: {{ start_time }}</span>
     </h1>
 
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-label">Total Page Views</div>
+            <div class="stat-value">{{ page_view_stats.total_views }}</div>
+            <div class="stat-subtext">Today: {{ page_view_stats.views_today }} | Last 7 days: {{ page_view_stats.views_last_7_days }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Unique Visitors</div>
+            <div class="stat-value">{{ page_view_stats.unique_visitors }}</div>
+            <div class="stat-subtext">Last 7 days: {{ page_view_stats.unique_visitors_last_7_days }} approximate visitors.</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Publication Detail Views</div>
+            <div class="stat-value">{{ page_view_stats.article_detail_views }}</div>
+            <div class="stat-subtext">These are the visits that matter most for download conversion.</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Total Downloads</div>
+            <div class="stat-value">{{ total_downloads }}</div>
+            <div class="stat-subtext">Today: {{ page_view_stats.downloads_today }} | Last 7 days: {{ page_view_stats.downloads_last_7_days }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">View to Download</div>
+            <div class="stat-value">
+                {% if page_view_stats.publication_conversion_rate is not none %}
+                    {{ "%.1f"|format(page_view_stats.publication_conversion_rate) }}%
+                {% else %}
+                    --
+                {% endif %}
+            </div>
+            <div class="stat-subtext">Rough conversion from publication-detail page views to downloads.</div>
+        </div>
+    </div>
+
+    <div class="insights-grid">
+        <div class="insight-card">
+            <h3>Top Pages</h3>
+            {% if top_pages %}
+            <table class="mini-table">
+                <thead>
+                    <tr>
+                        <th>Page</th>
+                        <th>Views</th>
+                        <th>Path</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for page in top_pages %}
+                    <tr>
+                        <td>
+                            <strong>{{ page.label }}</strong><br>
+                            <span class="mono">{{ page.page_type }}</span>
+                        </td>
+                        <td>{{ page.count }}</td>
+                        <td class="mono">{{ page.path }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p style="text-align:left; color:#7f8c8d;">No page-view data yet. Browse the public pages once and refresh this dashboard.</p>
+            {% endif %}
+            <p class="table-note">The top-pages list helps you see whether visitors stay on overview pages or continue into publication details.</p>
+        </div>
+        <div class="insight-card">
+            <h3>Top Publications by Views</h3>
+            {% if top_articles_by_views %}
+            <table class="mini-table">
+                <thead>
+                    <tr>
+                        <th>Publication</th>
+                        <th>Views</th>
+                        <th>Downloads</th>
+                        <th>CVR</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in top_articles_by_views %}
+                    <tr>
+                        <td>
+                            <strong>{{ item.title }}</strong><br>
+                            <span class="mono">{{ item.id }}</span>
+                        </td>
+                        <td>{{ item.count }}</td>
+                        <td>{{ item.downloads }}</td>
+                        <td>
+                            {% if item.conversion_rate is not none %}
+                                {{ "%.1f"|format(item.conversion_rate) }}%
+                            {% else %}
+                                --
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p style="text-align:left; color:#7f8c8d;">Publication-detail views will appear here after visitors open paper pages.</p>
+            {% endif %}
+            <p class="table-note">CVR = downloads divided by publication-detail views. It is a quick proxy for how compelling each paper page is.</p>
+        </div>
+    </div>
+
+    <div class="insights-grid">
+        <div class="insight-card">
+            <h3>Last 7 Days Trend</h3>
+            <div class="trend-list">
+                {% for day in trend_data %}
+                <div class="trend-row">
+                    <div class="trend-label">{{ day.label }}</div>
+                    <div class="trend-bars">
+                        <div class="bar-track">
+                            <div class="bar-fill views" style="width: {{ day.views_width }}%;"></div>
+                            <span class="bar-value">Views {{ day.views }}</span>
+                        </div>
+                        <div class="bar-track">
+                            <div class="bar-fill downloads" style="width: {{ day.downloads_width }}%;"></div>
+                            <span class="bar-value">Downloads {{ day.downloads }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <p class="table-note">This is a lightweight trend chart rendered directly in the template, so it works without any JS chart library.</p>
+        </div>
+        <div class="insight-card">
+            <h3>Tracking Files</h3>
+            <table class="mini-table">
+                <tbody>
+                    <tr>
+                        <td><strong>downloads.csv</strong></td>
+                        <td>Records download time, user info, article ID, and file type.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>page_views.csv</strong></td>
+                        <td>Records public-page visits, page type, path, and article/profile context.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>render_data bundle</strong></td>
+                        <td>The sync ZIP already includes both logs, so your analytics travel with the site data.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="section-card">
+        <h3 style="margin-top:0; color:#2c3e50;">Publication Funnel Snapshot</h3>
+        <table class="mini-table">
+            <thead>
+                <tr>
+                    <th>Publication</th>
+                    <th>Views</th>
+                    <th>Downloads</th>
+                    <th>Users</th>
+                    <th>CVR</th>
+                    <th>Last Activity</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in article_metrics %}
+                <tr>
+                    <td>
+                        <strong>{{ item.title }}</strong><br>
+                        <span class="mono">{{ item.id }}</span>
+                    </td>
+                    <td>{{ item.views }}</td>
+                    <td>{{ item.downloads }}</td>
+                    <td>{{ item.unique_users }}</td>
+                    <td>
+                        {% if item.conversion_rate is not none %}
+                            {{ "%.1f"|format(item.conversion_rate) }}%
+                        {% else %}
+                            --
+                        {% endif %}
+                    </td>
+                    <td class="mono">
+                        {% if item.last_downloaded %}
+                            download {{ item.last_downloaded.strftime("%m-%d %H:%M") }}
+                        {% elif item.last_viewed %}
+                            view {{ item.last_viewed.strftime("%m-%d %H:%M") }}
+                        {% else %}
+                            No activity
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <p class="table-note">This table is the most resume-friendly view: it shows which publications attracted attention and whether that attention converted to downloads.</p>
+    </div>
+
 
     <!-- Download Logs -->
     <h2>📥 Download Records</h2>
     <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);">
-        <p>Click the button below to download all user download records as a CSV file.</p>
+        <p>Download raw analytics logs as CSV files for deeper analysis or to keep snapshots of the site's performance over time.</p>
         <a href="{{ url_for('download_logs_csv') }}" 
         style="display: inline-block; background: #3498db; color: white; text-decoration: none; 
                 padding: 10px 20px; border-radius: 4px; font-weight: bold; margin-top: 10px;">
             📥 Download logs.csv
         </a>
+        <a href="{{ url_for('download_page_views_csv') }}" 
+        style="display: inline-block; background: #16a085; color: white; text-decoration: none; 
+                padding: 10px 20px; border-radius: 4px; font-weight: bold; margin-top: 10px; margin-left: 12px;">
+            Download page_views.csv
+        </a>
         <p style="font-size: 14px; color: #7f8c8d; margin-top: 15px;">
-            File includes: timestamp, user info, resource/article ID.
+            downloads.csv stores download activity. page_views.csv stores public-page browsing activity.
         </p>
     </div>
 
@@ -396,13 +761,14 @@
 
     <div id="pub-section">
     {% for item in articles %}
-    <details>
+    <details id="article-{{ item.id }}">
         <summary>
             {{ item.title }} ({{ item.venue }}, {{ item.year }})
             <span style="color: #95a5a6; font-size: 0.85em; margin: 0 8px;">{{ item.id }}</span><br>
             <span style="font-size: 0.85em; color:#7f8c8d;">
               {% set count = download_counts.get(item.id, 0) %}
               {% set people_count = unique_counts.get(item.id, 0) %}
+              {% set view_count = article_view_counts.get(item.id, 0) %}
               {% if item.last_edited %}Last edited: {{ item.last_edited }} · {% endif %}
               Last download: {{ (last_download_times[item.id].strftime("%Y-%m-%d %H:%M:%S") if last_download_times.get(item.id)) or 'N/A' }} · 
               📥 {{ count }} downloads · 👤 {{ people_count }} users
@@ -552,10 +918,22 @@
       <h2 id="site-header">🏠 Manage Home Welcome</h2>
       <div class="form-section">
         <form method="POST" action="{{ url_for('admin_dashboard') }}">
-          <input type="hidden" name="action" value="edit_site_welcome">
+          <input type="hidden" name="action" value="edit_site_content">
           <input type="hidden" name="item_type" value="site">
           <label>Home Welcome Text</label>
           <textarea name="home_welcome" rows="4">{{ site_cfg.home_welcome }}</textarea>
+          <label style="margin-top:16px;">Resources / Login Note</label>
+          <textarea name="home_note" rows="3">{{ site_cfg.home_note }}</textarea>
+          <h3 style="margin:20px 0 8px; color:#2c3e50;">Research Highlight Panel</h3>
+          <p style="margin:0 0 14px; color:#6b7b8c;">These four items drive the interactive keyword panel on the homepage.</p>
+          {% for highlight in site_cfg.research_highlights %}
+          <div style="padding:14px 16px; border:1px solid #e4ebf3; border-radius:10px; margin-bottom:12px; background:#fbfdff;">
+            <label>Keyword {{ loop.index }}</label>
+            <input name="highlight_title_{{ loop.index }}" value="{{ highlight.title }}">
+            <label style="margin-top:10px;">Summary {{ loop.index }}</label>
+            <textarea name="highlight_summary_{{ loop.index }}" rows="3">{{ highlight.summary }}</textarea>
+          </div>
+          {% endfor %}
           <button type="submit">💾 Save</button>
         </form>
       </div>
@@ -576,6 +954,8 @@
         const tabSite = document.getElementById('tab-site');
         const siteHeader = document.getElementById('site-header');
         const siteSection = document.getElementById('site-section');
+        if (tabSite) tabSite.textContent = 'Home Content';
+        if (siteHeader) siteHeader.textContent = 'Manage Home Content';
         function showPub() {
             pubHeader.style.display = '';
             pubSection.style.display = '';

@@ -9,7 +9,7 @@ import json
 import logging
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for, send_file, session
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
@@ -23,9 +23,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # --- Global Settings ---
-IS_LOCAL = 0  # Set to 0 for production/deployment
+IS_LOCAL = 1  # Set to 0 for production/deployment
 BASE_ROOT = os.environ.get('PERSISTENT_ROOT', '.').strip()
 PERSISTENT_ROOT = os.path.join(BASE_ROOT, 'render_data')
+LOCAL_HOST = (os.environ.get('LOCAL_HOST', '127.0.0.1') or '127.0.0.1').strip()
+LOCAL_PORT = int(os.environ.get('LOCAL_PORT') or os.environ.get('PORT') or 5000)
 
 # --- Directory Paths ---
 PRIVATE_DOWNLOADS_DIR = os.path.join(PERSISTENT_ROOT, 'private_downloads')
@@ -73,7 +75,16 @@ original_print = print
 def debug_print(*args, **kwargs):
     """Print with auto-flush to avoid log buffering"""
     kwargs.setdefault('flush', True)
-    original_print(*args, **kwargs)
+    try:
+        original_print(*args, **kwargs)
+    except UnicodeEncodeError:
+        stream = kwargs.get('file', sys.stdout)
+        encoding = getattr(stream, 'encoding', None) or 'utf-8'
+        safe_args = []
+        for arg in args:
+            text = str(arg)
+            safe_args.append(text.encode(encoding, errors='replace').decode(encoding))
+        original_print(*safe_args, **kwargs)
 
 print = debug_print
 
@@ -90,6 +101,40 @@ print(f"📂 Logs Dir: {DATA_LOGS_DIR}")
 START_TIME = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 LAB_NAME = "Intelligent Optoelectronic Computing Lab"
 SITE_CONFIG_PATH = os.path.join(PERSISTENT_ROOT, 'site.json')
+PAGE_VIEWS_CSV_PATH = os.path.join(DATA_LOGS_DIR, 'page_views.csv')
+VIEW_LOG_COOLDOWN_SECONDS = 30
+PAGE_TYPE_LABELS = {
+    'home': 'Home',
+    'team': 'People',
+    'articles': 'Publications',
+    'article_detail': 'Publication Detail',
+    'person_detail': 'Profile Detail',
+    'register': 'Register'
+}
+DEFAULT_RESEARCH_HIGHLIGHTS = [
+    {
+        'title': 'Photonic AI',
+        'summary': 'Exploring photonic hardware and system design for AI workloads, with a focus on efficient optical-domain inference.'
+    },
+    {
+        'title': 'Optical Computing',
+        'summary': 'Studying computation schemes that leverage the parallelism and propagation properties of light to process information.'
+    },
+    {
+        'title': 'Diffractive Networks',
+        'summary': 'Investigating diffractive deep neural networks and related free-space optical architectures for compact intelligent systems.'
+    },
+    {
+        'title': 'Integrated Photonics',
+        'summary': 'Connecting algorithms, devices, and chip-level implementation to build practical intelligent optoelectronic platforms.'
+    }
+]
+DEFAULT_SITE_CONFIG = {
+    'home_note': 'To download our resources, please first fill in your information on the Login page.',
+    'home_welcome': "Our lab focuses on research in all-optical neural networks, diffractive deep learning, and intelligent photonic chips.\n\nThis website provides publicly available publications, code, and datasets from our group.",
+    'lab_name': LAB_NAME,
+    'research_highlights': DEFAULT_RESEARCH_HIGHLIGHTS
+}
 
 
 # ==============================================================================
@@ -141,24 +186,113 @@ def _human_size(n):
         pass
     return None
 
+def _normalize_research_highlights(items):
+    normalized = []
+    source_items = items if isinstance(items, list) else []
+    for index, default_item in enumerate(DEFAULT_RESEARCH_HIGHLIGHTS):
+        current = source_items[index] if index < len(source_items) and isinstance(source_items[index], dict) else {}
+        title = (current.get('title') or '').strip() or default_item['title']
+        summary = (current.get('summary') or '').strip() or default_item['summary']
+        normalized.append({
+            'title': title,
+            'summary': summary
+        })
+    return normalized
+
+def _read_download_log_summary():
+    download_counts = {}
+    unique_downloaders = {}
+    last_download_times = {}
+    csv_path = os.path.join(DATA_LOGS_DIR, 'downloads.csv')
+    if not os.path.exists(csv_path):
+        return {
+            'download_counts': download_counts,
+            'unique_downloaders': unique_downloaders,
+            'last_download_times': last_download_times,
+            'total_downloads': 0
+        }
+
+    try:
+        with open(csv_path, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                item_id = row.get('resource_id') or ''
+                if not item_id:
+                    continue
+                download_counts[item_id] = download_counts.get(item_id, 0) + 1
+                key_triplet = (row.get('name', ''), row.get('affiliation', ''), row.get('email', ''))
+                unique_downloaders.setdefault(item_id, set()).add(key_triplet)
+                try:
+                    stamp = datetime.strptime(row.get('time', ''), "%Y-%m-%d %H:%M:%S")
+                    previous = last_download_times.get(item_id)
+                    if previous is None or stamp > previous:
+                        last_download_times[item_id] = stamp
+                except Exception:
+                    pass
+    except Exception as e:
+        print(f"CSV read error: {e}")
+
+    return {
+        'download_counts': download_counts,
+        'unique_downloaders': unique_downloaders,
+        'last_download_times': last_download_times,
+        'total_downloads': sum(download_counts.values())
+    }
+
+def _read_page_view_log_summary():
+    total_views = 0
+    article_view_counts = {}
+    if not os.path.exists(PAGE_VIEWS_CSV_PATH):
+        return {
+            'total_views': total_views,
+            'article_view_counts': article_view_counts
+        }
+
+    try:
+        with open(PAGE_VIEWS_CSV_PATH, 'r', encoding='utf-8-sig') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                total_views += 1
+                if (row.get('page_type') or '') == 'article_detail':
+                    article_id = row.get('item_id') or ''
+                    if article_id:
+                        article_view_counts[article_id] = article_view_counts.get(article_id, 0) + 1
+    except Exception as e:
+        print(f"Page view CSV read error: {e}")
+
+    return {
+        'total_views': total_views,
+        'article_view_counts': article_view_counts
+    }
+
 def load_site_config():
     os.makedirs(PERSISTENT_ROOT, exist_ok=True)
     if not os.path.exists(SITE_CONFIG_PATH):
-        default = {
-            "home_welcome": "Our lab focuses on research in all-optical neural networks, diffractive deep learning, and intelligent photonic chips.\n\nThis website provides publicly available publications, code, and datasets from our group.",
-            "lab_name": LAB_NAME
-        }
         try:
             with open(SITE_CONFIG_PATH, 'w', encoding='utf-8') as f:
-                json.dump(default, f, ensure_ascii=False, indent=2)
+                json.dump(DEFAULT_SITE_CONFIG, f, ensure_ascii=False, indent=2)
         except Exception as e:
             print(f"⚠️ Failed to init site config: {e}")
     try:
         with open(SITE_CONFIG_PATH, 'r', encoding='utf-8') as f:
-            return json.load(f)
+            cfg = json.load(f)
+        changed = False
+        for key in ('home_note', 'home_welcome', 'lab_name'):
+            if key not in cfg or not isinstance(cfg.get(key), str):
+                cfg[key] = DEFAULT_SITE_CONFIG[key]
+                changed = True
+        normalized_highlights = _normalize_research_highlights(cfg.get('research_highlights'))
+        if cfg.get('research_highlights') != normalized_highlights:
+            cfg['research_highlights'] = normalized_highlights
+            changed = True
+        if changed:
+            save_site_config(cfg)
+        return cfg
     except Exception as e:
         print(f"⚠️ Failed to load site config: {e}")
-        return {"home_welcome": "", "lab_name": LAB_NAME}
+        fallback = dict(DEFAULT_SITE_CONFIG)
+        fallback['research_highlights'] = _normalize_research_highlights(DEFAULT_SITE_CONFIG.get('research_highlights'))
+        return fallback
 
 def save_site_config(cfg):
     try:
@@ -186,6 +320,63 @@ def save_json_data(filename, data):
     path = os.path.join(PERSISTENT_ROOT, filename)
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
+
+def _ensure_visitor_id():
+    visitor_id = session.get('visitor_id')
+    if not visitor_id:
+        visitor_id = os.urandom(8).hex()
+        session['visitor_id'] = visitor_id
+    return visitor_id
+
+def _should_skip_view_log(page_key, now):
+    last_key = session.get('last_view_key')
+    last_time = session.get('last_view_time')
+    if not last_key or not last_time:
+        return False
+    try:
+        last_dt = datetime.strptime(last_time, "%Y-%m-%d %H:%M:%S")
+    except Exception:
+        return False
+    return last_key == page_key and (now - last_dt).total_seconds() < VIEW_LOG_COOLDOWN_SECONDS
+
+def log_page_view(page_type, item_id='', title=''):
+    """Append a lightweight page-view record for public pages."""
+    if request.method != 'GET':
+        return
+    now = datetime.now()
+    page_key = f"{page_type}:{item_id or request.path}"
+    if _should_skip_view_log(page_key, now):
+        return
+
+    os.makedirs(DATA_LOGS_DIR, exist_ok=True)
+    file_exists = os.path.isfile(PAGE_VIEWS_CSV_PATH)
+    timestamp = now.strftime("%Y-%m-%d %H:%M:%S")
+    visitor_id = _ensure_visitor_id()
+    user_info = session.get('user_info') or {}
+
+    try:
+        with open(PAGE_VIEWS_CSV_PATH, 'a', encoding='utf-8-sig', newline='') as f:
+            writer = csv.writer(f)
+            if not file_exists:
+                writer.writerow([
+                    'time', 'visitor_id', 'path', 'page_type', 'item_id',
+                    'title', 'name', 'affiliation', 'email'
+                ])
+            writer.writerow([
+                timestamp,
+                visitor_id,
+                request.path,
+                page_type,
+                item_id,
+                title,
+                user_info.get('name', ''),
+                user_info.get('affiliation', ''),
+                user_info.get('email', '')
+            ])
+        session['last_view_key'] = page_key
+        session['last_view_time'] = timestamp
+    except Exception as e:
+        print(f"View log write failed: {e}")
 
 def get_file_status(item_id):
     status = {'paper': False, 'resource': False}
@@ -275,6 +466,8 @@ PEOPLE_IMAGES_DIR = os.path.join(PERSISTENT_ROOT, 'images', 'people')
 os.makedirs(PEOPLE_IMAGES_DIR, exist_ok=True)
 ARTICLE_IMAGES_DIR = os.path.join(PERSISTENT_ROOT, 'images', 'articles')
 os.makedirs(ARTICLE_IMAGES_DIR, exist_ok=True)
+SITE_IMAGES_DIR = os.path.join(PERSISTENT_ROOT, 'images')
+os.makedirs(SITE_IMAGES_DIR, exist_ok=True)
 
 def _add_person(form_data, photo_file=None):
     filename = 'people.json'
@@ -362,18 +555,41 @@ def _delete_person(person_id):
 @app.route('/')
 def index():
     site_cfg = load_site_config()
-    return render_template('index.html', site_cfg=site_cfg)
+    articles = load_json_data('articles.json')
+    people = load_json_data('people.json')
+    featured_articles = sorted(articles, key=lambda x: x.get('year', 0), reverse=True)[:3]
+    log_page_view('home', title='Home')
+    page_view_summary = _read_page_view_log_summary()
+    return render_template(
+        'index.html',
+        site_cfg=site_cfg,
+        article_count=len(articles),
+        people_count=len(people),
+        featured_articles=featured_articles,
+        total_page_views=page_view_summary['total_views']
+    )
 
 @app.route('/team')
 def team():
     people = load_json_data('people.json')
+    log_page_view('team', title='People')
     return render_template('team.html', people=people)
 
 @app.route('/articles')
 def articles():
+    site_cfg = load_site_config()
     ARTICLES = load_json_data('articles.json')
     sorted_articles = sorted(ARTICLES, key=lambda x: x['year'], reverse=True)
-    return render_template('articles.html', articles=sorted_articles)
+    current_year = datetime.now().year
+    min_year = min((item.get('year', current_year) for item in ARTICLES), default=current_year)
+    year_groups = []
+    for year in range(current_year, min_year - 1, -1):
+        year_groups.append({
+            'year': year,
+            'articles': [item for item in sorted_articles if item.get('year') == year]
+        })
+    log_page_view('articles', title='Publications')
+    return render_template('articles.html', articles=sorted_articles, year_groups=year_groups, site_cfg=site_cfg)
 
 @app.route('/article/<id>')
 def article_detail(id):
@@ -385,7 +601,16 @@ def article_detail(id):
     status = get_file_status(id)
     paper_info = _file_info(id, 'paper')
     resource_info = _file_info(id, 'resource')
-    return render_template('article_detail.html', item=article, file_status=status, paper_info=paper_info, resource_info=resource_info)
+    download_summary = _read_download_log_summary()
+    log_page_view('article_detail', item_id=id, title=article.get('title', id))
+    return render_template(
+        'article_detail.html',
+        item=article,
+        file_status=status,
+        paper_info=paper_info,
+        resource_info=resource_info,
+        download_count=download_summary['download_counts'].get(id, 0)
+    )
 
 @app.route('/person/<id>')
 def person_detail(id):
@@ -393,6 +618,7 @@ def person_detail(id):
     person = next((p for p in people if p['id'] == id), None)
     if not person:
         return "Person not found", 404
+    log_page_view('person_detail', item_id=id, title=person.get('name', id))
     return render_template('person_detail.html', person=person)
 # Resources route removed/merged into articles
 
@@ -413,6 +639,7 @@ def register():
     """User Login/Register page"""
     session.pop('user_info', None)
     session.pop('registered_at', None)
+    log_page_view('register', title='Register')
     return render_template('register.html')
 
 @app.route('/submit_register', methods=['POST'])
@@ -575,10 +802,17 @@ def admin_dashboard():
         else:
             _update_item(item_type, item_id, request.form)
         return redirect(url_for('admin_dashboard'))
-    elif action == 'edit_site_welcome':
-        note = (request.form.get('home_welcome') or '').strip()
+    elif action in ('edit_site_welcome', 'edit_site_content'):
         cfg = load_site_config()
-        cfg['home_welcome'] = note
+        cfg['home_welcome'] = (request.form.get('home_welcome') or '').strip()
+        cfg['home_note'] = (request.form.get('home_note') or '').strip() or DEFAULT_SITE_CONFIG['home_note']
+        highlights = []
+        for index, default_item in enumerate(DEFAULT_RESEARCH_HIGHLIGHTS, start=1):
+            highlights.append({
+                'title': (request.form.get(f'highlight_title_{index}') or '').strip() or default_item['title'],
+                'summary': (request.form.get(f'highlight_summary_{index}') or '').strip() or default_item['summary']
+            })
+        cfg['research_highlights'] = _normalize_research_highlights(highlights)
         save_site_config(cfg)
         return redirect(url_for('admin_dashboard'))
     elif action == 'delete':
@@ -590,11 +824,17 @@ def admin_dashboard():
         return redirect(url_for('admin_dashboard'))
 
     # === Load data for display ===
-    
+    now = datetime.now()
+    today = now.date()
+    trend_dates = [today - timedelta(days=offset) for offset in range(6, -1, -1)]
+    trend_keys = {d.strftime("%Y-%m-%d"): {'date': d, 'views': 0, 'downloads': 0} for d in trend_dates}
+
     # Load download counts and unique downloaders
     download_counts = {}
     unique_downloaders = {}
     last_download_times = {}
+    downloads_last_7_days = 0
+    downloads_today = 0
     csv_path = os.path.join(DATA_LOGS_DIR, 'downloads.csv')
     if os.path.exists(csv_path):
         try:
@@ -612,6 +852,12 @@ def admin_dashboard():
                         s.add(key_triplet)
                         try:
                             t = datetime.strptime(row.get('time',''), "%Y-%m-%d %H:%M:%S")
+                            date_key = t.strftime("%Y-%m-%d")
+                            if date_key in trend_keys:
+                                trend_keys[date_key]['downloads'] += 1
+                                downloads_last_7_days += 1
+                            if t.date() == today:
+                                downloads_today += 1
                             prev = last_download_times.get(item_id)
                             if (prev is None) or (t > prev):
                                 last_download_times[item_id] = t
@@ -623,6 +869,139 @@ def admin_dashboard():
     # Load articles
     articles = load_json_data('articles.json')
     people = load_json_data('people.json')
+    article_titles = {item['id']: item.get('title', item['id']) for item in articles}
+
+    # Load page view stats
+    page_view_counts = {}
+    page_view_meta = {}
+    article_view_counts = {}
+    article_last_view_times = {}
+    unique_visitors = set()
+    unique_visitors_last_7_days = set()
+    views_last_7_days = 0
+    views_today = 0
+    article_detail_views = 0
+    cutoff = now - timedelta(days=7)
+    if os.path.exists(PAGE_VIEWS_CSV_PATH):
+        try:
+            with open(PAGE_VIEWS_CSV_PATH, 'r', encoding='utf-8-sig') as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    path = row.get('path') or ''
+                    page_type = row.get('page_type') or ''
+                    item_id = row.get('item_id') or ''
+                    title = row.get('title') or PAGE_TYPE_LABELS.get(page_type, path or page_type or 'Unknown')
+                    visitor_id = row.get('visitor_id') or ''
+                    stamp = row.get('time') or ''
+
+                    if visitor_id:
+                        unique_visitors.add(visitor_id)
+
+                    page_view_counts[path] = page_view_counts.get(path, 0) + 1
+                    meta = page_view_meta.get(path)
+                    if meta is None:
+                        meta = {
+                            'path': path,
+                            'label': title,
+                            'page_type': page_type,
+                            'count': 0,
+                            'last_viewed': None
+                        }
+                        page_view_meta[path] = meta
+                    meta['count'] += 1
+
+                    try:
+                        viewed_at = datetime.strptime(stamp, "%Y-%m-%d %H:%M:%S")
+                        if viewed_at >= cutoff:
+                            views_last_7_days += 1
+                            if visitor_id:
+                                unique_visitors_last_7_days.add(visitor_id)
+                        if viewed_at.date() == today:
+                            views_today += 1
+                        date_key = viewed_at.strftime("%Y-%m-%d")
+                        if date_key in trend_keys:
+                            trend_keys[date_key]['views'] += 1
+                        prev = meta.get('last_viewed')
+                        if prev is None or viewed_at > prev:
+                            meta['last_viewed'] = viewed_at
+                    except Exception:
+                        viewed_at = None
+
+                    if page_type == 'article_detail':
+                        article_detail_views += 1
+                        article_view_counts[item_id] = article_view_counts.get(item_id, 0) + 1
+                        prev = article_last_view_times.get(item_id)
+                        if viewed_at and (prev is None or viewed_at > prev):
+                            article_last_view_times[item_id] = viewed_at
+        except Exception as e:
+            print(f"Page view CSV read error: {e}")
+
+    top_pages = sorted(
+        page_view_meta.values(),
+        key=lambda x: (-x['count'], x['label'])
+    )[:5]
+    top_articles_by_views = []
+    for article_id, count in sorted(article_view_counts.items(), key=lambda x: (-x[1], x[0]))[:5]:
+        download_total = download_counts.get(article_id, 0)
+        conversion_rate = (download_total / count * 100.0) if count else None
+        top_articles_by_views.append({
+            'id': article_id,
+            'title': article_titles.get(article_id, article_id),
+            'count': count,
+            'last_viewed': article_last_view_times.get(article_id),
+            'downloads': download_total,
+            'conversion_rate': conversion_rate
+        })
+
+    trend_data = []
+    max_views_in_trend = max((item['views'] for item in trend_keys.values()), default=0)
+    max_downloads_in_trend = max((item['downloads'] for item in trend_keys.values()), default=0)
+    for key in sorted(trend_keys.keys()):
+        item = trend_keys[key]
+        views = item['views']
+        downloads = item['downloads']
+        trend_data.append({
+            'date': key,
+            'label': item['date'].strftime("%m-%d"),
+            'views': views,
+            'downloads': downloads,
+            'views_width': 0 if max_views_in_trend == 0 else max(8, round(views / max_views_in_trend * 100)),
+            'downloads_width': 0 if max_downloads_in_trend == 0 else max(8, round(downloads / max_downloads_in_trend * 100))
+        })
+
+    article_metrics = []
+    for article in articles:
+        article_id = article['id']
+        view_total = article_view_counts.get(article_id, 0)
+        download_total = download_counts.get(article_id, 0)
+        unique_user_total = len(unique_downloaders.get(article_id, set()))
+        conversion_rate = (download_total / view_total * 100.0) if view_total else None
+        article_metrics.append({
+            'id': article_id,
+            'title': article.get('title', article_id),
+            'views': view_total,
+            'downloads': download_total,
+            'unique_users': unique_user_total,
+            'conversion_rate': conversion_rate,
+            'last_viewed': article_last_view_times.get(article_id),
+            'last_downloaded': last_download_times.get(article_id)
+        })
+    article_metrics.sort(key=lambda item: (-item['views'], -item['downloads'], item['title']))
+
+    total_downloads = sum(download_counts.values())
+    publication_conversion_rate = (total_downloads / article_detail_views * 100.0) if article_detail_views else None
+    page_view_stats = {
+        'total_views': sum(page_view_counts.values()),
+        'unique_visitors': len(unique_visitors),
+        'views_last_7_days': views_last_7_days,
+        'views_today': views_today,
+        'unique_visitors_last_7_days': len(unique_visitors_last_7_days),
+        'article_detail_views': article_detail_views,
+        'downloads_last_7_days': downloads_last_7_days,
+        'downloads_today': downloads_today,
+        'publication_conversion_rate': publication_conversion_rate
+    }
+
     # People photo status/info
     people_photo_status = {}
     people_photo_info = {}
@@ -656,10 +1035,17 @@ def admin_dashboard():
         'admin.html',
         articles=articles,
         download_counts=download_counts,
+        total_downloads=total_downloads,
         file_statuses=file_statuses,
         file_infos=file_infos,
         unique_counts=unique_counts,
         last_download_times=last_download_times,
+        page_view_stats=page_view_stats,
+        trend_data=trend_data,
+        top_pages=top_pages,
+        top_articles_by_views=top_articles_by_views,
+        article_view_counts=article_view_counts,
+        article_metrics=article_metrics,
         people=people,
         people_photo_status=people_photo_status,
         people_photo_info=people_photo_info,
@@ -774,7 +1160,7 @@ def admin_upload_thumbnail(article_id):
             articles[i] = target
             break
     save_json_data('articles.json', articles)
-    return redirect(url_for('admin_dashboard'))
+    return redirect(url_for('admin_dashboard') + '#article-' + article_id)
 
 # ==============================================================================
 # 8. Asset Serving (from render_data)
@@ -795,6 +1181,13 @@ def asset_article_thumb(filename):
         return abort(404)
     return send_file(path)
 
+@app.route('/assets/site/<filename>')
+def asset_site_image(filename):
+    path = os.path.join(SITE_IMAGES_DIR, filename)
+    if not os.path.exists(path):
+        return abort(404)
+    return send_file(path)
+
 @app.route('/admin/download-logs.csv')
 def download_logs_csv():
     """Export download logs as CSV"""
@@ -804,8 +1197,23 @@ def download_logs_csv():
     os.makedirs(DATA_LOGS_DIR, exist_ok=True)
     if not os.path.exists(csv_path):
         with open(csv_path, 'w', encoding='utf-8') as f:
-            f.write('time,name,affiliation,email,resource_id\n')
+            f.write('time,name,affiliation,email,resource_id,type\n')
     return send_file(csv_path, as_attachment=True, download_name='lightchip_download_logs.csv')
+
+@app.route('/admin/download-page-views.csv')
+def download_page_views_csv():
+    """Export page view logs as CSV"""
+    if not session.get('is_admin'):
+        return "Unauthorized", 403
+    os.makedirs(DATA_LOGS_DIR, exist_ok=True)
+    if not os.path.exists(PAGE_VIEWS_CSV_PATH):
+        with open(PAGE_VIEWS_CSV_PATH, 'w', encoding='utf-8-sig', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                'time', 'visitor_id', 'path', 'page_type', 'item_id',
+                'title', 'name', 'affiliation', 'email'
+            ])
+    return send_file(PAGE_VIEWS_CSV_PATH, as_attachment=True, download_name='lightchip_page_views.csv')
 
 @app.route('/admin/download-render-data.zip')
 def download_render_data_zip():
@@ -867,7 +1275,8 @@ if __name__ == '__main__':
     print("🛑 Press Ctrl+C to stop")
     
     if IS_LOCAL:
-        app.run(host='127.0.0.1', port=5000, debug=True, use_reloader=True)
+        print(f"Local URL: http://{LOCAL_HOST}:{LOCAL_PORT}")
+        app.run(host=LOCAL_HOST, port=LOCAL_PORT, debug=True, use_reloader=True)
     else:
         port = int(os.environ.get('PORT', 5000))
         app.run(host='0.0.0.0', port=port, debug=False)

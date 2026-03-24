@@ -3,14 +3,14 @@
 {% block content %}
 <h2>👤 {{ person.name }}</h2>
 
-<div style="max-width: 800px; margin: 0 auto; display: grid; grid-template-columns: 220px 1fr; gap: 24px; align-items: start;">
+<div class="person-detail-layout" style="max-width: 800px; margin: 0 auto; display: grid; grid-template-columns: 220px 1fr; gap: 24px; align-items: start;">
   <div>
-    <img src="{{ url_for('asset_people', filename=person.photo_filename) if person.photo_filename else 'https://via.placeholder.com/200' }}" alt="{{ person.name }}" style="width: 200px; height: 200px; object-fit: cover; border-radius: 8px;">
+    <img src="{{ url_for('asset_people', filename=person.photo_filename) if person.photo_filename else url_for('static', filename='images/placeholder-person.svg') }}" alt="{{ person.name }}" class="person-detail-photo" style="width: 200px; height: 200px; object-fit: cover; border-radius: 8px;">
   </div>
   <div>
     <p style="margin: 4px 0;"><strong>Email:</strong> <a href="mailto:{{ person.email }}">{{ person.email }}</a></p>
     {% if person.links %}
-    <div style="margin: 6px 0; text-align: center;">
+    <div class="person-links" style="margin: 6px 0; text-align: center;">
       {% for l in person.links %}
         <p style="margin: 4px 0;">
           <strong>{{ l.name }}:</strong>

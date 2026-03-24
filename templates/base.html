@@ -9,18 +9,20 @@
 </head>
 <body>
   <div class="container">
-    <!-- Top Header -->
-    <header class="site-header">
-      <h1><a href="/" style="text-decoration: none; color: inherit;">Prof. Yitong Chen - Intelligent Optoelectronic Computing Lab</a></h1>
+    <header class="site-topbar">
+      <a href="/" class="site-brand">
+        <img src="{{ url_for('asset_site_image', filename='ic_logo.png') }}" alt="Lab Logo" class="site-brand-logo">
+        <span class="site-brand-text">
+          <span class="site-brand-name">LightChip Lab</span>
+          <span class="site-brand-subtitle">Intelligent Optoelectronic Computing Lab</span>
+        </span>
+      </a>
+      <nav class="main-nav">
+          <a href="/" class="{% if request.path == '/' %}is-active{% endif %}">Home</a>
+          <a href="/articles" class="{% if request.path.startswith('/articles') or request.path.startswith('/article/') %}is-active{% endif %}">Publications</a>
+          <a href="/team" class="{% if request.path.startswith('/team') or request.path.startswith('/person/') %}is-active{% endif %}">People</a>
+      </nav>
     </header>
-
-    <!-- Main Navigation -->
-    <nav class="main-nav">
-        <a href="/">Home</a>
-        <a href="/articles">Publications</a>
-        <a href="/team">People</a>
-        <!-- <a href="/research">Research</a> -->
-    </nav>
 
     <!-- Page Content -->
     <div class="content-card">

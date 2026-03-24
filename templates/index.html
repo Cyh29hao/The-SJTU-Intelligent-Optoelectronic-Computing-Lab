@@ -1,45 +1,217 @@
 {% extends "base.html" %}
 {% block content %}
-<div style="margin: 12px 0; white-space: pre-wrap;">
-  {{ site_cfg.home_welcome }}
-</div>
+<section class="portal-hero">
+  <div class="portal-hero-backdrop"></div>
+  <div class="portal-hero-content">
+    <div class="portal-hero-main">
+      <div class="portal-hero-copy">
+        <div class="portal-hero-kicker">Shanghai Jiao Tong University</div>
+        <h2 class="portal-hero-title">Intelligent Optoelectronic Computing Lab</h2>
+        <p class="portal-hero-subtitle">Prof. Yitong Chen</p>
+        <p class="portal-hero-summary">
+          Research in photonic neural networks, intelligent photonic integrated circuits,
+          and open academic resources for optical computing.
+        </p>
+      </div>
 
-{% if not session.user_info %}
-  <p>
-    <strong>Note:</strong> To download our resources, please first fill in your information on the 
-    <a href="{{ url_for('register') }}">LOGIN page</a>.
-    {% if session.admin_shadow %}
-      <br><a href="{{ url_for('admin_return') }}">Return to Admin</a>
-    {% endif %}
-  </p>
-{% else %}
-  <p>
-    <strong>Note:</strong> You are logged in. You can download resources directly.
-    {% if session.admin_shadow %}
-      <br><a href="{{ url_for('admin_return') }}">Return to Admin</a>
-    {% endif %}
-  </p>
-{% endif %}
+      {% if site_cfg.research_highlights %}
+      <div class="portal-hero-side">
+        <div class="portal-hero-panel" data-highlight-panel>
+          <div class="portal-hero-panel-label">Research Focus</div>
+          <div class="portal-highlights portal-highlights-hero">
+            <div class="portal-highlight-nav" role="tablist" aria-label="Research focus">
+              {% for highlight in site_cfg.research_highlights %}
+              <button
+                type="button"
+                class="portal-highlight-trigger{% if loop.first %} is-active{% endif %}"
+                data-highlight-index="{{ loop.index0 }}"
+                aria-selected="{{ 'true' if loop.first else 'false' }}"
+              >
+                {{ highlight.title }}
+              </button>
+              {% endfor %}
+            </div>
+            <div class="portal-highlight-display">
+              {% for highlight in site_cfg.research_highlights %}
+              <article class="portal-highlight-card{% if loop.first %} is-active{% endif %}" data-highlight-panel-index="{{ loop.index0 }}">
+                <div class="portal-highlight-index">0{{ loop.index }}</div>
+                <h4>{{ highlight.title }}</h4>
+                <p>{{ highlight.summary }}</p>
+              </article>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</section>
 
-<!-- <p>
-  LAST EDITED ON : 2026-01-29 21:32:00
-</p> -->
+<section class="portal-carousel-section">
+  <div class="portal-section-head">
+    <h3>Selected Publications</h3>
+  </div>
+  <div class="portal-carousel" data-carousel>
+    <div class="portal-carousel-track">
+      {% for article in featured_articles %}
+      <article class="portal-slide{% if loop.first %} is-active{% endif %}">
+        <div class="portal-slide-media">
+          <img
+            src="{{ url_for('asset_article_thumb', filename=article.thumbnail_filename) if article.thumbnail_filename else url_for('static', filename='images/placeholder-article.svg') }}"
+            alt="{{ article.title }}"
+            class="portal-slide-image"
+          >
+        </div>
+        <div class="portal-slide-content">
+          <div class="portal-slide-index">0{{ loop.index }}</div>
+          <a href="{{ url_for('article_detail', id=article.id) }}" class="portal-slide-title">{{ article.title }}</a>
+          {% set adc = article.authors_display_count or 3 %}
+          {% set total = article.authors|length %}
+          {% set shown = article.authors[:adc] %}
+          {% set remaining = total - adc %}
+          <p class="portal-slide-authors">
+            {{ shown|join(', ') }}{% if remaining > 0 %} et al.{% endif %}
+          </p>
+          <p class="portal-slide-meta">{{ article.venue }}, {{ article.year }}</p>
+          <p class="portal-slide-summary">
+            {{ (article.abstract[:200] ~ '...') if article.abstract and article.abstract|length > 200 else article.abstract }}
+          </p>
+          <div class="portal-slide-actions">
+            <a href="{{ url_for('article_detail', id=article.id) }}" class="portal-slide-link">Read Article &rarr;</a>
+          </div>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+    <div class="portal-carousel-dots">
+      {% for article in featured_articles %}
+      <button type="button" class="portal-dot{% if loop.first %} is-active{% endif %}" data-slide-index="{{ loop.index0 }}" aria-label="Go to slide {{ loop.index }}"></button>
+      {% endfor %}
+    </div>
+  </div>
+</section>
 
-{% if session.user_info %}
-  <p>Current user: {{ session.user_info.name }} ({{ session.user_info.affiliation }}) {{ session.user_info.email }}</p>
-{% endif %}
+<section class="portal-lower">
+  <div class="portal-about">
+    <div class="portal-section-head">
+      <h3>About the Lab</h3>
+    </div>
+    <div class="portal-about-body">
+      {{ site_cfg.home_welcome }}
+    </div>
+  </div>
+
+  <aside class="portal-side-note">
+    <div class="portal-side-card">
+      <div class="portal-side-label">Resources</div>
+      {% if not session.user_info %}
+        <p class="portal-side-text">{{ site_cfg.home_note }}</p>
+        <a href="{{ url_for('register') }}" class="portal-inline-link">Go to LOGIN page</a>
+      {% else %}
+        <p class="portal-side-text">
+          You are currently logged in and can access downloadable resources directly from each publication detail page.
+        </p>
+        <p class="portal-user-line">
+          Current user: {{ session.user_info.name }} ({{ session.user_info.affiliation }}) {{ session.user_info.email }}
+        </p>
+      {% endif %}
+      <div class="portal-side-stats portal-side-stats-wide">
+        <div class="portal-side-stat">
+          <div class="portal-side-value">{{ article_count }}</div>
+          <div class="portal-side-metric">Publications</div>
+        </div>
+        <div class="portal-side-stat">
+          <div class="portal-side-value">{{ people_count }}</div>
+          <div class="portal-side-metric">People</div>
+        </div>
+        <div class="portal-side-stat">
+          <div class="portal-side-value">{{ total_page_views }}</div>
+          <div class="portal-side-metric">Page Views</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+</section>
 
 <script>
-  console.log("%c❤️ Welcome to our research world!", "color: #9b59b6; font-size: 18px; font-weight: bold;");
+  console.log("%cWelcome to our research world.", "color: #9b59b6; font-size: 18px; font-weight: bold;");
   console.log("Developer: An undergraduate student passionate about coding");
-  console.log("Note: This site is under construction — suggestions are welcome!");
+  console.log("Note: This site is under construction. Suggestions are welcome!");
   console.log("GitHub Repository: https://github.com/Cyh29hao/0129_YitongChen_lightchip_lab_website_draft");
 
   function team() {
     console.clear();
-    console.log("🧪 Prof. Yitong Chen - Intelligent Optoelectronic Computing Lab");
-    console.log("📍 Research Areas: D²NN · MZI · Metasurface · Photonic AI");
-    console.log("📩 Contact: contact@lightchip-lab.org");
+    console.log("Prof. Yitong Chen - Intelligent Optoelectronic Computing Lab");
+    console.log("Research Areas: D2NN | MZI | Metasurface | Photonic AI");
+    console.log("Contact: contact@lightchip-lab.org");
   }
+
+  (function() {
+    const carousel = document.querySelector('[data-carousel]');
+    if (carousel) {
+      const slides = Array.from(carousel.querySelectorAll('.portal-slide'));
+      const dots = Array.from(carousel.querySelectorAll('.portal-dot'));
+      let current = 0;
+      let timer = null;
+
+      function showSlide(index) {
+        current = (index + slides.length) % slides.length;
+        slides.forEach((slide, idx) => slide.classList.toggle('is-active', idx === current));
+        dots.forEach((dot, idx) => dot.classList.toggle('is-active', idx === current));
+      }
+
+      function startAutoplay() {
+        stopAutoplay();
+        if (slides.length > 1) {
+          timer = window.setInterval(() => showSlide(current + 1), 5200);
+        }
+      }
+
+      function stopAutoplay() {
+        if (timer) {
+          window.clearInterval(timer);
+          timer = null;
+        }
+      }
+
+      dots.forEach((dot, idx) => {
+        dot.addEventListener('click', () => {
+          showSlide(idx);
+          startAutoplay();
+        });
+      });
+
+      carousel.addEventListener('mouseenter', stopAutoplay);
+      carousel.addEventListener('mouseleave', startAutoplay);
+      showSlide(0);
+      startAutoplay();
+    }
+
+    const highlightPanel = document.querySelector('[data-highlight-panel]');
+    if (highlightPanel) {
+      const triggers = Array.from(highlightPanel.querySelectorAll('.portal-highlight-trigger'));
+      const cards = Array.from(highlightPanel.querySelectorAll('.portal-highlight-card'));
+
+      function showHighlight(index) {
+        triggers.forEach((trigger, idx) => {
+          const active = idx === index;
+          trigger.classList.toggle('is-active', active);
+          trigger.setAttribute('aria-selected', active ? 'true' : 'false');
+        });
+        cards.forEach((card, idx) => {
+          card.classList.toggle('is-active', idx === index);
+        });
+      }
+
+      triggers.forEach((trigger, idx) => {
+        trigger.addEventListener('mouseenter', () => showHighlight(idx));
+        trigger.addEventListener('focus', () => showHighlight(idx));
+        trigger.addEventListener('click', () => showHighlight(idx));
+      });
+
+      showHighlight(0);
+    }
+  })();
 </script>
 {% endblock %}

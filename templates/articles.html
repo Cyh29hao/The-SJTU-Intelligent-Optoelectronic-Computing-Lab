@@ -1,35 +1,58 @@
-<!-- templates/articles.html -->
 {% extends "base.html" %}
 {% block title %}Publications - LightChip Lab{% endblock %}
 {% block content %}
 
-<div style="text-align: left; max-width: 900px; margin: 0 auto;">
-  {% for article in articles %}
-  <div style="margin-bottom: 20px; padding: 12px; border: 1px solid #eee; border-radius:8px; display:flex; gap:16px; align-items: center;">
-    <img src="{{ url_for('asset_article_thumb', filename=article.thumbnail_filename) if article.thumbnail_filename else 'https://via.placeholder.com/120' }}" alt="{{ article.title }}" style="width: 120px; height: 90px; object-fit: cover; border-radius: 6px;">
-    <div style="flex:1;">
-      <h3 style="margin: 0 0 6px; font-size: 1.2em;">
-        <a href="{{ url_for('article_detail', id=article.id) }}" 
-           style="color: #2c3e50; text-decoration: none; transition: color 0.15s, text-decoration-color 0.15s;"
-           onmouseover="this.style.color='#1a73e8'; this.style.textDecoration='underline';"
-           onmouseout="this.style.color='#2c3e50'; this.style.textDecoration='none';">
-          {{ article.title }}
-        </a>
-      </h3>
-      {% set adc = article.authors_display_count or 3 %}
-      {% set total = article.authors|length %}
-      {% set shown = article.authors[:adc] %}
-      {% set remaining = total - adc %}
-      <p style="margin: 2px 0; color: #555;">
-        <strong>
-          {{ shown|join(', ') }}{% if remaining > 0 %} et al.{% endif %}
-        </strong>
+<div class="publications-page" style="text-align: left; max-width: 900px; margin: 0 auto;">
+  <section class="publications-access-card">
+    <div class="portal-side-label">Resources</div>
+    {% if not session.user_info %}
+      <p class="portal-side-text">{{ site_cfg.home_note }}</p>
+      <a href="{{ url_for('register') }}" class="portal-inline-link">Go to LOGIN page</a>
+    {% else %}
+      <p class="portal-side-text">
+        You are currently logged in and can access downloadable resources directly from each publication detail page.
       </p>
-      <p style="margin: 2px 0; color: #7f8c8d; font-style: italic;">
-        {{ article.venue }}, {{ article.year }}
+      <p class="portal-user-line">
+        Current user: {{ session.user_info.name }} ({{ session.user_info.affiliation }}) {{ session.user_info.email }}
       </p>
-    </div>
-  </div>
+    {% endif %}
+  </section>
+
+  {% for group in year_groups %}
+  <section class="publication-year-group">
+    <h3 class="publication-year-heading">{{ group.year }}</h3>
+    {% if group.articles %}
+      {% for article in group.articles %}
+      <div class="publication-card" style="margin-bottom: 20px; padding: 12px; border: 1px solid #eee; border-radius:8px; display:flex; gap:16px; align-items: center;">
+        <img src="{{ url_for('asset_article_thumb', filename=article.thumbnail_filename) if article.thumbnail_filename else url_for('static', filename='images/placeholder-article.svg') }}" alt="{{ article.title }}" class="publication-thumb" style="width: 120px; height: 90px; object-fit: cover; border-radius: 6px;">
+        <div class="publication-card-body" style="flex:1;">
+          <h3 style="margin: 0 0 6px; font-size: 1.2em;">
+            <a href="{{ url_for('article_detail', id=article.id) }}"
+               style="color: #2c3e50; text-decoration: none; transition: color 0.15s, text-decoration-color 0.15s;"
+               onmouseover="this.style.color='#1a73e8'; this.style.textDecoration='underline';"
+               onmouseout="this.style.color='#2c3e50'; this.style.textDecoration='none';">
+              {{ article.title }}
+            </a>
+          </h3>
+          {% set adc = article.authors_display_count or 3 %}
+          {% set total = article.authors|length %}
+          {% set shown = article.authors[:adc] %}
+          {% set remaining = total - adc %}
+          <p style="margin: 2px 0; color: #555;">
+            <strong>
+              {{ shown|join(', ') }}{% if remaining > 0 %} et al.{% endif %}
+            </strong>
+          </p>
+          <p style="margin: 2px 0; color: #7f8c8d; font-style: italic;">
+            {{ article.venue }}, {{ article.year }}
+          </p>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <p class="publication-empty">No entries yet.</p>
+    {% endif %}
+  </section>
   {% endfor %}
 </div>
 {% endblock %}
