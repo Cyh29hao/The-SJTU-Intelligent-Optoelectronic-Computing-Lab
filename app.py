@@ -132,7 +132,10 @@ DEFAULT_RESEARCH_HIGHLIGHTS = [
 DEFAULT_SITE_CONFIG = {
     'home_note': 'To download our resources, please first fill in your information on the Login page.',
     'home_welcome': "Our lab focuses on research in all-optical neural networks, diffractive deep learning, and intelligent photonic chips.\n\nThis website provides publicly available publications, code, and datasets from our group.",
+    'hero_summary': 'Research in photonic neural networks, intelligent photonic integrated circuits, and open academic resources for optical computing.',
     'lab_name': LAB_NAME,
+    'lab_name_short': '"LightChip Lab"',
+    'lab_name_full': 'the SJTU Intelligent Optoelectronic Computing Lab',
     'research_highlights': DEFAULT_RESEARCH_HIGHLIGHTS
 }
 
@@ -277,7 +280,7 @@ def load_site_config():
         with open(SITE_CONFIG_PATH, 'r', encoding='utf-8') as f:
             cfg = json.load(f)
         changed = False
-        for key in ('home_note', 'home_welcome', 'lab_name'):
+        for key in ('home_note', 'home_welcome', 'hero_summary', 'lab_name', 'lab_name_short', 'lab_name_full'):
             if key not in cfg or not isinstance(cfg.get(key), str):
                 cfg[key] = DEFAULT_SITE_CONFIG[key]
                 changed = True
@@ -320,6 +323,54 @@ def save_json_data(filename, data):
     path = os.path.join(PERSISTENT_ROOT, filename)
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
+
+def _article_sort_key(item):
+    last_edited = item.get('last_edited') or ''
+    return (
+        -(item.get('year') or 0),
+        last_edited,
+        item.get('id', '')
+    )
+
+def _normalize_home_carousel_flags(articles):
+    changed = False
+    explicit_flag_count = sum(1 for item in articles if 'featured_on_home' in item)
+    ordered_articles = sorted(articles, key=_article_sort_key)
+
+    if explicit_flag_count == 0:
+        selected_ids = {item['id'] for item in ordered_articles[:3]}
+        for item in articles:
+            desired = item.get('id') in selected_ids
+            if item.get('featured_on_home') is not desired:
+                item['featured_on_home'] = desired
+                changed = True
+    else:
+        for item in articles:
+            if 'featured_on_home' not in item:
+                item['featured_on_home'] = False
+                changed = True
+
+    selected = [item for item in ordered_articles if item.get('featured_on_home')]
+    if len(selected) > 5:
+        keep_ids = {item['id'] for item in selected[:5]}
+        for item in articles:
+            if item.get('featured_on_home') and item['id'] not in keep_ids:
+                item['featured_on_home'] = False
+                changed = True
+
+    return changed
+
+def load_articles_data():
+    articles = load_json_data('articles.json')
+    if _normalize_home_carousel_flags(articles):
+        save_json_data('articles.json', articles)
+    return articles
+
+@app.context_processor
+def inject_site_globals():
+    return {
+        'site_cfg_global': load_site_config()
+    }
 
 def _ensure_visitor_id():
     visitor_id = session.get('visitor_id')
@@ -390,7 +441,7 @@ def _add_item(item_type, form_data):
     """Helper to add new article"""
     # We only support articles now (merged resources)
     filename = 'articles.json'
-    data = load_json_data(filename)
+    data = load_articles_data()
     
     # Generate new ID
     ids = [int(item['id'].split('_')[-1]) for item in data if '_' in item['id']]
@@ -412,17 +463,19 @@ def _add_item(item_type, form_data):
         'resource_url': form_data.get('resource_url', '').strip(),
         'authors_display_count': int(form_data.get('authors_display_count', 3)),
         'resource_kinds': form_data.getlist('resource_kinds') if hasattr(form_data, 'getlist') and form_data.getlist('resource_kinds') else ['Code'],
+        'featured_on_home': (form_data.get('featured_on_home') == 'on'),
         'last_edited': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
 
     data.append(new_item)
+    _normalize_home_carousel_flags(data)
     save_json_data(filename, data)
     print(f"✅ Added article: {new_id}")
 
 def _update_item(item_type, item_id, form_data):
     """Helper to update existing article"""
     filename = 'articles.json'
-    data = load_json_data(filename)
+    data = load_articles_data()
     for item in data:
         if item['id'] == item_id:
             item['title'] = form_data.get('title', item['title']).strip()
@@ -449,8 +502,10 @@ def _update_item(item_type, item_id, form_data):
                 kinds = form_data.getlist('resource_kinds')
                 if kinds:
                     item['resource_kinds'] = kinds
+            item['featured_on_home'] = (form_data.get('featured_on_home') == 'on')
             item['last_edited'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             break
+    _normalize_home_carousel_flags(data)
     save_json_data(filename, data)
     print(f"✏️ Updated article: {item_id}")
 
@@ -555,9 +610,12 @@ def _delete_person(person_id):
 @app.route('/')
 def index():
     site_cfg = load_site_config()
-    articles = load_json_data('articles.json')
+    articles = load_articles_data()
     people = load_json_data('people.json')
-    featured_articles = sorted(articles, key=lambda x: x.get('year', 0), reverse=True)[:3]
+    featured_articles = sorted(
+        [item for item in articles if item.get('featured_on_home')],
+        key=_article_sort_key
+    )[:5]
     log_page_view('home', title='Home')
     page_view_summary = _read_page_view_log_summary()
     return render_template(
@@ -578,7 +636,7 @@ def team():
 @app.route('/articles')
 def articles():
     site_cfg = load_site_config()
-    ARTICLES = load_json_data('articles.json')
+    ARTICLES = load_articles_data()
     sorted_articles = sorted(ARTICLES, key=lambda x: x['year'], reverse=True)
     current_year = datetime.now().year
     min_year = min((item.get('year', current_year) for item in ARTICLES), default=current_year)
@@ -593,7 +651,7 @@ def articles():
 
 @app.route('/article/<id>')
 def article_detail(id):
-    ARTICLES = load_json_data('articles.json')
+    ARTICLES = load_articles_data()
     article = next((a for a in ARTICLES if a['id'] == id), None)
     if not article:
         return "Article not found", 404
@@ -806,6 +864,10 @@ def admin_dashboard():
         cfg = load_site_config()
         cfg['home_welcome'] = (request.form.get('home_welcome') or '').strip()
         cfg['home_note'] = (request.form.get('home_note') or '').strip() or DEFAULT_SITE_CONFIG['home_note']
+        cfg['hero_summary'] = (request.form.get('hero_summary') or '').strip() or DEFAULT_SITE_CONFIG['hero_summary']
+        cfg['lab_name_short'] = (request.form.get('lab_name_short') or '').strip() or DEFAULT_SITE_CONFIG['lab_name_short']
+        cfg['lab_name_full'] = (request.form.get('lab_name_full') or '').strip() or DEFAULT_SITE_CONFIG['lab_name_full']
+        cfg['lab_name'] = cfg['lab_name_full']
         highlights = []
         for index, default_item in enumerate(DEFAULT_RESEARCH_HIGHLIGHTS, start=1):
             highlights.append({
@@ -867,7 +929,7 @@ def admin_dashboard():
             print(f"CSV read error: {e}")
 
     # Load articles
-    articles = load_json_data('articles.json')
+    articles = load_articles_data()
     people = load_json_data('people.json')
     article_titles = {item['id']: item.get('title', item['id']) for item in articles}
 
@@ -1050,7 +1112,7 @@ def admin_dashboard():
         people_photo_status=people_photo_status,
         people_photo_info=people_photo_info,
         start_time=START_TIME,
-        lab_name=LAB_NAME,
+        lab_name=site_cfg.get('lab_name_full', LAB_NAME),
         site_cfg=site_cfg
     )
 
@@ -1084,7 +1146,7 @@ def admin_upload_file(file_type, resource_id):
         return "Invalid file type", 400
 
     # Check if article exists
-    articles = load_json_data('articles.json')
+    articles = load_articles_data()
     target = next((a for a in articles if a['id'] == resource_id), None)
 
     if not target:
@@ -1131,7 +1193,7 @@ def admin_upload_file(file_type, resource_id):
 def admin_upload_thumbnail(article_id):
     if not session.get('is_admin'):
         return "Unauthorized", 403
-    articles = load_json_data('articles.json')
+    articles = load_articles_data()
     target = next((a for a in articles if a['id'] == article_id), None)
     if not target:
         return "Article not found", 404
@@ -1241,22 +1303,49 @@ def upload_render_data_zip():
     name = secure_filename(f.filename)
     if not name.lower().endswith('.zip'):
         return "Only .zip allowed", 400
-    import io, zipfile
+    import io, shutil, zipfile
     buf = io.BytesIO(f.read())
-    with zipfile.ZipFile(buf, 'r') as zf:
-        root_abs = os.path.abspath(PERSISTENT_ROOT)
-        for member in zf.namelist():
-            if member.endswith('/'):
-                dest_dir = os.path.abspath(os.path.join(PERSISTENT_ROOT, member))
-                if dest_dir.startswith(root_abs):
-                    os.makedirs(dest_dir, exist_ok=True)
-                continue
-            dest_path = os.path.abspath(os.path.join(PERSISTENT_ROOT, member))
-            if not dest_path.startswith(root_abs):
-                continue
-            os.makedirs(os.path.dirname(dest_path), exist_ok=True)
-            with zf.open(member) as src, open(dest_path, 'wb') as out:
-                out.write(src.read())
+    root_abs = os.path.abspath(PERSISTENT_ROOT)
+    tmp_dir = os.path.join(BASE_ROOT, '_render_data_import_tmp')
+    if os.path.exists(tmp_dir):
+        shutil.rmtree(tmp_dir)
+    extract_root = os.path.join(tmp_dir, 'render_data_import')
+    extract_root_abs = os.path.abspath(extract_root)
+    os.makedirs(extract_root, exist_ok=True)
+    try:
+        with zipfile.ZipFile(buf, 'r') as zf:
+            for member in zf.namelist():
+                if member.endswith('/'):
+                    dest_dir = os.path.abspath(os.path.join(extract_root, member))
+                    if dest_dir.startswith(extract_root_abs):
+                        os.makedirs(dest_dir, exist_ok=True)
+                    continue
+                dest_path = os.path.abspath(os.path.join(extract_root, member))
+                if not dest_path.startswith(extract_root_abs):
+                    continue
+                os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+                with zf.open(member) as src, open(dest_path, 'wb') as out:
+                    out.write(src.read())
+
+        os.makedirs(PERSISTENT_ROOT, exist_ok=True)
+        for name in os.listdir(PERSISTENT_ROOT):
+            target = os.path.join(PERSISTENT_ROOT, name)
+            if os.path.isdir(target):
+                shutil.rmtree(target)
+            else:
+                os.remove(target)
+
+        for name in os.listdir(extract_root):
+            source = os.path.join(extract_root, name)
+            target = os.path.join(PERSISTENT_ROOT, name)
+            if os.path.isdir(source):
+                shutil.copytree(source, target)
+            else:
+                os.makedirs(os.path.dirname(target), exist_ok=True)
+                shutil.copy2(source, target)
+    finally:
+        if os.path.exists(tmp_dir):
+            shutil.rmtree(tmp_dir)
     return redirect(url_for('admin_dashboard'))
 
 

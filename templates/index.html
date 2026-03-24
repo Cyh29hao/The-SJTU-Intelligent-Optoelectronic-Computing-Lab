@@ -6,11 +6,10 @@
     <div class="portal-hero-main">
       <div class="portal-hero-copy">
         <div class="portal-hero-kicker">Shanghai Jiao Tong University</div>
-        <h2 class="portal-hero-title">Intelligent Optoelectronic Computing Lab</h2>
-        <p class="portal-hero-subtitle">Prof. Yitong Chen</p>
+        <h2 class="portal-hero-title"><a href="{{ url_for('index') }}" class="portal-hero-title-link">{{ site_cfg.lab_name_full }}</a></h2>
+        <p class="portal-hero-subtitle"><a href="{{ url_for('person_detail', id='person_001') }}" class="portal-hero-subtitle-link">Prof. Yitong Chen</a></p>
         <p class="portal-hero-summary">
-          Research in photonic neural networks, intelligent photonic integrated circuits,
-          and open academic resources for optical computing.
+          {{ site_cfg.hero_summary }}
         </p>
       </div>
 

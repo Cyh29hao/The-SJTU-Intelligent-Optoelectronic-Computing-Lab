@@ -13,8 +13,8 @@
       <a href="/" class="site-brand">
         <img src="{{ url_for('asset_site_image', filename='ic_logo.png') }}" alt="Lab Logo" class="site-brand-logo">
         <span class="site-brand-text">
-          <span class="site-brand-name">LightChip Lab</span>
-          <span class="site-brand-subtitle">Intelligent Optoelectronic Computing Lab</span>
+          <span class="site-brand-name">{{ site_cfg_global.lab_name_short }}</span>
+          <span class="site-brand-subtitle">{{ site_cfg_global.lab_name_full }}</span>
         </span>
       </a>
       <nav class="main-nav">
@@ -22,6 +22,9 @@
           <a href="/articles" class="{% if request.path.startswith('/articles') or request.path.startswith('/article/') %}is-active{% endif %}">Publications</a>
           <a href="/team" class="{% if request.path.startswith('/team') or request.path.startswith('/person/') %}is-active{% endif %}">People</a>
       </nav>
+      {% if session.get('admin_shadow') %}
+      <a href="{{ url_for('admin_return') }}" class="admin-return-link">Return to Admin</a>
+      {% endif %}
     </header>
 
     <!-- Page Content -->

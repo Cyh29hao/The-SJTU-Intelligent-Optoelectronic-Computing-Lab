@@ -603,6 +603,11 @@
             <input name="paper_url" placeholder="https://...">
             <label>Code/Data URL (optional)</label>
             <input name="resource_url" placeholder="https://...">
+            <label class="checkbox-label" style="margin-top:14px;">
+              <input type="checkbox" name="featured_on_home">
+              <span>Include this publication in the homepage carousel</span>
+            </label>
+            <p style="margin:6px 0 0; color:#7f8c8d; font-size:0.92rem;">At most 5 publications can participate in the homepage carousel.</p>
             <h4 style="margin-top:10px;">🧩 Resource Type</h4>
             <div class="checkbox-list">
               <label class="checkbox-label"><input type="checkbox" name="resource_kinds" value="Supplementary Material"> <span>Supplementary Material</span></label>
@@ -792,6 +797,10 @@
                 <input name="year" type="number" value="{{ item.year }}" min="2000" max="2030" required>
                 <label>Abstract</label>
                 <textarea name="abstract" rows="5" required>{{ item.abstract }}</textarea>
+                <label class="checkbox-label" style="margin-top:14px;">
+                  <input type="checkbox" name="featured_on_home" {% if item.featured_on_home %}checked{% endif %}>
+                  <span>Include this publication in the homepage carousel</span>
+                </label>
                 <button type="submit" style="display:none;">💾 Save Changes</button>
                 <a href="{{ url_for('admin_dashboard', action='delete', item_type='article', id=item.id) }}"
                    class="actions" 
@@ -920,6 +929,12 @@
         <form method="POST" action="{{ url_for('admin_dashboard') }}">
           <input type="hidden" name="action" value="edit_site_content">
           <input type="hidden" name="item_type" value="site">
+          <label>Lab Name (Header / Short)</label>
+          <input name="lab_name_short" value="{{ site_cfg.lab_name_short }}">
+          <label>Lab Name (Homepage / Full)</label>
+          <input name="lab_name_full" value="{{ site_cfg.lab_name_full }}">
+          <label>Hero Summary Text</label>
+          <textarea name="hero_summary" rows="3">{{ site_cfg.hero_summary }}</textarea>
           <label>Home Welcome Text</label>
           <textarea name="home_welcome" rows="4">{{ site_cfg.home_welcome }}</textarea>
           <label style="margin-top:16px;">Resources / Login Note</label>
