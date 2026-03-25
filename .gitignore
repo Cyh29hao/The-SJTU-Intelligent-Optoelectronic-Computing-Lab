@@ -4,8 +4,9 @@ __pycache__/
 .env
 secret_key.bin 
 
-# Data that should NOT be in Git (Render handles persistence)
-render_data/
+# Runtime data that should NOT be in Git
+render_data/data_logs/
+render_data/private_downloads/
 
 # Logs or temp files
 *.log

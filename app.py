@@ -134,7 +134,7 @@ DEFAULT_FRIEND_LINKS = [
         'title': 'SJTU',
         'caption': 'Shanghai Jiao Tong University',
         'url': 'https://www.sjtu.edu.cn/',
-        'image_filename': 'friend_link_sjtu.svg'
+        'image_filename': 'sjtu_logo.png'
     },
     {
         'title': 'ICISEE',
@@ -162,7 +162,8 @@ DEFAULT_SITE_CONFIG = {
     'lab_name': LAB_NAME,
     'lab_name_short': '"LightChip Lab"',
     'lab_name_full': 'the SJTU Intelligent Optoelectronic Computing Lab',
-    'logo_filename': '',
+    'footer_copyright': '2026 AI Intelligent Optoelectronic Computing Lab',
+    'logo_filename': 'site_logo.svg',
     'friend_links': DEFAULT_FRIEND_LINKS,
     'research_highlights': DEFAULT_RESEARCH_HIGHLIGHTS
 }
@@ -325,7 +326,7 @@ def load_site_config():
         with open(SITE_CONFIG_PATH, 'r', encoding='utf-8') as f:
             cfg = json.load(f)
         changed = False
-        for key in ('home_note', 'home_welcome', 'hero_summary', 'lab_name', 'lab_name_short', 'lab_name_full', 'logo_filename'):
+        for key in ('home_note', 'home_welcome', 'hero_summary', 'lab_name', 'lab_name_short', 'lab_name_full', 'logo_filename', 'footer_copyright'):
             if key not in cfg or not isinstance(cfg.get(key), str):
                 cfg[key] = DEFAULT_SITE_CONFIG[key]
                 changed = True
@@ -936,6 +937,7 @@ def admin_dashboard():
             cfg['hero_summary'] = (request.form.get('hero_summary') or '').strip() or DEFAULT_SITE_CONFIG['hero_summary']
             cfg['lab_name_short'] = (request.form.get('lab_name_short') or '').strip() or DEFAULT_SITE_CONFIG['lab_name_short']
             cfg['lab_name_full'] = (request.form.get('lab_name_full') or '').strip() or DEFAULT_SITE_CONFIG['lab_name_full']
+            cfg['footer_copyright'] = (request.form.get('footer_copyright') or '').strip() or DEFAULT_SITE_CONFIG['footer_copyright']
             cfg['lab_name'] = cfg['lab_name_full']
         if action in ('edit_site_content', 'edit_friend_links'):
             friend_links = []

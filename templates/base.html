@@ -10,6 +10,12 @@
 <body>
   <div class="container">
     <header class="site-topbar">
+      {% set sjtu_link = site_cfg_global.friend_links[0] if site_cfg_global.friend_links and site_cfg_global.friend_links|length > 0 else None %}
+      {% if sjtu_link and sjtu_link.url %}
+      <a href="{{ sjtu_link.url }}" class="site-topbar-badge" target="_blank" rel="noopener" title="{{ sjtu_link.caption or sjtu_link.title }}">
+        <img src="{{ url_for('asset_site_image', filename=sjtu_link.image_filename) if sjtu_link.image_filename else url_for('static', filename='images/placeholder-site.svg') }}" alt="{{ sjtu_link.title }}" class="site-topbar-badge-image">
+      </a>
+      {% endif %}
       <a href="/" class="site-brand">
         <img src="{{ url_for('asset_site_image', filename=site_cfg_global.logo_filename) if site_cfg_global.logo_filename else url_for('static', filename='images/placeholder-site.svg') }}" alt="Lab Logo" class="site-brand-logo">
         <span class="site-brand-text">
@@ -48,7 +54,8 @@
           {% endfor %}
         </div>
         <div class="footer-meta">
-          &copy; 2026 AI Intelligent Optoelectronic Computing Lab
+          <div>&copy; {{ site_cfg_global.footer_copyright }}</div>
+          <div class="footer-credit">Developed by <a href="https://github.com/Cyh29hao" target="_blank" rel="noopener">cyh29hao</a></div>
         </div>
       </div>
       <div class="footer-right">

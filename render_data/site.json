@@ -1,0 +1,54 @@
+{
+  "home_note": "Note: To download our resources, please first fill in your information on the Login page.",
+  "lab_name": "the SJTU Intelligent Optoelectronic Computing Lab",
+  "home_welcome": "Welcome! We are the SJTU Intelligent Optoelectronic Computing Lab, led by Prof. Yitong Chen.\r\n \r\n Our publicly available papers and the related resources( code, datasets, etc.) are downloadable on this website.",
+  "research_highlights": [
+    {
+      "title": "Photonic AI",
+      "summary": "Exploring photonic hardware and system design for AI workloads, with a focus on efficient optical-domain inference."
+    },
+    {
+      "title": "Optical Computing",
+      "summary": "Studying computation schemes that leverage the parallelism and propagation properties of light to process information."
+    },
+    {
+      "title": "Diffractive Networks",
+      "summary": "Investigating diffractive deep neural networks and related free-space optical architectures for compact intelligent systems."
+    },
+    {
+      "title": "Integrated Photonics",
+      "summary": "Connecting algorithms, devices, and chip-level implementation to build practical intelligent optoelectronic platforms."
+    }
+  ],
+  "hero_summary": "Research in photonic neural networks, intelligent photonic integrated circuits, and open academic resources for optical computing.",
+  "lab_name_short": "\"LightChip Lab\"",
+  "lab_name_full": "the SJTU Intelligent Optoelectronic Computing Lab",
+  "footer_copyright": "2026 AI Intelligent Optoelectronic Computing Lab",
+  "logo_filename": "site_logo.svg",
+  "friend_links": [
+    {
+      "title": "SJTU",
+      "caption": "Shanghai Jiao Tong University",
+      "url": "https://www.sjtu.edu.cn/",
+      "image_filename": "sjtu_logo.png"
+    },
+    {
+      "title": "ICISEE",
+      "caption": "School of Integrated Circuits",
+      "url": "https://icisee.sjtu.edu.cn/",
+      "image_filename": "friend_link_icisee.svg"
+    },
+    {
+      "title": "Contact Us",
+      "caption": "Email the lab",
+      "url": "mailto:yitongchen@sjtu.edu.cn",
+      "image_filename": "friend_link_mail.svg"
+    },
+    {
+      "title": "GitHub",
+      "caption": "Lab project repository",
+      "url": "https://github.com/Cyh29hao/0129_YitongChen_lightchip_lab_website_draft",
+      "image_filename": "friend_link_github.svg"
+    }
+  ]
+}

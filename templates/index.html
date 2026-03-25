@@ -26,7 +26,7 @@
                 data-highlight-index="{{ loop.index0 }}"
                 aria-selected="{{ 'true' if loop.first else 'false' }}"
               >
-                {{ highlight.title }}
+                {{ highlight.title.replace(' ', '<br>', 1)|safe }}
               </button>
               {% endfor %}
             </div>
@@ -34,7 +34,7 @@
               {% for highlight in site_cfg.research_highlights %}
               <article class="portal-highlight-card{% if loop.first %} is-active{% endif %}" data-highlight-panel-index="{{ loop.index0 }}">
                 <div class="portal-highlight-index">0{{ loop.index }}</div>
-                <h4>{{ highlight.title }}</h4>
+                <h4>{{ highlight.title.replace(' ', '<br>', 1)|safe }}</h4>
                 <p>{{ highlight.summary }}</p>
               </article>
               {% endfor %}
