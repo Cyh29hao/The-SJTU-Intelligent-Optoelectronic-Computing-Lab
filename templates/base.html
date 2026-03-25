@@ -11,7 +11,7 @@
   <div class="container">
     <header class="site-topbar">
       <a href="/" class="site-brand">
-        <img src="{{ url_for('asset_site_image', filename='ic_logo.png') }}" alt="Lab Logo" class="site-brand-logo">
+        <img src="{{ url_for('asset_site_image', filename=site_cfg_global.logo_filename) if site_cfg_global.logo_filename else url_for('static', filename='images/placeholder-site.svg') }}" alt="Lab Logo" class="site-brand-logo">
         <span class="site-brand-text">
           <span class="site-brand-name">{{ site_cfg_global.lab_name_short }}</span>
           <span class="site-brand-subtitle">{{ site_cfg_global.lab_name_full }}</span>
@@ -35,9 +35,21 @@
     <!-- Footer -->
     <footer class="site-footer">
       <div class="footer-left">
-        &copy; 2026 AI Intelligent Optoelectronic Computing Lab
-        <span class="separator">|</span>
-        <a href="mailto:yitongchen@sjtu.edu.cn">Contact Us</a>
+        <div class="footer-links-strip">
+          {% for item in site_cfg_global.friend_links if item.title and item.url %}
+          {% set hover_text = item.caption if item.caption else item.title %}
+          <a href="{{ item.url }}" class="footer-link-card" title="{{ hover_text }}" aria-label="{{ hover_text }}" target="{{ '_blank' if not item.url.startswith('mailto:') else '_self' }}" rel="{{ 'noopener' if not item.url.startswith('mailto:') else '' }}">
+            {% if item.image_filename %}
+            <img src="{{ url_for('asset_site_image', filename=item.image_filename) }}" alt="{{ item.title }}" class="footer-link-image">
+            {% else %}
+            <span class="footer-link-fallback">{{ item.title[:4] }}</span>
+            {% endif %}
+          </a>
+          {% endfor %}
+        </div>
+        <div class="footer-meta">
+          &copy; 2026 AI Intelligent Optoelectronic Computing Lab
+        </div>
       </div>
       <div class="footer-right">
         <div class="footer-text">
@@ -55,6 +67,7 @@
   </div>
   <script>
     (function() {
+      var supportsHoverMotion = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
       function spawnPhoton(x, y) {
         var d = document.createElement('div');
         d.className = 'photon';
@@ -65,13 +78,45 @@
           if (d && d.parentNode) d.parentNode.removeChild(d);
         });
       }
+      function spawnPhotonTrail(x, y) {
+        var d = document.createElement('div');
+        d.className = 'photon-trail';
+        d.style.left = x + 'px';
+        d.style.top = y + 'px';
+        document.body.appendChild(d);
+        d.addEventListener('animationend', function() {
+          if (d && d.parentNode) d.parentNode.removeChild(d);
+        });
+      }
       function isLeftClick(e) { return (e.button === 0); }
+      Array.prototype.forEach.call(document.querySelectorAll('a[href]'), function(link) {
+        link.classList.add('link-hover-cue');
+        if (!supportsHoverMotion) return;
+        link.addEventListener('mouseenter', function() {
+          link.classList.remove('is-wiggling');
+          void link.offsetWidth;
+          link.classList.add('is-wiggling');
+        });
+        link.addEventListener('animationend', function() {
+          link.classList.remove('is-wiggling');
+        });
+      });
       document.addEventListener('click', function(e) {
         var a = e.target.closest('a');
         if (!a) return;
         if (!isLeftClick(e)) return;
         spawnPhoton(e.clientX, e.clientY);
       }, true);
+      if (supportsHoverMotion) {
+        var lastTrailAt = 0;
+        document.addEventListener('pointermove', function(e) {
+          if (e.pointerType && e.pointerType !== 'mouse') return;
+          var now = Date.now();
+          if (now - lastTrailAt < 95) return;
+          lastTrailAt = now;
+          spawnPhotonTrail(e.clientX, e.clientY);
+        }, { passive: true });
+      }
     })();
   </script>
 </body>

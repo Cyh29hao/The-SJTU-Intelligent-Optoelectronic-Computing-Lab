@@ -129,6 +129,32 @@ DEFAULT_RESEARCH_HIGHLIGHTS = [
         'summary': 'Connecting algorithms, devices, and chip-level implementation to build practical intelligent optoelectronic platforms.'
     }
 ]
+DEFAULT_FRIEND_LINKS = [
+    {
+        'title': 'SJTU',
+        'caption': 'Shanghai Jiao Tong University',
+        'url': 'https://www.sjtu.edu.cn/',
+        'image_filename': 'friend_link_sjtu.svg'
+    },
+    {
+        'title': 'ICISEE',
+        'caption': 'School of Integrated Circuits',
+        'url': 'https://icisee.sjtu.edu.cn/',
+        'image_filename': 'friend_link_icisee.svg'
+    },
+    {
+        'title': 'Contact Us',
+        'caption': 'Email the lab',
+        'url': 'mailto:yitongchen@sjtu.edu.cn',
+        'image_filename': 'friend_link_mail.svg'
+    },
+    {
+        'title': 'GitHub',
+        'caption': 'Lab project repository',
+        'url': 'https://github.com/Cyh29hao/0129_YitongChen_lightchip_lab_website_draft',
+        'image_filename': 'friend_link_github.svg'
+    }
+]
 DEFAULT_SITE_CONFIG = {
     'home_note': 'To download our resources, please first fill in your information on the Login page.',
     'home_welcome': "Our lab focuses on research in all-optical neural networks, diffractive deep learning, and intelligent photonic chips.\n\nThis website provides publicly available publications, code, and datasets from our group.",
@@ -136,6 +162,8 @@ DEFAULT_SITE_CONFIG = {
     'lab_name': LAB_NAME,
     'lab_name_short': '"LightChip Lab"',
     'lab_name_full': 'the SJTU Intelligent Optoelectronic Computing Lab',
+    'logo_filename': '',
+    'friend_links': DEFAULT_FRIEND_LINKS,
     'research_highlights': DEFAULT_RESEARCH_HIGHLIGHTS
 }
 
@@ -199,6 +227,23 @@ def _normalize_research_highlights(items):
         normalized.append({
             'title': title,
             'summary': summary
+        })
+    return normalized
+
+def _normalize_friend_links(items):
+    normalized = []
+    source_items = items if isinstance(items, list) else []
+    for index, default_item in enumerate(DEFAULT_FRIEND_LINKS):
+        current = source_items[index] if index < len(source_items) and isinstance(source_items[index], dict) else {}
+        title_raw = current['title'] if 'title' in current else default_item['title']
+        caption_raw = current['caption'] if 'caption' in current else default_item['caption']
+        url_raw = current['url'] if 'url' in current else default_item['url']
+        image_raw = current['image_filename'] if 'image_filename' in current else default_item.get('image_filename', '')
+        normalized.append({
+            'title': (title_raw or '').strip(),
+            'caption': (caption_raw or '').strip(),
+            'url': (url_raw or '').strip(),
+            'image_filename': (image_raw or '').strip()
         })
     return normalized
 
@@ -280,13 +325,17 @@ def load_site_config():
         with open(SITE_CONFIG_PATH, 'r', encoding='utf-8') as f:
             cfg = json.load(f)
         changed = False
-        for key in ('home_note', 'home_welcome', 'hero_summary', 'lab_name', 'lab_name_short', 'lab_name_full'):
+        for key in ('home_note', 'home_welcome', 'hero_summary', 'lab_name', 'lab_name_short', 'lab_name_full', 'logo_filename'):
             if key not in cfg or not isinstance(cfg.get(key), str):
                 cfg[key] = DEFAULT_SITE_CONFIG[key]
                 changed = True
         normalized_highlights = _normalize_research_highlights(cfg.get('research_highlights'))
         if cfg.get('research_highlights') != normalized_highlights:
             cfg['research_highlights'] = normalized_highlights
+            changed = True
+        normalized_friend_links = _normalize_friend_links(cfg.get('friend_links'))
+        if cfg.get('friend_links') != normalized_friend_links:
+            cfg['friend_links'] = normalized_friend_links
             changed = True
         if changed:
             save_site_config(cfg)
@@ -295,6 +344,7 @@ def load_site_config():
         print(f"⚠️ Failed to load site config: {e}")
         fallback = dict(DEFAULT_SITE_CONFIG)
         fallback['research_highlights'] = _normalize_research_highlights(DEFAULT_SITE_CONFIG.get('research_highlights'))
+        fallback['friend_links'] = _normalize_friend_links(DEFAULT_SITE_CONFIG.get('friend_links'))
         return fallback
 
 def save_site_config(cfg):
@@ -323,6 +373,22 @@ def save_json_data(filename, data):
     path = os.path.join(PERSISTENT_ROOT, filename)
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
+
+def _latest_content_modified_time():
+    latest_ts = None
+    for root, dirs, files in os.walk(PERSISTENT_ROOT):
+        dirs[:] = [d for d in dirs if d != 'data_logs' and not d.startswith('.')]
+        for filename in files:
+            path = os.path.join(root, filename)
+            try:
+                mtime = os.path.getmtime(path)
+            except OSError:
+                continue
+            if latest_ts is None or mtime > latest_ts:
+                latest_ts = mtime
+    if latest_ts is None:
+        return 'N/A'
+    return datetime.fromtimestamp(latest_ts).strftime("%Y-%m-%d %H:%M:%S")
 
 def _article_sort_key(item):
     last_edited = item.get('last_edited') or ''
@@ -718,6 +784,7 @@ def submit_register():
         affiliation == ADMIN_CREDENTIALS['affiliation'] and
         email == ADMIN_CREDENTIALS['email']):
         session['is_admin'] = True
+        session['admin_login_at'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         print("✅ Admin login successful")
         return redirect(url_for('admin_dashboard'))
 
@@ -743,6 +810,7 @@ def logout():
 def admin_logout():
     """Admin logout"""
     session.pop('is_admin', None)
+    session.pop('admin_login_at', None)
     session.pop('admin_shadow', None)
     session.pop('user_info', None)
     session.pop('registered_at', None)
@@ -860,21 +928,35 @@ def admin_dashboard():
         else:
             _update_item(item_type, item_id, request.form)
         return redirect(url_for('admin_dashboard'))
-    elif action in ('edit_site_welcome', 'edit_site_content'):
+    elif action in ('edit_site_welcome', 'edit_site_content', 'edit_site_branding', 'edit_friend_links', 'edit_research_highlights'):
         cfg = load_site_config()
-        cfg['home_welcome'] = (request.form.get('home_welcome') or '').strip()
-        cfg['home_note'] = (request.form.get('home_note') or '').strip() or DEFAULT_SITE_CONFIG['home_note']
-        cfg['hero_summary'] = (request.form.get('hero_summary') or '').strip() or DEFAULT_SITE_CONFIG['hero_summary']
-        cfg['lab_name_short'] = (request.form.get('lab_name_short') or '').strip() or DEFAULT_SITE_CONFIG['lab_name_short']
-        cfg['lab_name_full'] = (request.form.get('lab_name_full') or '').strip() or DEFAULT_SITE_CONFIG['lab_name_full']
-        cfg['lab_name'] = cfg['lab_name_full']
-        highlights = []
-        for index, default_item in enumerate(DEFAULT_RESEARCH_HIGHLIGHTS, start=1):
-            highlights.append({
-                'title': (request.form.get(f'highlight_title_{index}') or '').strip() or default_item['title'],
-                'summary': (request.form.get(f'highlight_summary_{index}') or '').strip() or default_item['summary']
-            })
-        cfg['research_highlights'] = _normalize_research_highlights(highlights)
+        if action in ('edit_site_welcome', 'edit_site_content', 'edit_site_branding'):
+            cfg['home_welcome'] = (request.form.get('home_welcome') or '').strip()
+            cfg['home_note'] = (request.form.get('home_note') or '').strip() or DEFAULT_SITE_CONFIG['home_note']
+            cfg['hero_summary'] = (request.form.get('hero_summary') or '').strip() or DEFAULT_SITE_CONFIG['hero_summary']
+            cfg['lab_name_short'] = (request.form.get('lab_name_short') or '').strip() or DEFAULT_SITE_CONFIG['lab_name_short']
+            cfg['lab_name_full'] = (request.form.get('lab_name_full') or '').strip() or DEFAULT_SITE_CONFIG['lab_name_full']
+            cfg['lab_name'] = cfg['lab_name_full']
+        if action in ('edit_site_content', 'edit_friend_links'):
+            friend_links = []
+            for index, default_item in enumerate(DEFAULT_FRIEND_LINKS, start=1):
+                current_links = cfg.get('friend_links') or []
+                current = current_links[index - 1] if index - 1 < len(current_links) and isinstance(current_links[index - 1], dict) else {}
+                friend_links.append({
+                    'title': (request.form.get(f'friend_title_{index}') or '').strip(),
+                    'caption': (request.form.get(f'friend_caption_{index}') or '').strip(),
+                    'url': (request.form.get(f'friend_url_{index}') or '').strip(),
+                    'image_filename': (current.get('image_filename') or '').strip()
+                })
+            cfg['friend_links'] = _normalize_friend_links(friend_links)
+        if action in ('edit_site_content', 'edit_research_highlights'):
+            highlights = []
+            for index, default_item in enumerate(DEFAULT_RESEARCH_HIGHLIGHTS, start=1):
+                highlights.append({
+                    'title': (request.form.get(f'highlight_title_{index}') or '').strip() or default_item['title'],
+                    'summary': (request.form.get(f'highlight_summary_{index}') or '').strip() or default_item['summary']
+                })
+            cfg['research_highlights'] = _normalize_research_highlights(highlights)
         save_site_config(cfg)
         return redirect(url_for('admin_dashboard'))
     elif action == 'delete':
@@ -1112,6 +1194,8 @@ def admin_dashboard():
         people_photo_status=people_photo_status,
         people_photo_info=people_photo_info,
         start_time=START_TIME,
+        admin_login_time=session.get('admin_login_at') or START_TIME,
+        content_last_modified=_latest_content_modified_time(),
         lab_name=site_cfg.get('lab_name_full', LAB_NAME),
         site_cfg=site_cfg
     )
@@ -1224,6 +1308,60 @@ def admin_upload_thumbnail(article_id):
     save_json_data('articles.json', articles)
     return redirect(url_for('admin_dashboard') + '#article-' + article_id)
 
+@app.route('/admin/upload-site-image/<slot>', methods=['POST'])
+def admin_upload_site_image(slot):
+    if not session.get('is_admin'):
+        return "Unauthorized", 403
+
+    image = request.files.get('image')
+    if not image or not image.filename:
+        return "No file selected", 400
+
+    ext = os.path.splitext(secure_filename(image.filename))[1].lower()
+    if ext not in ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp']:
+        return "File type not allowed for site image", 400
+
+    cfg = load_site_config()
+    os.makedirs(SITE_IMAGES_DIR, exist_ok=True)
+
+    if slot == 'logo':
+        base_name = 'site_logo'
+        for old_ext in ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp']:
+            old_path = os.path.join(SITE_IMAGES_DIR, base_name + old_ext)
+            if os.path.exists(old_path):
+                try:
+                    os.remove(old_path)
+                except Exception:
+                    pass
+        filename = base_name + ext
+        image.save(os.path.join(SITE_IMAGES_DIR, filename))
+        cfg['logo_filename'] = filename
+    else:
+        if not slot.startswith('friend-'):
+            return "Invalid site image slot", 400
+        try:
+            index = int(slot.split('-')[-1]) - 1
+        except Exception:
+            return "Invalid site image slot", 400
+        links = _normalize_friend_links(cfg.get('friend_links'))
+        if index < 0 or index >= len(links):
+            return "Invalid site image slot", 400
+        base_name = f"friend_link_{index + 1}"
+        for old_ext in ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp']:
+            old_path = os.path.join(SITE_IMAGES_DIR, base_name + old_ext)
+            if os.path.exists(old_path):
+                try:
+                    os.remove(old_path)
+                except Exception:
+                    pass
+        filename = base_name + ext
+        image.save(os.path.join(SITE_IMAGES_DIR, filename))
+        links[index]['image_filename'] = filename
+        cfg['friend_links'] = links
+
+    save_site_config(cfg)
+    return redirect(url_for('admin_dashboard') + '#site-section')
+
 # ==============================================================================
 # 8. Asset Serving (from render_data)
 # ==============================================================================
@@ -1247,6 +1385,9 @@ def asset_article_thumb(filename):
 def asset_site_image(filename):
     path = os.path.join(SITE_IMAGES_DIR, filename)
     if not os.path.exists(path):
+        fallback = os.path.join(app.static_folder, 'images', 'placeholder-site.svg')
+        if os.path.exists(fallback):
+            return send_file(fallback)
         return abort(404)
     return send_file(path)
 

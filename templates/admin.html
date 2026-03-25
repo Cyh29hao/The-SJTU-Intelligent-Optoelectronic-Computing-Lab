@@ -273,6 +273,55 @@
             padding: 18px 20px;
             margin-bottom: 24px;
         }
+        .site-stack {
+            display: grid;
+            gap: 16px;
+        }
+        .site-manage-note {
+            margin: 0 0 8px;
+            color: #7f8c8d;
+            font-size: 14px;
+            text-align: left;
+        }
+        .subpanel-body {
+            padding: 18px 20px 20px;
+            background: #fff;
+        }
+        .site-image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 14px;
+            margin-top: 14px;
+        }
+        .site-image-card {
+            border: 1px solid #e4ebf3;
+            border-radius: 10px;
+            background: #fbfdff;
+            padding: 14px;
+        }
+        .site-image-card h4,
+        .site-image-card h5 {
+            margin: 0 0 10px;
+            color: #2c3e50;
+        }
+        .site-mini-note {
+            margin: 0 0 10px;
+            font-size: 13px;
+            color: #7f8c8d;
+            text-align: left;
+        }
+        .site-link-grid {
+            display: grid;
+            gap: 12px;
+        }
+        .site-section-visible-title {
+            margin-top: 0;
+            margin-bottom: 14px;
+        }
+        #site-section > #site-header,
+        #site-section > .form-section {
+            display: none;
+        }
         .table-note {
             font-size: 13px;
             color: #7f8c8d;
@@ -329,7 +378,12 @@
 </head>
 <body>
     <h1>Admin Dashboard
-        <span class="header-right">{{ lab_name }}<br>Started at: {{ start_time }}</span>
+        <span class="header-right">
+            {{ lab_name }}<br>
+            Last content update: {{ content_last_modified }}<br>
+            Admin login: {{ admin_login_time }}<br>
+            App started: {{ start_time }}
+        </span>
     </h1>
 
     <div class="stats-grid">
@@ -924,11 +978,171 @@
     </div>
     
     <div id="site-section" style="display:none;">
+      <!-- Home content blocks are grouped below for easier management. -->
+      <h2 class="site-section-visible-title">Manage Home Content</h2>
+      <div class="site-stack">
+        <p class="site-manage-note">Open the section you need. Site branding, site images, footer links, and research focus can now be managed separately.</p>
+
+        <details open>
+          <summary>Site Branding</summary>
+          <div class="subpanel-body">
+            <form method="POST" action="{{ url_for('admin_dashboard') }}">
+              <input type="hidden" name="action" value="edit_site_branding">
+              <input type="hidden" name="item_type" value="site">
+              <label>Lab Name (Header / Short)</label>
+              <input name="lab_name_short" value="{{ site_cfg.lab_name_short }}">
+              <label>Lab Name (Homepage / Full)</label>
+              <input name="lab_name_full" value="{{ site_cfg.lab_name_full }}">
+              <label>Hero Summary Text</label>
+              <textarea name="hero_summary" rows="3">{{ site_cfg.hero_summary }}</textarea>
+              <label>Home Welcome Text</label>
+              <textarea name="home_welcome" rows="4">{{ site_cfg.home_welcome }}</textarea>
+              <label style="margin-top:16px;">Resources / Login Note</label>
+              <textarea name="home_note" rows="3">{{ site_cfg.home_note }}</textarea>
+              <button type="submit">Save Branding</button>
+            </form>
+          </div>
+        </details>
+
+        <details>
+          <summary>Site Images</summary>
+          <div class="subpanel-body">
+            <p class="site-mini-note">Upload the header logo and the four footer-link icons here. These image files are included in render_data sync.</p>
+            <div class="site-image-grid">
+              <div class="site-image-card">
+                <h4>Header Logo</h4>
+                <div style="display:flex; align-items:center; gap:14px; margin-bottom:12px;">
+                  <img src="{{ url_for('asset_site_image', filename=site_cfg.logo_filename) if site_cfg.logo_filename else url_for('static', filename='images/placeholder-site.svg') }}" alt="Site logo" style="width:64px; height:64px; object-fit:contain; border-radius:12px; background:#fff; border:1px solid #dbe7f3; padding:6px;">
+                  <div style="font-size:0.92rem; color:#6b7b8c;">
+                    {% if site_cfg.logo_filename %}
+                    Current logo: <code>{{ site_cfg.logo_filename }}</code>
+                    {% else %}
+                    No logo uploaded yet. The placeholder image is currently used.
+                    {% endif %}
+                  </div>
+                </div>
+                <form method="POST" enctype="multipart/form-data" action="{{ url_for('admin_upload_site_image', slot='logo') }}">
+                  <input type="file" name="image" accept="image/png,image/jpeg,image/jpg,image/gif,image/svg+xml,image/webp" required>
+                  <button type="submit" style="margin-top:8px;">Upload Logo</button>
+                </form>
+              </div>
+
+              {% for item in site_cfg.friend_links %}
+              <div class="site-image-card">
+                <h5>Footer Link {{ loop.index }} Icon</h5>
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px;">
+                  {% if item.image_filename %}
+                  <img src="{{ url_for('asset_site_image', filename=item.image_filename) }}" alt="{{ item.title }}" style="width:48px; height:48px; object-fit:contain; border-radius:10px; background:#fff; border:1px solid #dbe7f3; padding:5px;">
+                  {% else %}
+                  <div style="width:48px; height:48px; border-radius:10px; border:1px solid #dbe7f3; background:#fff; display:flex; align-items:center; justify-content:center; color:#4b6480; font-weight:700;">{{ item.title[:4] }}</div>
+                  {% endif %}
+                  <div style="font-size:0.9rem; color:#6b7b8c;">
+                    {{ item.title or ('Link ' ~ loop.index) }}
+                    {% if item.image_filename %}
+                    <br><code>{{ item.image_filename }}</code>
+                    {% endif %}
+                  </div>
+                </div>
+                <form method="POST" enctype="multipart/form-data" action="{{ url_for('admin_upload_site_image', slot='friend-' ~ loop.index) }}">
+                  <input type="file" name="image" accept="image/png,image/jpeg,image/jpg,image/gif,image/svg+xml,image/webp" required>
+                  <button type="submit" style="margin-top:8px;">Upload Link Image</button>
+                </form>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        </details>
+
+        <details>
+          <summary>Friendly Links</summary>
+          <div class="subpanel-body">
+            <p class="site-mini-note">Up to 4 links are supported. Leave a title or URL empty to hide that slot on the footer.</p>
+            <form method="POST" action="{{ url_for('admin_dashboard') }}">
+              <input type="hidden" name="action" value="edit_friend_links">
+              <input type="hidden" name="item_type" value="site">
+              <div class="site-link-grid">
+                {% for item in site_cfg.friend_links %}
+                <div style="padding:14px 16px; border:1px solid #e4ebf3; border-radius:10px; background:#fbfdff;">
+                  <label>Link {{ loop.index }} Title</label>
+                  <input name="friend_title_{{ loop.index }}" value="{{ item.title }}">
+                  <label style="margin-top:10px;">Link {{ loop.index }} Caption</label>
+                  <input name="friend_caption_{{ loop.index }}" value="{{ item.caption }}">
+                  <label style="margin-top:10px;">Link {{ loop.index }} URL</label>
+                  <input name="friend_url_{{ loop.index }}" value="{{ item.url }}">
+                </div>
+                {% endfor %}
+              </div>
+              <button type="submit">Save Friendly Links</button>
+            </form>
+          </div>
+        </details>
+
+        <details>
+          <summary>Research Focus</summary>
+          <div class="subpanel-body">
+            <p class="site-mini-note">These four items drive the interactive keyword panel on the homepage.</p>
+            <form method="POST" action="{{ url_for('admin_dashboard') }}">
+              <input type="hidden" name="action" value="edit_research_highlights">
+              <input type="hidden" name="item_type" value="site">
+              {% for highlight in site_cfg.research_highlights %}
+              <div style="padding:14px 16px; border:1px solid #e4ebf3; border-radius:10px; margin-bottom:12px; background:#fbfdff;">
+                <label>Keyword {{ loop.index }}</label>
+                <input name="highlight_title_{{ loop.index }}" value="{{ highlight.title }}">
+                <label style="margin-top:10px;">Summary {{ loop.index }}</label>
+                <textarea name="highlight_summary_{{ loop.index }}" rows="3">{{ highlight.summary }}</textarea>
+              </div>
+              {% endfor %}
+              <button type="submit">Save Research Focus</button>
+            </form>
+          </div>
+        </details>
+      </div>
       <h2 id="site-header">🏠 Manage Home Welcome</h2>
       <div class="form-section">
+        <div style="margin-bottom:18px; padding:16px; border:1px solid #e4ebf3; border-radius:10px; background:#fbfdff;">
+          <h3 style="margin:0 0 12px; color:#2c3e50;">Site Images</h3>
+          <div style="display:flex; align-items:center; gap:14px; margin-bottom:14px;">
+            <img src="{{ url_for('asset_site_image', filename=site_cfg.logo_filename) if site_cfg.logo_filename else url_for('static', filename='images/placeholder-site.svg') }}" alt="Site logo" style="width:64px; height:64px; object-fit:contain; border-radius:12px; background:#fff; border:1px solid #dbe7f3; padding:6px;">
+            <div style="font-size:0.92rem; color:#6b7b8c;">
+              {% if site_cfg.logo_filename %}
+              Current logo: <code>{{ site_cfg.logo_filename }}</code>
+              {% else %}
+              No logo uploaded yet. The placeholder image is currently used.
+              {% endif %}
+            </div>
+          </div>
+          <form method="POST" enctype="multipart/form-data" action="{{ url_for('admin_upload_site_image', slot='logo') }}">
+            <input type="file" name="image" accept="image/png,image/jpeg,image/jpg,image/gif,image/svg+xml,image/webp" required>
+            <button type="submit" style="margin-top:8px;">Upload Logo</button>
+          </form>
+          <div style="margin-top:18px; display:grid; gap:14px;">
+            {% for item in site_cfg.friend_links %}
+            <div style="padding-top:14px; border-top:1px solid #e4ebf3;">
+              <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px;">
+                {% if item.image_filename %}
+                <img src="{{ url_for('asset_site_image', filename=item.image_filename) }}" alt="{{ item.title }}" style="width:48px; height:48px; object-fit:contain; border-radius:10px; background:#fff; border:1px solid #dbe7f3; padding:5px;">
+                {% else %}
+                <div style="width:48px; height:48px; border-radius:10px; border:1px solid #dbe7f3; background:#fff; display:flex; align-items:center; justify-content:center; color:#4b6480; font-weight:700;">{{ item.title[:4] }}</div>
+                {% endif %}
+                <div style="font-size:0.9rem; color:#6b7b8c;">
+                  {{ item.title }}
+                  {% if item.image_filename %}
+                  <br><code>{{ item.image_filename }}</code>
+                  {% endif %}
+                </div>
+              </div>
+              <form method="POST" enctype="multipart/form-data" action="{{ url_for('admin_upload_site_image', slot='friend-' ~ loop.index) }}">
+                <input type="file" name="image" accept="image/png,image/jpeg,image/jpg,image/gif,image/svg+xml,image/webp" required>
+                <button type="submit" style="margin-top:8px;">Upload Link Image</button>
+              </form>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
         <form method="POST" action="{{ url_for('admin_dashboard') }}">
           <input type="hidden" name="action" value="edit_site_content">
           <input type="hidden" name="item_type" value="site">
+          <h3 style="margin:0 0 8px; color:#2c3e50;">Site Branding</h3>
           <label>Lab Name (Header / Short)</label>
           <input name="lab_name_short" value="{{ site_cfg.lab_name_short }}">
           <label>Lab Name (Homepage / Full)</label>
@@ -939,6 +1153,18 @@
           <textarea name="home_welcome" rows="4">{{ site_cfg.home_welcome }}</textarea>
           <label style="margin-top:16px;">Resources / Login Note</label>
           <textarea name="home_note" rows="3">{{ site_cfg.home_note }}</textarea>
+          <h3 style="margin:20px 0 8px; color:#2c3e50;">Friendly Links</h3>
+          <p style="margin:0 0 14px; color:#6b7b8c;">Up to 4 links are supported. Leave a title or URL empty to hide that slot.</p>
+          {% for item in site_cfg.friend_links %}
+          <div style="padding:14px 16px; border:1px solid #e4ebf3; border-radius:10px; margin-bottom:12px; background:#fbfdff;">
+            <label>Link {{ loop.index }} Title</label>
+            <input name="friend_title_{{ loop.index }}" value="{{ item.title }}">
+            <label style="margin-top:10px;">Link {{ loop.index }} Caption</label>
+            <input name="friend_caption_{{ loop.index }}" value="{{ item.caption }}">
+            <label style="margin-top:10px;">Link {{ loop.index }} URL</label>
+            <input name="friend_url_{{ loop.index }}" value="{{ item.url }}">
+          </div>
+          {% endfor %}
           <h3 style="margin:20px 0 8px; color:#2c3e50;">Research Highlight Panel</h3>
           <p style="margin:0 0 14px; color:#6b7b8c;">These four items drive the interactive keyword panel on the homepage.</p>
           {% for highlight in site_cfg.research_highlights %}
