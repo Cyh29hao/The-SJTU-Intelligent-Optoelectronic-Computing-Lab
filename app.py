@@ -160,7 +160,7 @@ DEFAULT_SITE_CONFIG = {
     'home_welcome': "Our lab focuses on research in all-optical neural networks, diffractive deep learning, and intelligent photonic chips.\n\nThis website provides publicly available publications, code, and datasets from our group.",
     'hero_summary': 'Research in photonic neural networks, intelligent photonic integrated circuits, and open academic resources for optical computing.',
     'lab_name': LAB_NAME,
-    'lab_name_short': '"LightChip Lab"',
+    'lab_name_short': 'SJTU IOC Lab',
     'lab_name_full': 'the SJTU Intelligent Optoelectronic Computing Lab',
     'footer_copyright': '2026 AI Intelligent Optoelectronic Computing Lab',
     'logo_filename': 'site_logo.svg',

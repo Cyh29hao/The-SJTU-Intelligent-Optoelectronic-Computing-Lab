@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>{% block title %}Prof. Yitong Chen - AI Photonic Computing Lab{% endblock %}</title>
+  <title>{% block title %}{{ site_cfg_global.lab_name_short }} - {{ site_cfg_global.lab_name_full }}{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
