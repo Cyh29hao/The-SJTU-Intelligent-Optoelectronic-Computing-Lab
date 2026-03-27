@@ -26,6 +26,7 @@
       <nav class="main-nav">
           <a href="/" class="{% if request.path == '/' %}is-active{% endif %}">Home</a>
           <a href="/articles" class="{% if request.path.startswith('/articles') or request.path.startswith('/article/') %}is-active{% endif %}">Publications</a>
+          <a href="/news" class="{% if request.path.startswith('/news') %}is-active{% endif %}">News</a>
           <a href="/team" class="{% if request.path.startswith('/team') or request.path.startswith('/person/') %}is-active{% endif %}">People</a>
       </nav>
       {% if session.get('admin_shadow') %}
@@ -55,7 +56,7 @@
         </div>
         <div class="footer-meta">
           <div>&copy; {{ site_cfg_global.footer_copyright }}</div>
-          <div class="footer-credit">Developed by <a href="https://github.com/Cyh29hao" target="_blank" rel="noopener">cyh29hao</a></div>
+          <div class="footer-credit">Developed by <a href="https://github.com/Cyh29hao" target="_blank" rel="noopener">cyh29hao</a>{% if site_cfg_global.site_version %} <span class="footer-version">v{{ site_cfg_global.site_version }}</span>{% endif %}</div>
         </div>
       </div>
       <div class="footer-right">

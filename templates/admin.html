@@ -701,6 +701,14 @@
             <input name="email" placeholder="name@example.com">
             <label>Photo</label>
             <input type="file" name="photo" accept="image/png,image/jpeg,image/jpg,image/gif">
+            {% if site_cfg.person_tags %}
+            <label>Tags</label>
+            <div class="checkbox-list">
+              {% for tag in site_cfg.person_tags %}
+              <label class="checkbox-label"><input type="checkbox" name="person_tags" value="{{ tag }}"> <span>{{ tag }}</span></label>
+              {% endfor %}
+            </div>
+            {% endif %}
             <h4>Links (Optional, up to 3)</h4>
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
               <div>
@@ -776,6 +784,14 @@
                         <input name="email" value="{{ p.email }}">
                         <label>Photo (replace)</label>
                         <input type="file" name="photo" accept="image/png,image/jpeg,image/jpg,image/gif">
+                        {% if site_cfg.person_tags %}
+                        <label>Tags</label>
+                        <div class="checkbox-list">
+                          {% for tag in site_cfg.person_tags %}
+                          <label class="checkbox-label"><input type="checkbox" name="person_tags" value="{{ tag }}" {% if p.tags and tag in p.tags %}checked{% endif %}> <span>{{ tag }}</span></label>
+                          {% endfor %}
+                        </div>
+                        {% endif %}
                         <h4>Links (Optional, up to 3)</h4>
                         <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                           <div>
@@ -993,6 +1009,8 @@
               <input name="lab_name_short" value="{{ site_cfg.lab_name_short }}">
               <label>Lab Name (Homepage / Full)</label>
               <input name="lab_name_full" value="{{ site_cfg.lab_name_full }}">
+              <label>Site Version</label>
+              <input name="site_version" value="{{ site_cfg.site_version }}">
               <label>Hero Summary Text</label>
               <textarea name="hero_summary" rows="3">{{ site_cfg.hero_summary }}</textarea>
               <label>Home Welcome Text</label>
@@ -1096,6 +1114,76 @@
               {% endfor %}
               <button type="submit">Save Research Focus</button>
             </form>
+          </div>
+        </details>
+
+        <details>
+          <summary>People Tags</summary>
+          <div class="subpanel-body">
+            <p class="site-mini-note">One tag per line. These tags appear as checkboxes in the People editor and as badges on each person detail page.</p>
+            <form method="POST" action="{{ url_for('admin_dashboard') }}">
+              <input type="hidden" name="action" value="edit_person_tags">
+              <input type="hidden" name="item_type" value="site">
+              <label>Available Tags</label>
+              <textarea name="person_tags_text" rows="8">{{ site_cfg.person_tags|join('\n') }}</textarea>
+              <button type="submit">Save People Tags</button>
+            </form>
+          </div>
+        </details>
+
+        <details>
+          <summary>News</summary>
+          <div class="subpanel-body">
+            <p class="site-mini-note">Use this panel to publish announcements and milestones. Each news item can have its own image, and a placeholder image is used by default.</p>
+
+            <div class="form-section" style="box-shadow:none; margin-top:0;">
+              <h3 style="margin-top:0;">Add News Item</h3>
+              <form method="POST" enctype="multipart/form-data" action="{{ url_for('admin_dashboard') }}">
+                <input type="hidden" name="action" value="add">
+                <input type="hidden" name="item_type" value="news">
+                <label>Title</label>
+                <input name="title" required>
+                <label>Date</label>
+                <input name="date" type="date">
+                <label>Summary</label>
+                <textarea name="summary" rows="3" placeholder="One short paragraph for the list page"></textarea>
+                <label>Content</label>
+                <textarea name="content" rows="6" required></textarea>
+                <label>Image (optional)</label>
+                <input type="file" name="image" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp">
+                <button type="submit">Add News</button>
+              </form>
+            </div>
+
+            {% if news_items %}
+            {% for item in news_items %}
+            <details id="news-{{ item.id }}" style="margin-top:14px;">
+              <summary>{{ item.title }} <span style="color:#95a5a6; font-size:0.85em; margin-left:8px;">{{ item.date }} · {{ item.id }}</span></summary>
+              <div class="form-section" style="box-shadow:none;">
+                <form method="POST" enctype="multipart/form-data" action="{{ url_for('admin_dashboard') }}">
+                  <input type="hidden" name="action" value="edit">
+                  <input type="hidden" name="item_type" value="news">
+                  <input type="hidden" name="id" value="{{ item.id }}">
+                  <label>Title</label>
+                  <input name="title" value="{{ item.title }}" required>
+                  <label>Date</label>
+                  <input name="date" type="date" value="{{ item.date }}">
+                  <label>Summary</label>
+                  <textarea name="summary" rows="3">{{ item.summary }}</textarea>
+                  <label>Content</label>
+                  <textarea name="content" rows="6" required>{{ item.content }}</textarea>
+                  <label>Image (replace)</label>
+                  <input type="file" name="image" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp">
+                  {% if item.image_filename %}
+                  <p class="site-mini-note">Current image: <code>{{ item.image_filename }}</code></p>
+                  {% endif %}
+                  <button type="submit">Save News</button>
+                  <a href="{{ url_for('admin_dashboard', action='delete', item_type='news', id=item.id) }}" class="btn delete" style="display:inline-block;background:#e74c3c;color:white;padding:10px 14px;border-radius:4px;text-decoration:none; margin-left:8px;">Delete</a>
+                </form>
+              </div>
+            </details>
+            {% endfor %}
+            {% endif %}
           </div>
         </details>
       </div>

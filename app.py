@@ -106,8 +106,10 @@ VIEW_LOG_COOLDOWN_SECONDS = 30
 PAGE_TYPE_LABELS = {
     'home': 'Home',
     'team': 'People',
+    'news': 'News',
     'articles': 'Publications',
     'article_detail': 'Publication Detail',
+    'news_detail': 'News Detail',
     'person_detail': 'Profile Detail',
     'register': 'Register'
 }
@@ -129,6 +131,14 @@ DEFAULT_RESEARCH_HIGHLIGHTS = [
         'summary': 'Connecting algorithms, devices, and chip-level implementation to build practical intelligent optoelectronic platforms.'
     }
 ]
+DEFAULT_PERSON_TAGS = [
+    'Algorithms',
+    'Optics',
+    'Electronics',
+    'Systems',
+    'Resources'
+]
+DEFAULT_SITE_VERSION = '1.0.1'
 DEFAULT_FRIEND_LINKS = [
     {
         'title': 'SJTU',
@@ -162,10 +172,12 @@ DEFAULT_SITE_CONFIG = {
     'lab_name': LAB_NAME,
     'lab_name_short': 'SJTU IOC Lab',
     'lab_name_full': 'the SJTU Intelligent Optoelectronic Computing Lab',
+    'site_version': DEFAULT_SITE_VERSION,
     'footer_copyright': '2026 AI Intelligent Optoelectronic Computing Lab',
     'logo_filename': 'site_logo.svg',
     'friend_links': DEFAULT_FRIEND_LINKS,
-    'research_highlights': DEFAULT_RESEARCH_HIGHLIGHTS
+    'research_highlights': DEFAULT_RESEARCH_HIGHLIGHTS,
+    'person_tags': DEFAULT_PERSON_TAGS
 }
 
 
@@ -248,6 +260,117 @@ def _normalize_friend_links(items):
         })
     return normalized
 
+def _normalize_person_tags(items):
+    normalized = []
+    source_items = items if isinstance(items, list) else []
+    for raw in source_items:
+        text = (raw or '').strip()
+        if text and text not in normalized:
+            normalized.append(text)
+    return normalized or list(DEFAULT_PERSON_TAGS)
+
+def _normalize_selected_tags(items):
+    normalized = []
+    source_items = items if isinstance(items, list) else []
+    for raw in source_items:
+        text = (raw or '').strip()
+        if text and text not in normalized:
+            normalized.append(text)
+    return normalized
+
+def _normalize_person_record(item):
+    if not isinstance(item, dict):
+        return None
+    links = []
+    for link in item.get('links') or []:
+        if not isinstance(link, dict):
+            continue
+        name = (link.get('name') or '').strip()
+        url = (link.get('url') or '').strip()
+        if name and url:
+            links.append({'name': name, 'url': url})
+    return {
+        'id': item.get('id', ''),
+        'name': (item.get('name') or '').strip(),
+        'category': (item.get('category') or '').strip(),
+        'email': (item.get('email') or '').strip(),
+        'photo_filename': (item.get('photo_filename') or '').strip(),
+        'bio': (item.get('bio') or '').strip(),
+        'links': links,
+        'tags': _normalize_selected_tags(item.get('tags') or []),
+        'last_edited': (item.get('last_edited') or '').strip()
+    }
+
+def load_people_data():
+    people = load_json_data('people.json')
+    normalized = []
+    changed = False
+    for item in people:
+        record = _normalize_person_record(item)
+        if record:
+            normalized.append(record)
+            if record != item:
+                changed = True
+    if changed:
+        save_json_data('people.json', normalized)
+    return normalized
+
+def _default_news_items():
+    today = datetime.now().strftime("%Y-%m-%d")
+    return [{
+        'id': 'news_001',
+        'title': 'SJTU IOC Lab website is now online',
+        'date': today,
+        'summary': f'Version {DEFAULT_SITE_VERSION} is now available with publications, people profiles, resource downloads, and admin analytics.',
+        'content': (
+            f'Our lab website officially went online on {today}.\n\n'
+            f'The current release is Version {DEFAULT_SITE_VERSION}. It includes publication pages, people pages, '
+            'resource download access, simple analytics, and a lightweight content-management workflow.\n\n'
+            'Welcome to browse the site, read our publications, download available resources, and use the shared materials for academic purposes.'
+        ),
+        'image_filename': '',
+        'last_edited': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }]
+
+def _normalize_news_record(item):
+    if not isinstance(item, dict):
+        return None
+    return {
+        'id': (item.get('id') or '').strip(),
+        'title': (item.get('title') or '').strip(),
+        'date': (item.get('date') or '').strip() or datetime.now().strftime("%Y-%m-%d"),
+        'summary': (item.get('summary') or '').strip(),
+        'content': (item.get('content') or '').strip(),
+        'image_filename': (item.get('image_filename') or '').strip(),
+        'last_edited': (item.get('last_edited') or '').strip()
+    }
+
+def _news_sort_key(item):
+    return ((item.get('date') or ''), (item.get('last_edited') or ''), item.get('id', ''))
+
+def load_news_data():
+    path = os.path.join(PERSISTENT_ROOT, 'news.json')
+    if not os.path.exists(path):
+        seed = _default_news_items()
+        save_json_data('news.json', seed)
+        return seed
+    news_items = load_json_data('news.json')
+    normalized = []
+    changed = False
+    for item in news_items:
+        record = _normalize_news_record(item)
+        if record:
+            normalized.append(record)
+            if record != item:
+                changed = True
+    if not normalized:
+        normalized = _default_news_items()
+        changed = True
+    normalized.sort(key=_news_sort_key, reverse=True)
+    if changed:
+        save_json_data('news.json', normalized)
+    return normalized
+
 def _read_download_log_summary():
     download_counts = {}
     unique_downloaders = {}
@@ -326,7 +449,7 @@ def load_site_config():
         with open(SITE_CONFIG_PATH, 'r', encoding='utf-8') as f:
             cfg = json.load(f)
         changed = False
-        for key in ('home_note', 'home_welcome', 'hero_summary', 'lab_name', 'lab_name_short', 'lab_name_full', 'logo_filename', 'footer_copyright'):
+        for key in ('home_note', 'home_welcome', 'hero_summary', 'lab_name', 'lab_name_short', 'lab_name_full', 'logo_filename', 'footer_copyright', 'site_version'):
             if key not in cfg or not isinstance(cfg.get(key), str):
                 cfg[key] = DEFAULT_SITE_CONFIG[key]
                 changed = True
@@ -338,6 +461,10 @@ def load_site_config():
         if cfg.get('friend_links') != normalized_friend_links:
             cfg['friend_links'] = normalized_friend_links
             changed = True
+        normalized_person_tags = _normalize_person_tags(cfg.get('person_tags'))
+        if cfg.get('person_tags') != normalized_person_tags:
+            cfg['person_tags'] = normalized_person_tags
+            changed = True
         if changed:
             save_site_config(cfg)
         return cfg
@@ -346,6 +473,7 @@ def load_site_config():
         fallback = dict(DEFAULT_SITE_CONFIG)
         fallback['research_highlights'] = _normalize_research_highlights(DEFAULT_SITE_CONFIG.get('research_highlights'))
         fallback['friend_links'] = _normalize_friend_links(DEFAULT_SITE_CONFIG.get('friend_links'))
+        fallback['person_tags'] = _normalize_person_tags(DEFAULT_SITE_CONFIG.get('person_tags'))
         return fallback
 
 def save_site_config(cfg):
@@ -588,12 +716,14 @@ PEOPLE_IMAGES_DIR = os.path.join(PERSISTENT_ROOT, 'images', 'people')
 os.makedirs(PEOPLE_IMAGES_DIR, exist_ok=True)
 ARTICLE_IMAGES_DIR = os.path.join(PERSISTENT_ROOT, 'images', 'articles')
 os.makedirs(ARTICLE_IMAGES_DIR, exist_ok=True)
+NEWS_IMAGES_DIR = os.path.join(PERSISTENT_ROOT, 'images', 'news')
+os.makedirs(NEWS_IMAGES_DIR, exist_ok=True)
 SITE_IMAGES_DIR = os.path.join(PERSISTENT_ROOT, 'images')
 os.makedirs(SITE_IMAGES_DIR, exist_ok=True)
 
 def _add_person(form_data, photo_file=None):
     filename = 'people.json'
-    data = load_json_data(filename)
+    data = load_people_data()
     ids = [int(item['id'].split('_')[-1]) for item in data if '_' in item['id']]
     new_id_num = max(ids) + 1 if ids else 1
     new_id = f"person_{new_id_num:03d}"
@@ -619,6 +749,7 @@ def _add_person(form_data, photo_file=None):
         'photo_filename': photo_filename,
         'bio': form_data.get('bio', '').strip(),
         'links': links,
+        'tags': _normalize_selected_tags(form_data.getlist('person_tags') if hasattr(form_data, 'getlist') else []),
         'last_edited': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
     data.append(item)
@@ -627,7 +758,7 @@ def _add_person(form_data, photo_file=None):
 
 def _update_person(person_id, form_data, photo_file=None):
     filename = 'people.json'
-    data = load_json_data(filename)
+    data = load_people_data()
     for item in data:
         if item['id'] == person_id:
             item['name'] = form_data.get('name', item.get('name', '')).strip()
@@ -657,6 +788,7 @@ def _update_person(person_id, form_data, photo_file=None):
                 if name and url:
                     links.append({'name': name, 'url': url})
             item['links'] = links
+            item['tags'] = _normalize_selected_tags(form_data.getlist('person_tags') if hasattr(form_data, 'getlist') else [])
             item['last_edited'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             break
     save_json_data(filename, data)
@@ -664,10 +796,79 @@ def _update_person(person_id, form_data, photo_file=None):
 
 def _delete_person(person_id):
     filename = 'people.json'
-    data = load_json_data(filename)
+    data = load_people_data()
     data = [item for item in data if item['id'] != person_id]
     save_json_data(filename, data)
     print(f"🗑️ Deleted person: {person_id}")
+
+
+def _add_news(form_data, image_file=None):
+    filename = 'news.json'
+    data = load_news_data()
+    ids = [int(item['id'].split('_')[-1]) for item in data if '_' in item['id']]
+    new_id_num = max(ids) + 1 if ids else 1
+    new_id = f"news_{new_id_num:03d}"
+    image_filename = ''
+    if image_file and image_file.filename:
+        ext = os.path.splitext(secure_filename(image_file.filename))[1].lower()
+        if ext in ['.png', '.jpg', '.jpeg', '.gif', '.webp']:
+            image_filename = f"{new_id}{ext}"
+            image_file.save(os.path.join(NEWS_IMAGES_DIR, image_filename))
+    item = {
+        'id': new_id,
+        'title': (form_data.get('title') or '').strip(),
+        'date': (form_data.get('date') or '').strip() or datetime.now().strftime("%Y-%m-%d"),
+        'summary': (form_data.get('summary') or '').strip(),
+        'content': (form_data.get('content') or '').strip(),
+        'image_filename': image_filename,
+        'last_edited': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }
+    data.append(item)
+    data.sort(key=_news_sort_key, reverse=True)
+    save_json_data(filename, data)
+    print(f"Added news: {new_id}")
+
+def _update_news(news_id, form_data, image_file=None):
+    filename = 'news.json'
+    data = load_news_data()
+    for item in data:
+        if item['id'] != news_id:
+            continue
+        item['title'] = (form_data.get('title') or item.get('title') or '').strip()
+        item['date'] = (form_data.get('date') or item.get('date') or '').strip() or datetime.now().strftime("%Y-%m-%d")
+        item['summary'] = (form_data.get('summary') or item.get('summary') or '').strip()
+        item['content'] = (form_data.get('content') or item.get('content') or '').strip()
+        if image_file and image_file.filename:
+            for ext in ['.png', '.jpg', '.jpeg', '.gif', '.webp']:
+                path = os.path.join(NEWS_IMAGES_DIR, f"{news_id}{ext}")
+                if os.path.exists(path):
+                    try:
+                        os.remove(path)
+                    except Exception:
+                        pass
+            ext = os.path.splitext(secure_filename(image_file.filename))[1].lower()
+            if ext in ['.png', '.jpg', '.jpeg', '.gif', '.webp']:
+                image_filename = f"{news_id}{ext}"
+                image_file.save(os.path.join(NEWS_IMAGES_DIR, image_filename))
+                item['image_filename'] = image_filename
+        item['last_edited'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        break
+    data.sort(key=_news_sort_key, reverse=True)
+    save_json_data(filename, data)
+    print(f"Updated news: {news_id}")
+
+def _delete_news(news_id):
+    filename = 'news.json'
+    data = [item for item in load_news_data() if item['id'] != news_id]
+    for ext in ['.png', '.jpg', '.jpeg', '.gif', '.webp']:
+        path = os.path.join(NEWS_IMAGES_DIR, f"{news_id}{ext}")
+        if os.path.exists(path):
+            try:
+                os.remove(path)
+            except Exception:
+                pass
+    save_json_data(filename, data)
+    print(f"Deleted news: {news_id}")
 
 
 # ==============================================================================
@@ -678,7 +879,8 @@ def _delete_person(person_id):
 def index():
     site_cfg = load_site_config()
     articles = load_articles_data()
-    people = load_json_data('people.json')
+    people = load_people_data()
+    news_items = load_news_data()
     featured_articles = sorted(
         [item for item in articles if item.get('featured_on_home')],
         key=_article_sort_key
@@ -691,14 +893,22 @@ def index():
         article_count=len(articles),
         people_count=len(people),
         featured_articles=featured_articles,
-        total_page_views=page_view_summary['total_views']
+        total_page_views=page_view_summary['total_views'],
+        latest_news=news_items[:1]
     )
 
 @app.route('/team')
 def team():
-    people = load_json_data('people.json')
+    people = load_people_data()
+    site_cfg = load_site_config()
     log_page_view('team', title='People')
-    return render_template('team.html', people=people)
+    return render_template('team.html', people=people, person_tags=site_cfg.get('person_tags', []))
+
+@app.route('/news')
+def news():
+    news_items = load_news_data()
+    log_page_view('news', title='News')
+    return render_template('news.html', news_items=news_items)
 
 @app.route('/articles')
 def articles():
@@ -739,12 +949,21 @@ def article_detail(id):
 
 @app.route('/person/<id>')
 def person_detail(id):
-    people = load_json_data('people.json')
+    people = load_people_data()
     person = next((p for p in people if p['id'] == id), None)
     if not person:
         return "Person not found", 404
     log_page_view('person_detail', item_id=id, title=person.get('name', id))
     return render_template('person_detail.html', person=person)
+
+@app.route('/news/<id>')
+def news_detail(id):
+    news_items = load_news_data()
+    item = next((n for n in news_items if n['id'] == id), None)
+    if not item:
+        return "News not found", 404
+    log_page_view('news_detail', item_id=id, title=item.get('title', id))
+    return render_template('news_detail.html', item=item)
 # Resources route removed/merged into articles
 
 @app.route('/test')
@@ -914,11 +1133,13 @@ def admin_dashboard():
 
     # === Handle form submissions (add/edit/delete) ===
     action = request.form.get('action') or request.args.get('action')
-    item_type = request.form.get('item_type') or request.args.get('item_type')  # 'article' or 'person' or 'site'
+    item_type = request.form.get('item_type') or request.args.get('item_type')  # 'article' or 'person' or 'news' or 'site'
 
     if action == 'add':
         if item_type == 'person':
             _add_person(request.form, request.files.get('photo'))
+        elif item_type == 'news':
+            _add_news(request.form, request.files.get('image'))
         else:
             _add_item(item_type, request.form)
         return redirect(url_for('admin_dashboard'))
@@ -926,10 +1147,12 @@ def admin_dashboard():
         item_id = request.form.get('id')
         if item_type == 'person':
             _update_person(item_id, request.form, request.files.get('photo'))
+        elif item_type == 'news':
+            _update_news(item_id, request.form, request.files.get('image'))
         else:
             _update_item(item_type, item_id, request.form)
         return redirect(url_for('admin_dashboard'))
-    elif action in ('edit_site_welcome', 'edit_site_content', 'edit_site_branding', 'edit_friend_links', 'edit_research_highlights'):
+    elif action in ('edit_site_welcome', 'edit_site_content', 'edit_site_branding', 'edit_friend_links', 'edit_research_highlights', 'edit_person_tags'):
         cfg = load_site_config()
         if action in ('edit_site_welcome', 'edit_site_content', 'edit_site_branding'):
             cfg['home_welcome'] = (request.form.get('home_welcome') or '').strip()
@@ -937,6 +1160,7 @@ def admin_dashboard():
             cfg['hero_summary'] = (request.form.get('hero_summary') or '').strip() or DEFAULT_SITE_CONFIG['hero_summary']
             cfg['lab_name_short'] = (request.form.get('lab_name_short') or '').strip() or DEFAULT_SITE_CONFIG['lab_name_short']
             cfg['lab_name_full'] = (request.form.get('lab_name_full') or '').strip() or DEFAULT_SITE_CONFIG['lab_name_full']
+            cfg['site_version'] = (request.form.get('site_version') or '').strip() or DEFAULT_SITE_CONFIG['site_version']
             cfg['footer_copyright'] = (request.form.get('footer_copyright') or '').strip() or DEFAULT_SITE_CONFIG['footer_copyright']
             cfg['lab_name'] = cfg['lab_name_full']
         if action in ('edit_site_content', 'edit_friend_links'):
@@ -959,12 +1183,17 @@ def admin_dashboard():
                     'summary': (request.form.get(f'highlight_summary_{index}') or '').strip() or default_item['summary']
                 })
             cfg['research_highlights'] = _normalize_research_highlights(highlights)
+        if action in ('edit_site_content', 'edit_person_tags'):
+            raw_text = request.form.get('person_tags_text', '')
+            cfg['person_tags'] = _normalize_person_tags(raw_text.splitlines())
         save_site_config(cfg)
         return redirect(url_for('admin_dashboard'))
     elif action == 'delete':
         item_id = request.args.get('id')
         if item_type == 'person':
             _delete_person(item_id)
+        elif item_type == 'news':
+            _delete_news(item_id)
         else:
             _delete_item(item_type, item_id)
         return redirect(url_for('admin_dashboard'))
@@ -1014,7 +1243,8 @@ def admin_dashboard():
 
     # Load articles
     articles = load_articles_data()
-    people = load_json_data('people.json')
+    people = load_people_data()
+    news_items = load_news_data()
     article_titles = {item['id']: item.get('title', item['id']) for item in articles}
 
     # Load page view stats
@@ -1193,6 +1423,7 @@ def admin_dashboard():
         article_view_counts=article_view_counts,
         article_metrics=article_metrics,
         people=people,
+        news_items=news_items,
         people_photo_status=people_photo_status,
         people_photo_info=people_photo_info,
         start_time=START_TIME,
@@ -1380,6 +1611,16 @@ def asset_people(filename):
 def asset_article_thumb(filename):
     path = os.path.join(ARTICLE_IMAGES_DIR, filename)
     if not os.path.exists(path):
+        return abort(404)
+    return send_file(path)
+
+@app.route('/assets/news/<filename>')
+def asset_news_image(filename):
+    path = os.path.join(NEWS_IMAGES_DIR, filename)
+    if not os.path.exists(path):
+        fallback = os.path.join(app.static_folder, 'images', 'placeholder-news.svg')
+        if os.path.exists(fallback):
+            return send_file(fallback)
         return abort(404)
     return send_file(path)
 

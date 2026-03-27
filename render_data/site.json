@@ -23,8 +23,16 @@
   "hero_summary": "Research in photonic neural networks, intelligent photonic integrated circuits, and open academic resources for optical computing.",
   "lab_name_short": "SJTU IOC Lab",
   "lab_name_full": "the SJTU Intelligent Optoelectronic Computing Lab",
+  "site_version": "1.0.1",
   "footer_copyright": "2026 AI Intelligent Optoelectronic Computing Lab",
   "logo_filename": "site_logo.svg",
+  "person_tags": [
+    "Algorithms",
+    "Optics",
+    "Electronics",
+    "Systems",
+    "Resources"
+  ],
   "friend_links": [
     {
       "title": "SJTU",

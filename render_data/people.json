@@ -6,13 +6,19 @@
     "email": "yitongchen@sjtu.edu.cn",
     "photo_filename": "person_001.png",
     "bio": "Research Interests: Photonic neural networks, intelligent photonic integrated circuits.",
-    "last_edited": "2026-02-06 17:20:25",
     "links": [
       {
         "name": "github",
         "url": "https://github.com/ytchen17"
       }
-    ]
+    ],
+    "tags": [
+      "Algorithms",
+      "Optics",
+      "Electronics",
+      "Systems"
+    ],
+    "last_edited": "2026-02-06 17:20:25"
   },
   {
     "id": "person_004",
@@ -21,13 +27,18 @@
     "email": "cyh29hao@sjtu.edu.cn",
     "photo_filename": "person_004.jpg",
     "bio": "A sophomore majoring in electronic science and technology.\r\nCurrent Work: web development",
-    "last_edited": "2026-02-06 15:54:10",
     "links": [
       {
         "name": "github",
         "url": "https://github.com/Cyh29hao"
       }
-    ]
+    ],
+    "tags": [
+      "Algorithms",
+      "Optics",
+      "Resources"
+    ],
+    "last_edited": "2026-03-27 08:14:42"
   },
   {
     "id": "person_005",
@@ -36,6 +47,8 @@
     "email": "",
     "photo_filename": "",
     "bio": "",
+    "links": [],
+    "tags": [],
     "last_edited": "2026-02-06 01:55:08"
   }
 ]
