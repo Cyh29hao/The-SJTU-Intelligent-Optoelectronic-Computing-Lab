@@ -4,7 +4,7 @@
 <div class="paper-detail-page" style="text-align: left; max-width: 750px; margin: 0 auto;">
   <div class="paper-detail-header">
     <h2 class="paper-detail-title">&#128196; {{ item.title }}</h2>
-    <span class="paper-download-inline">Downloaded {{ download_count }} times</span>
+    <span class="paper-download-inline">Opened {{ open_count }} times</span>
   </div>
   <p><strong>Authors:</strong> {{ item.authors|join(', ') }}</p>
   <p><strong>Published in:</strong> {{ item.venue }}, {{ item.year }}</p>
@@ -17,37 +17,31 @@
   </div>
 
   <div class="paper-action-row" style="margin-top: 24px; display: flex; gap: 12px; justify-content: center;">
-    {% if file_status.paper %}
-      <a href="/download_file/paper/{{ item.id }}" class="btn">&#11015;&#65039; Download Paper</a>
-    {% else %}
-      <button class="btn btn-disabled" disabled style="background: #ccc; cursor: not-allowed; opacity: 0.6;">&#11015;&#65039; Download Paper</button>
+    {% if item.official_free_access_url %}
+      <a href="{{ url_for('open_link', link_type='official_free_access', resource_id=item.id) }}" class="btn" target="_blank" rel="noopener">Official Free Access</a>
+    {% elif item.paper_url %}
+      <a href="{{ url_for('open_link', link_type='paper', resource_id=item.id) }}" class="btn" target="_blank" rel="noopener">Paper Link</a>
     {% endif %}
   </div>
-  <p style="margin-top: 6px; text-align:center; color:#7f8c8d; font-size: 0.9em;">
-    Includes: Paper{% if paper_info and paper_info.exists and paper_info.size %} | {{ (paper_info.size/1024/1024)|round(2) }} MB{% endif %}
-  </p>
 
+  {% if item.resource_url %}
   <div class="paper-action-row" style="margin-top: 16px; display: flex; gap: 12px; justify-content: center;">
-    {% if file_status.resource %}
-      <a href="/download_file/resource/{{ item.id }}" class="btn">&#11015;&#65039; Download Resources</a>
-    {% else %}
-      <button class="btn btn-disabled" disabled style="background: #ccc; cursor: not-allowed; opacity: 0.6;">&#11015;&#65039; Download Resources</button>
-    {% endif %}
+    <a href="{{ url_for('open_link', link_type='resource', resource_id=item.id) }}" class="btn" target="_blank" rel="noopener">Resources Link</a>
   </div>
-  {% if item.resource_kinds %}
-  <p style="margin-top: 6px; text-align:center; color:#7f8c8d; font-size: 0.9em;">
-    Includes: {{ item.resource_kinds|join(' & ') }}{% if resource_info and resource_info.exists and resource_info.size %} | {{ (resource_info.size/1024/1024)|round(2) }} MB{% endif %}
-  </p>
   {% endif %}
+
   {% if item.paper_url or item.resource_url %}
   <div class="paper-links-row" style="margin-top: 12px; display: flex; gap: 15px; justify-content: center; font-size: 0.95em;">
-    {% if item.paper_url %}
-      <a href="{{ item.paper_url }}" target="_blank" style="color:#2c3e50;">Paper Link &#8599;</a>
-    {% endif %}
-    {% if item.resource_url %}
-      <a href="{{ item.resource_url }}" target="_blank" style="color:#2c3e50;">Resources Link &#8599;</a>
+    {% if item.paper_url and item.official_free_access_url %}
+      <a href="{{ url_for('open_link', link_type='paper', resource_id=item.id) }}" target="_blank" rel="noopener" style="color:#2c3e50;">Paper Link &#8599;</a>
     {% endif %}
   </div>
+  {% endif %}
+
+  {% if site_cfg_global.show_external_access_note %}
+  <p style="margin-top: 12px; text-align:center; color:#7f8c8d; font-size: 0.88em;">
+    External links are unlocked after login so the lab can keep lightweight access records without hosting the files locally.
+  </p>
   {% endif %}
 </div>
 {% endblock %}

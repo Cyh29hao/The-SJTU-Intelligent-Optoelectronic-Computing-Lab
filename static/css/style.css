@@ -884,7 +884,7 @@ input[type="email"]:focus {
 }
 
 .paper-detail-page .btn {
-  min-width: 220px;
+  min-width: 206px;
 }
 
 .paper-detail-header {
@@ -913,6 +913,10 @@ input[type="email"]:focus {
 
 .paper-links-row a:hover {
   text-decoration: underline;
+}
+
+.paper-detail-page .paper-action-row {
+  margin-top: 18px !important;
 }
 
 .person-tag-row {

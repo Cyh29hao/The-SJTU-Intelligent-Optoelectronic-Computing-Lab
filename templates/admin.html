@@ -403,12 +403,12 @@
             <div class="stat-subtext">These are the visits that matter most for download conversion.</div>
         </div>
         <div class="stat-card">
-            <div class="stat-label">Total Downloads</div>
-            <div class="stat-value">{{ total_downloads }}</div>
-            <div class="stat-subtext">Today: {{ page_view_stats.downloads_today }} | Last 7 days: {{ page_view_stats.downloads_last_7_days }}</div>
+        <div class="stat-label">Tracked Opens</div>
+        <div class="stat-value">{{ total_downloads }}</div>
+        <div class="stat-subtext">Today: {{ page_view_stats.downloads_today }} | Last 7 days: {{ page_view_stats.downloads_last_7_days }}</div>
         </div>
         <div class="stat-card">
-            <div class="stat-label">View to Download</div>
+        <div class="stat-label">View to Open</div>
             <div class="stat-value">
                 {% if page_view_stats.publication_conversion_rate is not none %}
                     {{ "%.1f"|format(page_view_stats.publication_conversion_rate) }}%
@@ -416,7 +416,7 @@
                     --
                 {% endif %}
             </div>
-            <div class="stat-subtext">Rough conversion from publication-detail page views to downloads.</div>
+            <div class="stat-subtext">Rough conversion from publication-detail page views to gated paper/resource opens.</div>
         </div>
     </div>
 
@@ -458,7 +458,7 @@
                     <tr>
                         <th>Publication</th>
                         <th>Views</th>
-                        <th>Downloads</th>
+                        <th>Opens</th>
                         <th>CVR</th>
                     </tr>
                 </thead>
@@ -485,7 +485,7 @@
             {% else %}
             <p style="text-align:left; color:#7f8c8d;">Publication-detail views will appear here after visitors open paper pages.</p>
             {% endif %}
-            <p class="table-note">CVR = downloads divided by publication-detail views. It is a quick proxy for how compelling each paper page is.</p>
+            <p class="table-note">CVR = gated opens divided by publication-detail views. It is a quick proxy for how compelling each paper page is.</p>
         </div>
     </div>
 
@@ -503,7 +503,7 @@
                         </div>
                         <div class="bar-track">
                             <div class="bar-fill downloads" style="width: {{ day.downloads_width }}%;"></div>
-                            <span class="bar-value">Downloads {{ day.downloads }}</span>
+                            <span class="bar-value">Opens {{ day.downloads }}</span>
                         </div>
                     </div>
                 </div>
@@ -517,7 +517,7 @@
                 <tbody>
                     <tr>
                         <td><strong>downloads.csv</strong></td>
-                        <td>Records download time, user info, article ID, and file type.</td>
+                        <td>Records gated outbound opens, user info, article ID, and link type.</td>
                     </tr>
                     <tr>
                         <td><strong>page_views.csv</strong></td>
@@ -539,7 +539,7 @@
                 <tr>
                     <th>Publication</th>
                     <th>Views</th>
-                    <th>Downloads</th>
+                    <th>Opens</th>
                     <th>Users</th>
                     <th>CVR</th>
                     <th>Last Activity</th>
@@ -575,7 +575,7 @@
                 {% endfor %}
             </tbody>
         </table>
-        <p class="table-note">This table is the most resume-friendly view: it shows which publications attracted attention and whether that attention converted to downloads.</p>
+        <p class="table-note">This table is the most resume-friendly view: it shows which publications attracted attention and whether that attention converted to external opens.</p>
     </div>
 
 
@@ -653,15 +653,18 @@
             <input name="year" type="number" value="2025" min="2000" max="2030" required>
             <label>Abstract</label>
             <textarea name="abstract" rows="5" required></textarea>
-            <label>Paper URL (optional)</label>
+            <label>Paper URL</label>
             <input name="paper_url" placeholder="https://...">
-            <label>Code/Data URL (optional)</label>
+            <label>Official Free Access URL (optional)</label>
+            <input name="official_free_access_url" placeholder="https://...">
+            <label>Resources URL (optional)</label>
             <input name="resource_url" placeholder="https://...">
             <label class="checkbox-label" style="margin-top:14px;">
               <input type="checkbox" name="featured_on_home">
               <span>Include this publication in the homepage carousel</span>
             </label>
             <p style="margin:6px 0 0; color:#7f8c8d; font-size:0.92rem;">At most 5 publications can participate in the homepage carousel.</p>
+            <p style="margin:6px 0 0; color:#7f8c8d; font-size:0.92rem;">This site now records gated opens and redirects users to external paper/resource pages instead of hosting the files locally.</p>
             <h4 style="margin-top:10px;">🧩 Resource Type</h4>
             <div class="checkbox-list">
               <label class="checkbox-label"><input type="checkbox" name="resource_kinds" value="Supplementary Material"> <span>Supplementary Material</span></label>
@@ -867,11 +870,18 @@
                 <input name="year" type="number" value="{{ item.year }}" min="2000" max="2030" required>
                 <label>Abstract</label>
                 <textarea name="abstract" rows="5" required>{{ item.abstract }}</textarea>
+                <label>Paper URL</label>
+                <input name="paper_url" value="{{ item.paper_url }}">
+                <label>Official Free Access URL (optional)</label>
+                <input name="official_free_access_url" value="{{ item.official_free_access_url }}">
+                <label>Resources URL (optional)</label>
+                <input name="resource_url" value="{{ item.resource_url }}">
                 <label class="checkbox-label" style="margin-top:14px;">
                   <input type="checkbox" name="featured_on_home" {% if item.featured_on_home %}checked{% endif %}>
                   <span>Include this publication in the homepage carousel</span>
                 </label>
                 <button type="submit" style="display:none;">💾 Save Changes</button>
+                <button type="submit" style="margin-top:14px;">Save Publication</button>
                 <a href="{{ url_for('admin_dashboard', action='delete', item_type='article', id=item.id) }}"
                    class="actions" 
                    onclick="return confirm('⚠️ Delete this publication? This cannot be undone.')">
@@ -879,8 +889,24 @@
                 </a>
             </form>
 
+            <div class="upload-section" style="margin-top: 12px;">
+                <h4>Thumbnail</h4>
+                <form method="POST" enctype="multipart/form-data" action="{{ url_for('admin_upload_thumbnail', article_id=item.id) }}">
+                    <input type="file" name="thumbnail" accept="image/png,image/jpeg,image/jpg,image/gif">
+                    <button type="submit" style="background:#2980b9; margin-top:8px;">Upload Thumbnail</button>
+                </form>
+                {% if item.thumbnail_filename %}
+                <p style="font-size: 13px; color:#7f8c8d; margin-top:8px;">
+                    Current: <code>{{ item.thumbnail_filename }}</code>
+                </p>
+                {% endif %}
+                <p style="font-size: 13px; color:#7f8c8d; margin-top:8px;">
+                    Local file-hosting controls are hidden in Version {{ site_cfg.site_version }}. Publication access now uses external links.
+                </p>
+            </div>
+
             <!-- File Upload Section for Publications -->
-            <div class="upload-section" style="margin-top: 12px; padding: 12px; background-color: #f9f9f9; border-radius: 6px;">
+            <div class="upload-section" style="display:none; margin-top: 12px; padding: 12px; background-color: #f9f9f9; border-radius: 6px;">
                 <hr>
                 
                 <div style="display: flex; gap: 20px;">
@@ -1011,6 +1037,10 @@
               <input name="lab_name_full" value="{{ site_cfg.lab_name_full }}">
               <label>Site Version</label>
               <input name="site_version" value="{{ site_cfg.site_version }}">
+              <label class="checkbox-label" style="margin-top:12px;">
+                <input type="checkbox" name="show_external_access_note" {% if site_cfg.show_external_access_note %}checked{% endif %}>
+                <span>Show the small external-access note on article detail pages</span>
+              </label>
               <label>Hero Summary Text</label>
               <textarea name="hero_summary" rows="3">{{ site_cfg.hero_summary }}</textarea>
               <label>Home Welcome Text</label>

@@ -138,7 +138,7 @@ DEFAULT_PERSON_TAGS = [
     'Systems',
     'Resources'
 ]
-DEFAULT_SITE_VERSION = '1.0.1'
+DEFAULT_SITE_VERSION = '1.0.3'
 DEFAULT_FRIEND_LINKS = [
     {
         'title': 'SJTU',
@@ -173,6 +173,7 @@ DEFAULT_SITE_CONFIG = {
     'lab_name_short': 'SJTU IOC Lab',
     'lab_name_full': 'the SJTU Intelligent Optoelectronic Computing Lab',
     'site_version': DEFAULT_SITE_VERSION,
+    'show_external_access_note': False,
     'footer_copyright': '2026 AI Intelligent Optoelectronic Computing Lab',
     'logo_filename': 'site_logo.svg',
     'friend_links': DEFAULT_FRIEND_LINKS,
@@ -453,6 +454,9 @@ def load_site_config():
             if key not in cfg or not isinstance(cfg.get(key), str):
                 cfg[key] = DEFAULT_SITE_CONFIG[key]
                 changed = True
+        if 'show_external_access_note' not in cfg or not isinstance(cfg.get('show_external_access_note'), bool):
+            cfg['show_external_access_note'] = DEFAULT_SITE_CONFIG['show_external_access_note']
+            changed = True
         normalized_highlights = _normalize_research_highlights(cfg.get('research_highlights'))
         if cfg.get('research_highlights') != normalized_highlights:
             cfg['research_highlights'] = normalized_highlights
@@ -527,6 +531,28 @@ def _article_sort_key(item):
         item.get('id', '')
     )
 
+def _normalize_article_records(items):
+    normalized = []
+    changed = False
+    for item in items if isinstance(items, list) else []:
+        if not isinstance(item, dict):
+            continue
+        current = dict(item)
+        for key in ('paper_url', 'resource_url', 'official_free_access_url', 'venue', 'abstract', 'title', 'thumbnail_filename'):
+            if key not in current or not isinstance(current.get(key), str):
+                current[key] = '' if key != 'venue' and key != 'abstract' and key != 'title' else current.get(key, '') or ''
+                changed = True
+        if 'resource_kinds' not in current or not isinstance(current.get('resource_kinds'), list):
+            current['resource_kinds'] = ['Code']
+            changed = True
+        if 'authors_display_count' not in current:
+            current['authors_display_count'] = 3
+            changed = True
+        normalized.append(current)
+        if current != item:
+            changed = True
+    return normalized, changed
+
 def _normalize_home_carousel_flags(articles):
     changed = False
     explicit_flag_count = sum(1 for item in articles if 'featured_on_home' in item)
@@ -557,7 +583,10 @@ def _normalize_home_carousel_flags(articles):
 
 def load_articles_data():
     articles = load_json_data('articles.json')
+    articles, changed = _normalize_article_records(articles)
     if _normalize_home_carousel_flags(articles):
+        changed = True
+    if changed:
         save_json_data('articles.json', articles)
     return articles
 
@@ -655,6 +684,7 @@ def _add_item(item_type, form_data):
         'year': int(form_data.get('year', 2025)),
         'abstract': form_data.get('abstract', '').strip(),
         'paper_url': form_data.get('paper_url', '').strip(),
+        'official_free_access_url': form_data.get('official_free_access_url', '').strip(),
         'resource_url': form_data.get('resource_url', '').strip(),
         'authors_display_count': int(form_data.get('authors_display_count', 3)),
         'resource_kinds': form_data.getlist('resource_kinds') if hasattr(form_data, 'getlist') and form_data.getlist('resource_kinds') else ['Code'],
@@ -687,9 +717,12 @@ def _update_item(item_type, item_id, form_data):
                     pass
             # Optional source links
             paper_url_in = form_data.get('paper_url')
+            official_free_access_url_in = form_data.get('official_free_access_url')
             resource_url_in = form_data.get('resource_url')
             if paper_url_in is not None:
                 item['paper_url'] = paper_url_in.strip()
+            if official_free_access_url_in is not None:
+                item['official_free_access_url'] = official_free_access_url_in.strip()
             if resource_url_in is not None:
                 item['resource_url'] = resource_url_in.strip()
             # Resource kinds (multi-select)
@@ -932,19 +965,13 @@ def article_detail(id):
     article = next((a for a in ARTICLES if a['id'] == id), None)
     if not article:
         return "Article not found", 404
-    
-    status = get_file_status(id)
-    paper_info = _file_info(id, 'paper')
-    resource_info = _file_info(id, 'resource')
+
     download_summary = _read_download_log_summary()
     log_page_view('article_detail', item_id=id, title=article.get('title', id))
     return render_template(
         'article_detail.html',
         item=article,
-        file_status=status,
-        paper_info=paper_info,
-        resource_info=resource_info,
-        download_count=download_summary['download_counts'].get(id, 0)
+        open_count=download_summary['download_counts'].get(id, 0)
     )
 
 @app.route('/person/<id>')
@@ -1120,6 +1147,55 @@ def download_file(file_type, resource_id):
     filename = os.path.basename(actual_path)
     return send_file(actual_path, as_attachment=True, download_name=filename)
 
+@app.route('/open_link/<link_type>/<resource_id>')
+def open_link(link_type, resource_id):
+    """Gate external article/resource links behind login while preserving access analytics."""
+    user_info = session.get('user_info')
+    if not user_info:
+        print(f"Unregistered user attempted to open {resource_id}:{link_type}, redirecting to login")
+        return redirect(url_for('register'))
+
+    if link_type not in ['paper', 'resource', 'official_free_access']:
+        return "Invalid link type", 400
+
+    article = next((a for a in load_articles_data() if a.get('id') == resource_id), None)
+    if not article:
+        return "Article not found", 404
+
+    target_url = ''
+    if link_type == 'paper':
+        target_url = (article.get('paper_url') or '').strip()
+    elif link_type == 'resource':
+        target_url = (article.get('resource_url') or '').strip()
+    elif link_type == 'official_free_access':
+        target_url = (article.get('official_free_access_url') or '').strip()
+
+    if not target_url:
+        return "Requested link is not available", 404
+
+    csv_file = os.path.join(DATA_LOGS_DIR, 'downloads.csv')
+    os.makedirs(DATA_LOGS_DIR, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    file_exists = os.path.isfile(csv_file)
+    try:
+        with open(csv_file, 'a', encoding='utf-8-sig', newline='') as f:
+            writer = csv.writer(f)
+            if not file_exists:
+                writer.writerow(['time', 'name', 'affiliation', 'email', 'resource_id', 'type'])
+            writer.writerow([
+                timestamp,
+                user_info['name'],
+                user_info['affiliation'],
+                user_info['email'],
+                resource_id,
+                link_type
+            ])
+        print(f"Link open logged: {user_info['name']} -> {resource_id} ({link_type})")
+    except Exception as e:
+        print(f"Link-open CSV write failed: {e}")
+
+    return redirect(target_url)
+
 
 # ==============================================================================
 # 7. Route Definitions - Admin Dashboard
@@ -1161,6 +1237,7 @@ def admin_dashboard():
             cfg['lab_name_short'] = (request.form.get('lab_name_short') or '').strip() or DEFAULT_SITE_CONFIG['lab_name_short']
             cfg['lab_name_full'] = (request.form.get('lab_name_full') or '').strip() or DEFAULT_SITE_CONFIG['lab_name_full']
             cfg['site_version'] = (request.form.get('site_version') or '').strip() or DEFAULT_SITE_CONFIG['site_version']
+            cfg['show_external_access_note'] = (request.form.get('show_external_access_note') == 'on')
             cfg['footer_copyright'] = (request.form.get('footer_copyright') or '').strip() or DEFAULT_SITE_CONFIG['footer_copyright']
             cfg['lab_name'] = cfg['lab_name_full']
         if action in ('edit_site_content', 'edit_friend_links'):

@@ -1,7 +1,7 @@
 {
-  "home_note": "Note: To download our resources, please first fill in your information on the Login page.",
+  "home_note": "Note: To access our paper and resource links, please first fill in your information on the Login page.",
   "lab_name": "the SJTU Intelligent Optoelectronic Computing Lab",
-  "home_welcome": "Welcome! We are the SJTU Intelligent Optoelectronic Computing Lab, led by Prof. Yitong Chen.\r\n \r\n Our publicly available papers and the related resources( code, datasets, etc.) are downloadable on this website.",
+  "home_welcome": "Welcome! We are the SJTU Intelligent Optoelectronic Computing Lab, led by Prof. Yitong Chen.\r\n \r\n Our publicly available papers and the related resources (code, datasets, and supplementary materials) are organized and accessible through this website.",
   "research_highlights": [
     {
       "title": "Photonic AI",
@@ -23,7 +23,8 @@
   "hero_summary": "Research in photonic neural networks, intelligent photonic integrated circuits, and open academic resources for optical computing.",
   "lab_name_short": "SJTU IOC Lab",
   "lab_name_full": "the SJTU Intelligent Optoelectronic Computing Lab",
-  "site_version": "1.0.1",
+  "site_version": "1.0.3",
+  "show_external_access_note": false,
   "footer_copyright": "2026 AI Intelligent Optoelectronic Computing Lab",
   "logo_filename": "site_logo.svg",
   "person_tags": [
@@ -58,5 +59,6 @@
       "url": "https://github.com/Cyh29hao/0129_YitongChen_lightchip_lab_website_draft",
       "image_filename": "friend_link_github.svg"
     }
-  ]
+  ],
+  "show_external_access_note": false
 }

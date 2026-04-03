@@ -23,7 +23,8 @@
     ],
     "thumbnail_filename": "art_001.png",
     "authors_display_count": 3,
-    "featured_on_home": true
+    "featured_on_home": true,
+    "official_free_access_url": "https://www.science.org/doi/10.1126/science.adv7434"
   },
   {
     "id": "art_002",
@@ -54,7 +55,8 @@
       "Dataset"
     ],
     "authors_display_count": 3,
-    "featured_on_home": true
+    "featured_on_home": true,
+    "official_free_access_url": ""
   },
   {
     "id": "art_003",
@@ -79,6 +81,7 @@
     ],
     "thumbnail_filename": "art_003.png",
     "authors_display_count": 3,
-    "featured_on_home": true
+    "featured_on_home": true,
+    "official_free_access_url": ""
   }
 ]
