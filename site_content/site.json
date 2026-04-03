@@ -1,11 +1,11 @@
 {
   "home_note": "To open our paper and resource pages, please first fill in your information on the Login page.",
-  "home_welcome": "Our lab focuses on research in all-optical neural networks, diffractive deep learning, and intelligent photonic chips.\n\nThis website provides publicly available publications, code repositories, and dataset links from our group.",
+  "home_welcome": "Our lab focuses on research in all-optical neural networks, diffractive deep learning, and intelligent photonic chips.\r\n\r\nThis website provides publicly available publications, code repositories, and dataset links from our group.",
   "hero_summary": "Research in photonic neural networks, intelligent photonic integrated circuits, and open academic resources for optical computing.",
   "lab_name": "the SJTU Intelligent Optoelectronic Computing Lab",
   "lab_name_short": "SJTU IOC Lab",
   "lab_name_full": "the SJTU Intelligent Optoelectronic Computing Lab",
-  "site_version": "1.1.0",
+  "site_version": "1.2.0",
   "show_external_access_note": false,
   "footer_copyright": "2026 AI Intelligent Optoelectronic Computing Lab",
   "logo_filename": "site_logo.svg",
