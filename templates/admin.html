@@ -63,6 +63,109 @@
             margin: 20px 0; 
             box-shadow: 0 2px 6px rgba(0,0,0,0.08);
         }
+        .local-cms-card {
+            background: linear-gradient(135deg, #f7fbff 0%, #ffffff 100%);
+            border: 1px solid #dce8f5;
+        }
+        .cms-status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 14px;
+            margin: 16px 0;
+        }
+        .cms-status-item {
+            background: #fbfdff;
+            border: 1px solid #e4ebf3;
+            border-radius: 10px;
+            padding: 14px 16px;
+        }
+        .cms-status-item strong {
+            display: block;
+            color: #2c3e50;
+            margin-bottom: 6px;
+        }
+        .cms-status-item code {
+            font-size: 12px;
+            color: #5b6b7b;
+            word-break: break-all;
+        }
+        .cms-note {
+            margin: 0;
+            color: #5f7082;
+            line-height: 1.7;
+        }
+        .cms-inline-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 12px;
+        }
+        .cms-inline-actions a {
+            display: inline-block;
+            text-decoration: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-weight: 700;
+            color: white;
+        }
+        .cms-inline-actions a.secondary {
+            background: #16a085;
+        }
+        .cms-inline-actions a.tertiary {
+            background: #7f8c8d;
+        }
+        .admin-notice {
+            border-radius: 10px;
+            padding: 14px 16px;
+            margin: 16px 0;
+            line-height: 1.6;
+        }
+        .admin-notice.success {
+            background: #ebfff4;
+            border: 1px solid #bce7cb;
+            color: #1f6b3b;
+        }
+        .admin-notice.info {
+            background: #f2f8ff;
+            border: 1px solid #cfe0f5;
+            color: #2f5f87;
+        }
+        .admin-notice.error {
+            background: #fff0f0;
+            border: 1px solid #f0c2c2;
+            color: #8b2f2f;
+        }
+        .admin-notice pre {
+            margin: 10px 0 0;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-size: 12px;
+            color: inherit;
+        }
+        .changed-files {
+            margin: 12px 0 0;
+            padding-left: 18px;
+            color: #45576a;
+        }
+        .changed-files li {
+            margin: 6px 0;
+        }
+        .changed-files code {
+            font-size: 12px;
+            color: #5f7082;
+        }
+        .publish-form {
+            margin-top: 18px;
+            padding-top: 18px;
+            border-top: 1px solid #e5edf5;
+        }
+        .publish-form button {
+            background: #2d7ff0;
+        }
+        #site-section > h2#site-header,
+        #site-section > .form-section {
+            display: none !important;
+        }
         label { 
             display: block; 
             margin: 12px 0 6px; 
@@ -386,6 +489,87 @@
         </span>
     </h1>
 
+    <div id="local-cms-panel" class="form-section local-cms-card">
+        <h3 style="margin-top:0; color:#2c3e50;">Local CMS Workspace</h3>
+        <p class="cms-note">Phase 1 content editing now treats <code>site_content/</code> as the git-tracked source of truth. Runtime logs stay in <code>render_data/</code> for now, so your local admin can focus on editing content and publishing it cleanly to GitHub.</p>
+
+        {% if admin_notice %}
+        <div class="admin-notice {{ admin_notice.kind }}">
+            <strong>{{ admin_notice.message }}</strong>
+            {% if admin_notice.details %}
+            <pre>{{ admin_notice.details }}</pre>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <div class="cms-status-grid">
+            <div class="cms-status-item">
+                <strong>Mode</strong>
+                {% if local_cms_status.local_mode %}
+                Local CMS mode is active.
+                {% else %}
+                Running in deployed mode.
+                {% endif %}
+            </div>
+            <div class="cms-status-item">
+                <strong>Content Root</strong>
+                <code>{{ local_cms_status.content_root }}</code>
+            </div>
+            <div class="cms-status-item">
+                <strong>Runtime Root</strong>
+                <code>{{ local_cms_status.runtime_root }}</code>
+            </div>
+            <div class="cms-status-item">
+                <strong>Git Branch</strong>
+                {{ local_cms_status.branch }}
+            </div>
+            <div class="cms-status-item">
+                <strong>Last Commit</strong>
+                {{ local_cms_status.last_commit }}
+            </div>
+            <div class="cms-status-item">
+                <strong>Git Remote</strong>
+                <code>{{ local_cms_status.remote or 'No origin remote detected' }}</code>
+            </div>
+        </div>
+
+        <div class="cms-inline-actions">
+            <a href="{{ url_for('download_site_content_zip') }}" class="secondary">Download site_content backup</a>
+            <a href="{{ url_for('download_render_data_zip') }}" class="tertiary">Download runtime logs backup</a>
+        </div>
+
+        {% if local_cms_status.has_changes %}
+        <p style="margin:16px 0 0; color:#2c3e50; font-weight:700;">Pending git-tracked content changes</p>
+        <ul class="changed-files">
+            {% for file in local_cms_status.changed_files[:12] %}
+            <li><strong>{{ file.status }}</strong> <code>{{ file.path }}</code></li>
+            {% endfor %}
+            {% if local_cms_status.changed_files|length > 12 %}
+            <li>...and {{ local_cms_status.changed_files|length - 12 }} more files.</li>
+            {% endif %}
+        </ul>
+        {% else %}
+        <p style="margin:16px 0 0; color:#6b7b8c;">No unpublished <code>site_content/</code> changes were detected right now.</p>
+        {% endif %}
+
+        {% if local_cms_status.allow_publish %}
+        <form method="POST" action="{{ url_for('admin_dashboard') }}" class="publish-form">
+            <input type="hidden" name="action" value="publish_content_to_github">
+            <input type="hidden" name="item_type" value="site">
+            <label>Commit Message</label>
+            <input name="commit_message" placeholder="Update site content">
+            <button type="submit">Publish site_content to GitHub</button>
+        </form>
+        <p style="margin-top:10px; color:#7f8c8d; font-size:13px;">This button is for content only. Template or Python changes still need one normal developer Git push.</p>
+        {% else %}
+        <p style="margin-top:18px; color:#7f8c8d;">Publish to GitHub is only enabled while the app is running locally.</p>
+        {% endif %}
+
+        {% if local_cms_status.git_error %}
+        <p style="margin-top:12px; color:#8b2f2f;"><strong>Git status warning:</strong> {{ local_cms_status.git_error }}</p>
+        {% endif %}
+    </div>
+
     <div class="stats-grid">
         <div class="stat-card">
             <div class="stat-label">Total Page Views</div>
@@ -580,13 +764,13 @@
 
 
     <!-- Download Logs -->
-    <h2>📥 Download Records</h2>
+    <h2>Runtime Logs</h2>
     <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);">
-        <p>Download raw analytics logs as CSV files for deeper analysis or to keep snapshots of the site's performance over time.</p>
+        <p>Download raw runtime logs as CSV files for deeper analysis or to keep snapshots of the site's performance over time. These files still live under <code>render_data/data_logs/</code> during Phase 1.</p>
         <a href="{{ url_for('download_logs_csv') }}" 
         style="display: inline-block; background: #3498db; color: white; text-decoration: none; 
                 padding: 10px 20px; border-radius: 4px; font-weight: bold; margin-top: 10px;">
-            📥 Download logs.csv
+            Download opens.csv
         </a>
         <a href="{{ url_for('download_page_views_csv') }}" 
         style="display: inline-block; background: #16a085; color: white; text-decoration: none; 
@@ -594,30 +778,30 @@
             Download page_views.csv
         </a>
         <p style="font-size: 14px; color: #7f8c8d; margin-top: 15px;">
-            downloads.csv stores download activity. page_views.csv stores public-page browsing activity.
+            downloads.csv currently stores gated outbound opens. page_views.csv stores public-page browsing activity.
         </p>
     </div>
 
     <!-- Render Data Sync -->
-    <h2>🔄 Render Data Sync</h2>
+    <h2>Runtime Data Sync</h2>
     <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);">
-        <p>Package and download all admin-managed data under <code>render_data/</code> (JSON, uploads, logs, thumbnails, photos).</p>
+        <p>This backup now covers runtime-only data under <code>render_data/</code>, mainly logs and any legacy runtime files. Admin-managed content and images now live in git-tracked <code>site_content/</code>.</p>
         <a href="{{ url_for('download_render_data_zip') }}" 
            style="display:inline-block;background:#27ae60;color:white;text-decoration:none;padding:10px 20px;border-radius:4px;font-weight:bold;margin-top:10px;">
-           🔽 Download render_data_bundle.zip
+           Download runtime_data_bundle.zip
         </a>
         <p style="font-size: 14px; color: #7f8c8d; margin-top: 10px;">
-            Tip: After downloading, unzip and replace your local <code>render_data/</code> folder to sync changes.
+            Tip: keep this as a runtime/log backup only. Content publishing should now happen through GitHub from the Local CMS panel above.
         </p>
         <form method="POST" action="{{ url_for('upload_render_data_zip') }}" enctype="multipart/form-data" style="margin-top:12px;">
-            <label>Upload render_data_bundle.zip</label>
+            <label>Upload runtime_data_bundle.zip</label>
             <input type="file" name="bundle" accept=".zip" required>
             <button type="submit" style="background:#8e44ad;color:white;text-decoration:none;padding:10px 20px;border-radius:4px;font-weight:bold;margin-top:8px;">
                 ⬆️ Upload & Replace
             </button>
         </form>
         <p style="font-size: 14px; color: #7f8c8d; margin-top: 8px;">
-            Tip: This will overwrite files under <code>render_data/</code> on the server with the uploaded ZIP contents.
+            Tip: this overwrites files under <code>render_data/</code> only. It does not change <code>site_content/</code>.
         </p>
     </div>
     
@@ -626,7 +810,7 @@
     <div style="display:flex; gap:12px; align-items:center; margin: 10px 0 20px;">
         <button id="tab-pub" style="background:#3498db;color:white;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;">📚 Publications</button>
         <button id="tab-people" style="background:#7f8c8d;color:white;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;">👥 People</button>
-        <button id="tab-site" style="background:#95a5a6;color:white;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;">🏠 Home Welcome</button>
+        <button id="tab-site" style="background:#95a5a6;color:white;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;">🏠 Home Content</button>
         <a href="{{ url_for('admin_view_as_user') }}" style="margin-left:auto; background:#f39c12; color:white; text-decoration:none; padding:6px 12px; border-radius:4px;">🔁 View as User</a>
     </div>
     <h2 id="pub-header">
@@ -1057,7 +1241,7 @@
         <details>
           <summary>Site Images</summary>
           <div class="subpanel-body">
-            <p class="site-mini-note">Upload the header logo and the four footer-link icons here. These image files are included in render_data sync.</p>
+            <p class="site-mini-note">Upload the header logo and the four footer-link icons here. These image files now live in git-tracked <code>site_content/images/</code>.</p>
             <div class="site-image-grid">
               <div class="site-image-card">
                 <h4>Header Logo</h4>

@@ -8,6 +8,8 @@ import csv
 import json
 import logging
 import os
+import shutil
+import subprocess
 import sys
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for, send_file, session
@@ -23,19 +25,40 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # --- Global Settings ---
-IS_LOCAL = 0  # Set to 0 for production/deployment
-BASE_ROOT = os.environ.get('PERSISTENT_ROOT', '.').strip()
+IS_LOCAL = 1  # Set to 0 for production/deployment
+PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
+BASE_ROOT = os.environ.get('PERSISTENT_ROOT', PROJECT_ROOT).strip()
 PERSISTENT_ROOT = os.path.join(BASE_ROOT, 'render_data')
+CONTENT_ROOT = (os.environ.get('CONTENT_ROOT') or os.path.join(PROJECT_ROOT, 'site_content')).strip()
 LOCAL_HOST = (os.environ.get('LOCAL_HOST', '127.0.0.1') or '127.0.0.1').strip()
 LOCAL_PORT = int(os.environ.get('LOCAL_PORT') or os.environ.get('PORT') or 5000)
 
 # --- Directory Paths ---
 PRIVATE_DOWNLOADS_DIR = os.path.join(PERSISTENT_ROOT, 'private_downloads')
 DATA_LOGS_DIR = os.path.join(PERSISTENT_ROOT, 'data_logs')
+LEGACY_CONTENT_ROOT = os.path.join(PROJECT_ROOT, 'render_data')
 
 # Ensure directories exist (Safety check on every launch)
-os.makedirs(PRIVATE_DOWNLOADS_DIR, exist_ok=True)
+os.makedirs(CONTENT_ROOT, exist_ok=True)
 os.makedirs(DATA_LOGS_DIR, exist_ok=True)
+
+def _bootstrap_content_root():
+    """One-time migration: seed git-tracked site_content/ from legacy render_data/."""
+    content_marker = os.path.join(CONTENT_ROOT, 'site.json')
+    if os.path.exists(content_marker):
+        return
+    for filename in ('site.json', 'articles.json', 'people.json', 'news.json'):
+        legacy_path = os.path.join(LEGACY_CONTENT_ROOT, filename)
+        target_path = os.path.join(CONTENT_ROOT, filename)
+        if os.path.exists(legacy_path) and not os.path.exists(target_path):
+            os.makedirs(os.path.dirname(target_path), exist_ok=True)
+            shutil.copy2(legacy_path, target_path)
+    legacy_images = os.path.join(LEGACY_CONTENT_ROOT, 'images')
+    target_images = os.path.join(CONTENT_ROOT, 'images')
+    if os.path.isdir(legacy_images) and not os.path.exists(target_images):
+        shutil.copytree(legacy_images, target_images)
+
+_bootstrap_content_root()
 
 # --- Admin Credentials ---
 # In production, these should be set in environment variables
@@ -93,14 +116,15 @@ if not app.debug:
     app.logger.setLevel(logging.DEBUG)
 
 print("🚀 Application started, loading routes...")
-print(f"📂 Persistent Root: {PERSISTENT_ROOT}")
+print(f"📂 Runtime Root: {PERSISTENT_ROOT}")
+print(f"📂 Content Root: {CONTENT_ROOT}")
 print(f"📂 Downloads Dir: {PRIVATE_DOWNLOADS_DIR}")
 print(f"📂 Logs Dir: {DATA_LOGS_DIR}")
 
 # Runtime & Lab info
 START_TIME = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 LAB_NAME = "Intelligent Optoelectronic Computing Lab"
-SITE_CONFIG_PATH = os.path.join(PERSISTENT_ROOT, 'site.json')
+SITE_CONFIG_PATH = os.path.join(CONTENT_ROOT, 'site.json')
 PAGE_VIEWS_CSV_PATH = os.path.join(DATA_LOGS_DIR, 'page_views.csv')
 VIEW_LOG_COOLDOWN_SECONDS = 30
 PAGE_TYPE_LABELS = {
@@ -138,7 +162,7 @@ DEFAULT_PERSON_TAGS = [
     'Systems',
     'Resources'
 ]
-DEFAULT_SITE_VERSION = '1.0.3'
+DEFAULT_SITE_VERSION = '1.1.0'
 DEFAULT_FRIEND_LINKS = [
     {
         'title': 'SJTU',
@@ -166,8 +190,8 @@ DEFAULT_FRIEND_LINKS = [
     }
 ]
 DEFAULT_SITE_CONFIG = {
-    'home_note': 'To download our resources, please first fill in your information on the Login page.',
-    'home_welcome': "Our lab focuses on research in all-optical neural networks, diffractive deep learning, and intelligent photonic chips.\n\nThis website provides publicly available publications, code, and datasets from our group.",
+    'home_note': 'To open our paper and resource pages, please first fill in your information on the Login page.',
+    'home_welcome': "Our lab focuses on research in all-optical neural networks, diffractive deep learning, and intelligent photonic chips.\n\nThis website provides publicly available publications, code repositories, and dataset links from our group.",
     'hero_summary': 'Research in photonic neural networks, intelligent photonic integrated circuits, and open academic resources for optical computing.',
     'lab_name': LAB_NAME,
     'lab_name_short': 'SJTU IOC Lab',
@@ -270,6 +294,131 @@ def _normalize_person_tags(items):
             normalized.append(text)
     return normalized or list(DEFAULT_PERSON_TAGS)
 
+def _run_git_command(args):
+    """Run a git command in the project root and capture stdout/stderr safely."""
+    try:
+        result = subprocess.run(
+            ['git', *args],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            encoding='utf-8',
+            errors='replace'
+        )
+        return {
+            'ok': result.returncode == 0,
+            'code': result.returncode,
+            'stdout': (result.stdout or '').strip(),
+            'stderr': (result.stderr or '').strip()
+        }
+    except Exception as exc:
+        return {
+            'ok': False,
+            'code': -1,
+            'stdout': '',
+            'stderr': str(exc)
+        }
+
+def _get_local_cms_status():
+    """Collect a lightweight snapshot of the local CMS + git workspace status."""
+    content_rel = os.path.relpath(CONTENT_ROOT, PROJECT_ROOT)
+    status_result = _run_git_command(['status', '--short', '--', content_rel])
+    branch_result = _run_git_command(['rev-parse', '--abbrev-ref', 'HEAD'])
+    last_commit_result = _run_git_command(['log', '-1', '--pretty=format:%h | %ad | %s', '--date=format-local:%Y-%m-%d %H:%M'])
+    remote_result = _run_git_command(['remote', 'get-url', 'origin'])
+
+    changed_files = []
+    if status_result['ok'] and status_result['stdout']:
+        for raw_line in status_result['stdout'].splitlines():
+            line = raw_line.rstrip()
+            if not line:
+                continue
+            changed_files.append({
+                'status': (line[:2] or '').strip() or '??',
+                'path': line[3:] if len(line) > 3 else line
+            })
+
+    return {
+        'local_mode': bool(IS_LOCAL),
+        'content_root': CONTENT_ROOT,
+        'runtime_root': PERSISTENT_ROOT,
+        'branch': branch_result['stdout'] if branch_result['ok'] else 'unknown',
+        'remote': remote_result['stdout'] if remote_result['ok'] else '',
+        'last_commit': last_commit_result['stdout'] if last_commit_result['ok'] else 'Unavailable',
+        'changed_files': changed_files,
+        'has_changes': bool(changed_files),
+        'allow_publish': bool(IS_LOCAL) and branch_result['ok'],
+        'git_ok': status_result['ok'] and branch_result['ok'],
+        'git_error': status_result['stderr'] or branch_result['stderr'] or ''
+    }
+
+def _publish_site_content(commit_message):
+    """Commit and push git-tracked site_content/ changes from the local CMS."""
+    if not IS_LOCAL:
+        return {
+            'kind': 'error',
+            'message': 'Publish to GitHub is only enabled in Local CMS mode.',
+            'details': ''
+        }
+
+    content_rel = os.path.relpath(CONTENT_ROOT, PROJECT_ROOT)
+    status_result = _run_git_command(['status', '--short', '--', content_rel])
+    if not status_result['ok']:
+        return {
+            'kind': 'error',
+            'message': 'Git status failed before publishing.',
+            'details': status_result['stderr'] or status_result['stdout']
+        }
+    if not status_result['stdout']:
+        return {
+            'kind': 'info',
+            'message': 'No site_content changes were detected, so nothing was pushed.',
+            'details': ''
+        }
+
+    add_result = _run_git_command(['add', '--all', '--', content_rel])
+    if not add_result['ok']:
+        return {
+            'kind': 'error',
+            'message': 'Git add failed while preparing site_content for publish.',
+            'details': add_result['stderr'] or add_result['stdout']
+        }
+
+    message = (commit_message or '').strip() or f'Update site content {datetime.now().strftime("%Y-%m-%d %H:%M")}'
+    commit_result = _run_git_command(['commit', '-m', message, '--', content_rel])
+    if not commit_result['ok']:
+        combined_output = '\n'.join(part for part in [commit_result['stdout'], commit_result['stderr']] if part)
+        if 'nothing to commit' in combined_output.lower():
+            return {
+                'kind': 'info',
+                'message': 'Git reported nothing to commit after staging.',
+                'details': combined_output
+            }
+        return {
+            'kind': 'error',
+            'message': 'Git commit failed.',
+            'details': combined_output
+        }
+
+    push_result = _run_git_command(['push'])
+    if not push_result['ok']:
+        branch_result = _run_git_command(['rev-parse', '--abbrev-ref', 'HEAD'])
+        branch_name = branch_result['stdout'] if branch_result['ok'] else 'main'
+        push_result = _run_git_command(['push', '-u', 'origin', branch_name])
+
+    if not push_result['ok']:
+        return {
+            'kind': 'error',
+            'message': 'Git push failed after committing site_content.',
+            'details': '\n'.join(part for part in [push_result['stdout'], push_result['stderr']] if part)
+        }
+
+    return {
+        'kind': 'success',
+        'message': 'site_content has been committed and pushed to GitHub.',
+        'details': '\n'.join(part for part in [commit_result['stdout'], push_result['stdout']] if part)
+    }
+
 def _normalize_selected_tags(items):
     normalized = []
     source_items = items if isinstance(items, list) else []
@@ -322,12 +471,12 @@ def _default_news_items():
         'id': 'news_001',
         'title': 'SJTU IOC Lab website is now online',
         'date': today,
-        'summary': f'Version {DEFAULT_SITE_VERSION} is now available with publications, people profiles, resource downloads, and admin analytics.',
+        'summary': f'Version {DEFAULT_SITE_VERSION} is now available with publications, people profiles, external resource access, and admin analytics.',
         'content': (
             f'Our lab website officially went online on {today}.\n\n'
             f'The current release is Version {DEFAULT_SITE_VERSION}. It includes publication pages, people pages, '
-            'resource download access, simple analytics, and a lightweight content-management workflow.\n\n'
-            'Welcome to browse the site, read our publications, download available resources, and use the shared materials for academic purposes.'
+            'external paper and resource access, simple analytics, and a lightweight content-management workflow.\n\n'
+            'Welcome to browse the site, read our publications, open available resources, and use the shared materials for academic purposes.'
         ),
         'image_filename': '',
         'last_edited': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -350,7 +499,7 @@ def _news_sort_key(item):
     return ((item.get('date') or ''), (item.get('last_edited') or ''), item.get('id', ''))
 
 def load_news_data():
-    path = os.path.join(PERSISTENT_ROOT, 'news.json')
+    path = os.path.join(CONTENT_ROOT, 'news.json')
     if not os.path.exists(path):
         seed = _default_news_items()
         save_json_data('news.json', seed)
@@ -439,7 +588,7 @@ def _read_page_view_log_summary():
     }
 
 def load_site_config():
-    os.makedirs(PERSISTENT_ROOT, exist_ok=True)
+    os.makedirs(CONTENT_ROOT, exist_ok=True)
     if not os.path.exists(SITE_CONFIG_PATH):
         try:
             with open(SITE_CONFIG_PATH, 'w', encoding='utf-8') as f:
@@ -447,7 +596,7 @@ def load_site_config():
         except Exception as e:
             print(f"⚠️ Failed to init site config: {e}")
     try:
-        with open(SITE_CONFIG_PATH, 'r', encoding='utf-8') as f:
+        with open(SITE_CONFIG_PATH, 'r', encoding='utf-8-sig') as f:
             cfg = json.load(f)
         changed = False
         for key in ('home_note', 'home_welcome', 'hero_summary', 'lab_name', 'lab_name_short', 'lab_name_full', 'logo_filename', 'footer_copyright', 'site_version'):
@@ -488,29 +637,29 @@ def save_site_config(cfg):
         print(f"⚠️ Failed to save site config: {e}")
 
 def load_json_data(filename):
-    """Safely load JSON list from render_data/ directory"""
-    os.makedirs(PERSISTENT_ROOT, exist_ok=True)
-    path = os.path.join(PERSISTENT_ROOT, filename)
+    """Safely load JSON list from git-tracked site_content/ directory."""
+    os.makedirs(CONTENT_ROOT, exist_ok=True)
+    path = os.path.join(CONTENT_ROOT, filename)
     if not os.path.exists(path):
         return []
     try:
-        with open(path, 'r', encoding='utf-8') as f:
+        with open(path, 'r', encoding='utf-8-sig') as f:
             return json.load(f)
     except Exception as e:
         print(f"⚠️ Failed to load {filename}: {e}")
         return []
 
 def save_json_data(filename, data):
-    """Save data to JSON file (used by admin) into render_data/"""
-    os.makedirs(PERSISTENT_ROOT, exist_ok=True)
-    path = os.path.join(PERSISTENT_ROOT, filename)
+    """Save admin-managed content into git-tracked site_content/."""
+    os.makedirs(CONTENT_ROOT, exist_ok=True)
+    path = os.path.join(CONTENT_ROOT, filename)
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 def _latest_content_modified_time():
     latest_ts = None
-    for root, dirs, files in os.walk(PERSISTENT_ROOT):
-        dirs[:] = [d for d in dirs if d != 'data_logs' and not d.startswith('.')]
+    for root, dirs, files in os.walk(CONTENT_ROOT):
+        dirs[:] = [d for d in dirs if not d.startswith('.')]
         for filename in files:
             path = os.path.join(root, filename)
             try:
@@ -745,13 +894,13 @@ def _delete_item(item_type, item_id):
     save_json_data(filename, data)
     print(f"🗑️ Deleted article: {item_id}")
 
-PEOPLE_IMAGES_DIR = os.path.join(PERSISTENT_ROOT, 'images', 'people')
+PEOPLE_IMAGES_DIR = os.path.join(CONTENT_ROOT, 'images', 'people')
 os.makedirs(PEOPLE_IMAGES_DIR, exist_ok=True)
-ARTICLE_IMAGES_DIR = os.path.join(PERSISTENT_ROOT, 'images', 'articles')
+ARTICLE_IMAGES_DIR = os.path.join(CONTENT_ROOT, 'images', 'articles')
 os.makedirs(ARTICLE_IMAGES_DIR, exist_ok=True)
-NEWS_IMAGES_DIR = os.path.join(PERSISTENT_ROOT, 'images', 'news')
+NEWS_IMAGES_DIR = os.path.join(CONTENT_ROOT, 'images', 'news')
 os.makedirs(NEWS_IMAGES_DIR, exist_ok=True)
-SITE_IMAGES_DIR = os.path.join(PERSISTENT_ROOT, 'images')
+SITE_IMAGES_DIR = os.path.join(CONTENT_ROOT, 'images')
 os.makedirs(SITE_IMAGES_DIR, exist_ok=True)
 
 def _add_person(form_data, photo_file=None):
@@ -1265,6 +1414,10 @@ def admin_dashboard():
             cfg['person_tags'] = _normalize_person_tags(raw_text.splitlines())
         save_site_config(cfg)
         return redirect(url_for('admin_dashboard'))
+    elif action == 'publish_content_to_github':
+        publish_result = _publish_site_content(request.form.get('commit_message', ''))
+        session['admin_notice'] = publish_result
+        return redirect(url_for('admin_dashboard') + '#local-cms-panel')
     elif action == 'delete':
         item_id = request.args.get('id')
         if item_type == 'person':
@@ -1484,6 +1637,8 @@ def admin_dashboard():
     unique_counts = {aid: len(unique_downloaders.get(aid, set())) for aid in download_counts.keys()}
 
     site_cfg = load_site_config()
+    local_cms_status = _get_local_cms_status()
+    admin_notice = session.pop('admin_notice', None)
     return render_template(
         'admin.html',
         articles=articles,
@@ -1507,7 +1662,9 @@ def admin_dashboard():
         admin_login_time=session.get('admin_login_at') or START_TIME,
         content_last_modified=_latest_content_modified_time(),
         lab_name=site_cfg.get('lab_name_full', LAB_NAME),
-        site_cfg=site_cfg
+        site_cfg=site_cfg,
+        local_cms_status=local_cms_status,
+        admin_notice=admin_notice
     )
 
 @app.route('/admin/view-as-user')
@@ -1711,6 +1868,23 @@ def asset_site_image(filename):
         return abort(404)
     return send_file(path)
 
+@app.route('/admin/download-site-content.zip')
+def download_site_content_zip():
+    """Package the git-tracked site_content folder and download as ZIP."""
+    if not session.get('is_admin'):
+        return "Unauthorized", 403
+    import io, zipfile
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
+        for root, dirs, files in os.walk(CONTENT_ROOT):
+            dirs[:] = [d for d in dirs if not d.startswith('.')]
+            for name in files:
+                fpath = os.path.join(root, name)
+                rel = os.path.relpath(fpath, CONTENT_ROOT)
+                zf.write(fpath, arcname=rel)
+    buf.seek(0)
+    return send_file(buf, as_attachment=True, download_name='site_content_bundle.zip', mimetype='application/zip')
+
 @app.route('/admin/download-logs.csv')
 def download_logs_csv():
     """Export download logs as CSV"""
@@ -1740,7 +1914,7 @@ def download_page_views_csv():
 
 @app.route('/admin/download-render-data.zip')
 def download_render_data_zip():
-    """Package the entire render_data folder and download as ZIP"""
+    """Package runtime-only render_data/ (logs + legacy runtime files) and download as ZIP."""
     if not session.get('is_admin'):
         return "Unauthorized", 403
     import io, zipfile
@@ -1752,7 +1926,7 @@ def download_render_data_zip():
                 rel = os.path.relpath(fpath, PERSISTENT_ROOT)
                 zf.write(fpath, arcname=rel)
     buf.seek(0)
-    return send_file(buf, as_attachment=True, download_name='render_data_bundle.zip', mimetype='application/zip')
+    return send_file(buf, as_attachment=True, download_name='runtime_data_bundle.zip', mimetype='application/zip')
 
 @app.route('/admin/upload-render-data', methods=['POST'])
 def upload_render_data_zip():

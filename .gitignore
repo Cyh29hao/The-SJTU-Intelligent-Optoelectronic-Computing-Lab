@@ -4,6 +4,7 @@ __pycache__/
 .env
 secret_key.bin 
 
+# Git-tracked editable content now lives in site_content/
 # Runtime data that should NOT be in Git
 render_data/data_logs/
 render_data/private_downloads/
