@@ -275,6 +275,7 @@ def _supabase_logs_ready():
 def _supabase_headers(prefer=None):
     headers = {
         'apikey': SUPABASE_SECRET_KEY,
+        'Authorization': f'Bearer {SUPABASE_SECRET_KEY}',
         'Content-Type': 'application/json'
     }
     if prefer:

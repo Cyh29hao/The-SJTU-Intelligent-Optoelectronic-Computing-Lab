@@ -789,13 +789,13 @@
     <!-- Render Data Sync -->
     <h2>Analytics Backup</h2>
     <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);">
-        <p>This ZIP is now a generated analytics export bundle from Supabase. Editable content and images already live in git-tracked <code>site_content/</code>, so there is no longer a runtime disk payload to upload back into the app.</p>
+        <p>This ZIP is generated directly from Supabase and contains both analytics tables in CSV form. The old runtime-disk upload/replace workflow has been fully retired.</p>
         <a href="{{ url_for('download_render_data_zip') }}" 
            style="display:inline-block;background:#27ae60;color:white;text-decoration:none;padding:10px 20px;border-radius:4px;font-weight:bold;margin-top:10px;">
            Download analytics_export_bundle.zip
         </a>
         <p style="font-size: 14px; color: #7f8c8d; margin-top: 10px;">
-            Tip: content publishing happens through GitHub from the Local CMS panel above. This ZIP is only for off-platform analytics backup.
+            Use this when you want an off-platform backup of the current analytics snapshot.
         </p>
         <form method="POST" action="{{ url_for('upload_render_data_zip') }}" enctype="multipart/form-data" style="margin-top:12px;">
             <label>Upload runtime_data_bundle.zip</label>
