@@ -1,0 +1,241 @@
+{% extends "admin_layout.html" %}
+
+{% block admin_body %}
+<div id="homepage-copy-section" class="section-card">
+    <h2 style="margin-top:0;">Homepage Copy</h2>
+    <form method="POST" action="{{ url_for(module_endpoint) }}">
+        <input type="hidden" name="action" value="edit_site_welcome">
+        <input type="hidden" name="item_type" value="site">
+        <label>Hero Summary Text</label>
+        <textarea name="hero_summary" rows="3">{{ site_cfg.hero_summary }}</textarea>
+        <label>Home Welcome Text</label>
+        <textarea name="home_welcome" rows="5">{{ site_cfg.home_welcome }}</textarea>
+        <label>Resources / Login Note</label>
+        <textarea name="home_note" rows="3">{{ site_cfg.home_note }}</textarea>
+        <button type="submit">Save Homepage Copy</button>
+    </form>
+</div>
+
+<div id="publications-section" class="section-card">
+    <h2 style="margin-top:0;">Publications</h2>
+    <details open>
+        <summary>Add New Publication</summary>
+        <div class="details-body">
+            <form method="POST" action="{{ url_for(module_endpoint) }}">
+                <input type="hidden" name="action" value="add">
+                <input type="hidden" name="item_type" value="article">
+                <label>Title</label>
+                <input name="title" required>
+                <label>Authors (comma-separated)</label>
+                <input name="authors" required>
+                <label>Authors Display Count</label>
+                <input name="authors_display_count" type="number" min="1" value="3">
+                <label>Venue</label>
+                <input name="venue" required>
+                <label>Year</label>
+                <input name="year" type="number" value="2025" min="2000" max="2035" required>
+                <label>Abstract</label>
+                <textarea name="abstract" rows="5" required></textarea>
+                <label>Paper URL</label>
+                <input name="paper_url" placeholder="https://...">
+                <label>Official Free Access URL</label>
+                <input name="official_free_access_url" placeholder="https://...">
+                <label>Resources URL</label>
+                <input name="resource_url" placeholder="https://...">
+                <div class="checkbox-grid">
+                    <label><input type="checkbox" name="resource_kinds" value="Supplementary Material"> Supplementary Material</label>
+                    <label><input type="checkbox" name="resource_kinds" value="Code" checked> Code</label>
+                    <label><input type="checkbox" name="resource_kinds" value="Dataset"> Dataset</label>
+                    <label><input type="checkbox" name="featured_on_home"> Homepage carousel</label>
+                </div>
+                <button type="submit">Add Publication</button>
+            </form>
+        </div>
+    </details>
+
+    {% for item in articles %}
+    <details id="article-{{ item.id }}">
+        <summary>{{ item.title }} <span class="mono" style="margin-left:8px;">{{ item.id }}</span></summary>
+        <div class="details-body">
+            <p class="helper-note">Tracked opens: {{ download_counts.get(item.id, 0) }} | Views: {{ article_view_counts.get(item.id, 0) }} | Unique users: {{ unique_counts.get(item.id, 0) }}</p>
+            <form method="POST" action="{{ url_for(module_endpoint) }}">
+                <input type="hidden" name="action" value="edit">
+                <input type="hidden" name="item_type" value="article">
+                <input type="hidden" name="id" value="{{ item.id }}">
+                <label>Title</label>
+                <input name="title" value="{{ item.title }}" required>
+                <label>Authors</label>
+                <input name="authors" value="{{ item.authors|join(', ') }}" required>
+                <label>Authors Display Count</label>
+                <input name="authors_display_count" type="number" min="1" value="{{ item.authors_display_count or 1 }}">
+                <label>Venue</label>
+                <input name="venue" value="{{ item.venue }}" required>
+                <label>Year</label>
+                <input name="year" type="number" value="{{ item.year }}" min="2000" max="2035" required>
+                <label>Abstract</label>
+                <textarea name="abstract" rows="5" required>{{ item.abstract }}</textarea>
+                <label>Paper URL</label>
+                <input name="paper_url" value="{{ item.paper_url }}">
+                <label>Official Free Access URL</label>
+                <input name="official_free_access_url" value="{{ item.official_free_access_url }}">
+                <label>Resources URL</label>
+                <input name="resource_url" value="{{ item.resource_url }}">
+                {% set kinds = item.resource_kinds or ['Code'] %}
+                <div class="checkbox-grid">
+                    <label><input type="checkbox" name="resource_kinds" value="Supplementary Material" {% if 'Supplementary Material' in kinds %}checked{% endif %}> Supplementary Material</label>
+                    <label><input type="checkbox" name="resource_kinds" value="Code" {% if 'Code' in kinds %}checked{% endif %}> Code</label>
+                    <label><input type="checkbox" name="resource_kinds" value="Dataset" {% if 'Dataset' in kinds %}checked{% endif %}> Dataset</label>
+                    <label><input type="checkbox" name="featured_on_home" {% if item.featured_on_home %}checked{% endif %}> Homepage carousel</label>
+                </div>
+                <div class="inline-actions">
+                    <button type="submit">Save Publication</button>
+                    <a href="{{ url_for(module_endpoint, action='delete', item_type='article', id=item.id) }}" class="btn-link btn-danger" onclick="return confirm('Delete this publication?')">Delete</a>
+                </div>
+                <p class="helper-note">Thumbnail uploads moved to the Assets workspace.</p>
+            </form>
+        </div>
+    </details>
+    {% endfor %}
+</div>
+
+<div id="people-section" class="section-card">
+    <h2 style="margin-top:0;">People</h2>
+    <details open>
+        <summary>Add New Person</summary>
+        <div class="details-body">
+            <form method="POST" enctype="multipart/form-data" action="{{ url_for(module_endpoint) }}">
+                <input type="hidden" name="action" value="add">
+                <input type="hidden" name="item_type" value="person">
+                <label>Name</label>
+                <input name="name" required>
+                <label>Category</label>
+                <select name="category">
+                    <option>Professor</option>
+                    <option>PhD</option>
+                    <option selected>Master</option>
+                    <option>Undergraduate</option>
+                    <option>Visiting</option>
+                </select>
+                <label>Email</label>
+                <input name="email">
+                <label>Photo</label>
+                <input type="file" name="photo" accept="image/png,image/jpeg,image/jpg,image/gif">
+                <label>Bio</label>
+                <textarea name="bio" rows="5"></textarea>
+                {% for i in range(1, 4) %}
+                <label>Link {{ i }} Name</label>
+                <input name="link_name_{{ i }}">
+                <label>Link {{ i }} URL</label>
+                <input name="link_url_{{ i }}">
+                {% endfor %}
+                <label>Tags</label>
+                <div class="checkbox-grid">
+                    {% for tag in site_cfg.person_tags %}
+                    <label><input type="checkbox" name="person_tags" value="{{ tag }}"> {{ tag }}</label>
+                    {% endfor %}
+                </div>
+                <button type="submit">Add Person</button>
+            </form>
+        </div>
+    </details>
+
+    {% for person in people %}
+    <details id="person-{{ person.id }}">
+        <summary>{{ person.name }} <span class="mono" style="margin-left:8px;">{{ person.id }}</span></summary>
+        <div class="details-body">
+            <form method="POST" enctype="multipart/form-data" action="{{ url_for(module_endpoint) }}">
+                <input type="hidden" name="action" value="edit">
+                <input type="hidden" name="item_type" value="person">
+                <input type="hidden" name="id" value="{{ person.id }}">
+                <label>Name</label>
+                <input name="name" value="{{ person.name }}" required>
+                <label>Category</label>
+                <input name="category" value="{{ person.category }}">
+                <label>Email</label>
+                <input name="email" value="{{ person.email }}">
+                <label>Replace Photo</label>
+                <input type="file" name="photo" accept="image/png,image/jpeg,image/jpg,image/gif">
+                {% if people_photo_info[person.id].exists %}
+                <p class="helper-note">Current photo: <span class="mono">{{ people_photo_info[person.id].filename }}</span></p>
+                {% endif %}
+                <label>Bio</label>
+                <textarea name="bio" rows="5">{{ person.bio }}</textarea>
+                {% set links = person.links or [] %}
+                {% for i in range(1, 4) %}
+                {% set current_link = links[i-1] if links|length >= i else None %}
+                <label>Link {{ i }} Name</label>
+                <input name="link_name_{{ i }}" value="{{ current_link['name'] if current_link else '' }}">
+                <label>Link {{ i }} URL</label>
+                <input name="link_url_{{ i }}" value="{{ current_link['url'] if current_link else '' }}">
+                {% endfor %}
+                {% set person_tags = person.tags or [] %}
+                <label>Tags</label>
+                <div class="checkbox-grid">
+                    {% for tag in site_cfg.person_tags %}
+                    <label><input type="checkbox" name="person_tags" value="{{ tag }}" {% if tag in person_tags %}checked{% endif %}> {{ tag }}</label>
+                    {% endfor %}
+                </div>
+                <div class="inline-actions">
+                    <button type="submit">Save Person</button>
+                    <a href="{{ url_for(module_endpoint, action='delete', item_type='person', id=person.id) }}" class="btn-link btn-danger" onclick="return confirm('Delete this person?')">Delete</a>
+                </div>
+            </form>
+        </div>
+    </details>
+    {% endfor %}
+</div>
+
+<div id="news-section" class="section-card">
+    <h2 style="margin-top:0;">News</h2>
+    <details open>
+        <summary>Add News Item</summary>
+        <div class="details-body">
+            <form method="POST" enctype="multipart/form-data" action="{{ url_for(module_endpoint) }}">
+                <input type="hidden" name="action" value="add">
+                <input type="hidden" name="item_type" value="news">
+                <label>Title</label>
+                <input name="title" required>
+                <label>Date</label>
+                <input name="date" type="date">
+                <label>Summary</label>
+                <textarea name="summary" rows="3"></textarea>
+                <label>Content</label>
+                <textarea name="content" rows="6" required></textarea>
+                <label>Image</label>
+                <input type="file" name="image" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp">
+                <button type="submit">Add News</button>
+            </form>
+        </div>
+    </details>
+
+    {% for item in news_items %}
+    <details id="news-{{ item.id }}">
+        <summary>{{ item.title }} <span class="mono" style="margin-left:8px;">{{ item.id }}</span></summary>
+        <div class="details-body">
+            <form method="POST" enctype="multipart/form-data" action="{{ url_for(module_endpoint) }}">
+                <input type="hidden" name="action" value="edit">
+                <input type="hidden" name="item_type" value="news">
+                <input type="hidden" name="id" value="{{ item.id }}">
+                <label>Title</label>
+                <input name="title" value="{{ item.title }}" required>
+                <label>Date</label>
+                <input name="date" type="date" value="{{ item.date }}">
+                <label>Summary</label>
+                <textarea name="summary" rows="3">{{ item.summary }}</textarea>
+                <label>Content</label>
+                <textarea name="content" rows="6" required>{{ item.content }}</textarea>
+                <label>Replace Image</label>
+                <input type="file" name="image" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp">
+                {% if item.image_filename %}
+                <p class="helper-note">Current image: <span class="mono">{{ item.image_filename }}</span></p>
+                {% endif %}
+                <div class="inline-actions">
+                    <button type="submit">Save News</button>
+                    <a href="{{ url_for(module_endpoint, action='delete', item_type='news', id=item.id) }}" class="btn-link btn-danger" onclick="return confirm('Delete this news item?')">Delete</a>
+                </div>
+            </form>
+        </div>
+    </details>
+    {% endfor %}
+</div>
+{% endblock %}

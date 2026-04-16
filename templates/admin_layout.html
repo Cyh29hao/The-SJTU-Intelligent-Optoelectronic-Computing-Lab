@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block admin_title %}Admin Dashboard{% endblock %} - {{ site_cfg.lab_name_short if site_cfg else 'SJTU IOC Lab' }}</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            max-width: 1320px;
+            margin: 0 auto;
+            padding: 24px;
+            background: #f5f8fb;
+            color: #24384f;
+        }
+        h1 {
+            margin: 0;
+            font-size: 2.35rem;
+            color: #24384f;
+        }
+        h2 {
+            color: #2a4260;
+            margin: 30px 0 14px;
+            border-bottom: 1px solid #e1e9f2;
+            padding-bottom: 10px;
+        }
+        h3 {
+            color: #2a4260;
+            margin-top: 0;
+        }
+        .admin-topbar {
+            display: flex;
+            justify-content: space-between;
+            gap: 24px;
+            align-items: flex-start;
+            margin-bottom: 24px;
+        }
+        .admin-meta {
+            text-align: right;
+            color: #6a7b8f;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+        .module-nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 22px;
+        }
+        .module-nav a,
+        .quick-actions a,
+        .quick-actions button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 16px;
+            border-radius: 999px;
+            text-decoration: none;
+            font-weight: 700;
+            border: 1px solid #d5e0eb;
+            background: white;
+            color: #35506f;
+            cursor: pointer;
+        }
+        .module-nav a.active {
+            background: #2d7ff0;
+            border-color: #2d7ff0;
+            color: white;
+        }
+        .quick-actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 22px;
+        }
+        .quick-actions a.warning {
+            background: #f39c12;
+            color: white;
+            border-color: #f39c12;
+        }
+        .quick-actions a.danger {
+            background: #e74c3c;
+            color: white;
+            border-color: #e74c3c;
+        }
+        .page-card,
+        .section-card,
+        details {
+            background: white;
+            border: 1px solid #dde7f0;
+            border-radius: 18px;
+            box-shadow: 0 8px 24px rgba(48, 74, 104, 0.08);
+        }
+        .page-card,
+        .section-card {
+            padding: 24px 28px;
+            margin-bottom: 24px;
+        }
+        .admin-notice {
+            border-radius: 12px;
+            padding: 14px 18px;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+        .admin-notice.success { background: #ebfff4; border: 1px solid #bce7cb; color: #1f6b3b; }
+        .admin-notice.info { background: #f2f8ff; border: 1px solid #cfe0f5; color: #2f5f87; }
+        .admin-notice.error { background: #fff0f0; border: 1px solid #f0c2c2; color: #8b2f2f; }
+        .admin-notice pre { white-space: pre-wrap; word-break: break-word; font-size: 12px; }
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 18px;
+        }
+        .module-card {
+            display: block;
+            padding: 24px;
+            border-radius: 18px;
+            text-decoration: none;
+            color: inherit;
+            border: 1px solid #dde7f0;
+            background: linear-gradient(145deg, #ffffff 0%, #f8fbff 100%);
+            transition: transform 0.18s ease, box-shadow 0.18s ease;
+            box-shadow: 0 8px 24px rgba(48, 74, 104, 0.08);
+        }
+        .module-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 14px 28px rgba(48, 74, 104, 0.12);
+        }
+        .module-card-title {
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: #24384f;
+            margin-bottom: 10px;
+        }
+        .module-card-text {
+            color: #607387;
+            line-height: 1.7;
+        }
+        .status-grid,
+        .stats-grid,
+        .insights-grid,
+        .asset-grid,
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+        }
+        .status-item,
+        .stat-card,
+        .insight-card,
+        .asset-card,
+        .settings-card {
+            background: white;
+            border: 1px solid #e1e9f2;
+            border-radius: 14px;
+            padding: 18px 20px;
+        }
+        .status-item strong,
+        .stat-card .stat-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #2a4260;
+            font-weight: 800;
+        }
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #1f3d60;
+        }
+        .stat-subtext,
+        .helper-note,
+        .table-note {
+            color: #6b7b8c;
+            line-height: 1.65;
+            font-size: 0.95rem;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            padding: 12px 10px;
+            border-bottom: 1px solid #e7eef5;
+            vertical-align: top;
+            text-align: left;
+        }
+        th {
+            color: #365271;
+            font-weight: 800;
+            background: #f8fbfe;
+        }
+        label {
+            display: block;
+            margin: 12px 0 6px;
+            font-weight: 700;
+            color: #2a4260;
+        }
+        input, textarea, select {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 11px 12px;
+            border: 1px solid #cad7e4;
+            border-radius: 10px;
+            font-size: 15px;
+            margin-bottom: 12px;
+            background: #fff;
+        }
+        textarea {
+            min-height: 110px;
+            resize: vertical;
+        }
+        button,
+        .btn-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 16px;
+            border-radius: 10px;
+            border: none;
+            background: #2ecc71;
+            color: white;
+            font-weight: 800;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .btn-secondary {
+            background: #3498db;
+        }
+        .btn-muted {
+            background: #95a5a6;
+        }
+        .btn-danger {
+            background: #e74c3c;
+        }
+        details {
+            margin-bottom: 14px;
+            overflow: hidden;
+        }
+        summary {
+            cursor: pointer;
+            padding: 16px 18px;
+            font-weight: 800;
+            color: #2a4260;
+            background: #f8fbfe;
+            list-style: none;
+        }
+        summary::marker,
+        summary::-webkit-details-marker { display: none; }
+        .details-body {
+            padding: 18px;
+        }
+        .checkbox-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            margin-bottom: 12px;
+        }
+        .checkbox-grid label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0;
+            font-weight: 600;
+        }
+        .mono {
+            font-family: Consolas, "SFMono-Regular", monospace;
+            color: #617892;
+            word-break: break-all;
+        }
+        .asset-thumb {
+            width: 72px;
+            height: 72px;
+            object-fit: contain;
+            border-radius: 12px;
+            border: 1px solid #d8e3ee;
+            background: white;
+            padding: 6px;
+        }
+        .inline-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        @media (max-width: 860px) {
+            body { padding: 16px; }
+            .admin-topbar { flex-direction: column; }
+            .admin-meta { text-align: left; }
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-topbar">
+        <h1>{% block admin_header %}Admin Dashboard{% endblock %}</h1>
+        <div class="admin-meta">
+            {{ lab_name }}<br>
+            Analytics backend: {{ analytics_backend }}<br>
+            Last content update: {{ content_last_modified }}<br>
+            Admin login: {{ admin_login_time }}<br>
+            App started: {{ start_time }}
+        </div>
+    </div>
+
+    <div class="module-nav">
+        <a href="{{ url_for('admin_dashboard') }}" class="{% if active_module == 'home' %}active{% endif %}">Home</a>
+        <a href="{{ url_for('admin_content') }}" class="{% if active_module == 'content' %}active{% endif %}">Content</a>
+        <a href="{{ url_for('admin_analytics') }}" class="{% if active_module == 'analytics' %}active{% endif %}">Analytics</a>
+        <a href="{{ url_for('admin_assets') }}" class="{% if active_module == 'assets' %}active{% endif %}">Assets</a>
+        <a href="{{ url_for('admin_settings') }}" class="{% if active_module == 'settings' %}active{% endif %}">Settings</a>
+    </div>
+
+    <div class="quick-actions">
+        <a href="{{ url_for('admin_view_as_user') }}" class="warning">View as User</a>
+        <a href="/" >Return to Site</a>
+        <a href="{{ url_for('admin_logout') }}" class="danger">Logout</a>
+    </div>
+
+    {% if admin_notice %}
+    <div class="admin-notice {{ admin_notice.kind }}">
+        <strong>{{ admin_notice.message }}</strong>
+        {% if admin_notice.details %}
+        <pre>{{ admin_notice.details }}</pre>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% block admin_body %}{% endblock %}
+</body>
+</html>

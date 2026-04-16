@@ -200,7 +200,7 @@ DEFAULT_FRIEND_LINKS = [
         'title': 'ICISEE',
         'caption': 'School of Integrated Circuits',
         'url': 'https://icisee.sjtu.edu.cn/',
-        'image_filename': 'friend_link_icisee.svg'
+        'image_filename': 'ic_logo.png'
     },
     {
         'title': 'Contact Us',
@@ -1486,85 +1486,43 @@ def open_link(link_type, resource_id):
 # 7. Route Definitions - Admin Dashboard
 # ==============================================================================
 
-@app.route('/admin', methods=['GET', 'POST'])
-def admin_dashboard():
-    """Admin Dashboard for managing content"""
-    if not session.get('is_admin'):
-        return redirect(url_for('register'))
+def _admin_module_endpoint(module_name):
+    mapping = {
+        'home': 'admin_dashboard',
+        'content': 'admin_content',
+        'analytics': 'admin_analytics',
+        'assets': 'admin_assets',
+        'settings': 'admin_settings',
+    }
+    return mapping.get(module_name, 'admin_dashboard')
 
-    # === Handle form submissions (add/edit/delete) ===
-    action = request.form.get('action') or request.args.get('action')
-    item_type = request.form.get('item_type') or request.args.get('item_type')  # 'article' or 'person' or 'news' or 'site'
+def _admin_module_url(module_name, anchor=''):
+    url = url_for(_admin_module_endpoint(module_name))
+    if anchor:
+        return f"{url}{anchor}"
+    return url
 
-    if action == 'add':
-        if item_type == 'person':
-            _add_person(request.form, request.files.get('photo'))
-        elif item_type == 'news':
-            _add_news(request.form, request.files.get('image'))
-        else:
-            _add_item(item_type, request.form)
-        return redirect(url_for('admin_dashboard'))
-    elif action == 'edit':
-        item_id = request.form.get('id')
-        if item_type == 'person':
-            _update_person(item_id, request.form, request.files.get('photo'))
-        elif item_type == 'news':
-            _update_news(item_id, request.form, request.files.get('image'))
-        else:
-            _update_item(item_type, item_id, request.form)
-        return redirect(url_for('admin_dashboard'))
-    elif action in ('edit_site_welcome', 'edit_site_content', 'edit_site_branding', 'edit_friend_links', 'edit_research_highlights', 'edit_person_tags'):
-        cfg = load_site_config()
-        if action in ('edit_site_welcome', 'edit_site_content', 'edit_site_branding'):
-            cfg['home_welcome'] = (request.form.get('home_welcome') or '').strip()
-            cfg['home_note'] = (request.form.get('home_note') or '').strip() or DEFAULT_SITE_CONFIG['home_note']
-            cfg['hero_summary'] = (request.form.get('hero_summary') or '').strip() or DEFAULT_SITE_CONFIG['hero_summary']
-            cfg['lab_name_short'] = (request.form.get('lab_name_short') or '').strip() or DEFAULT_SITE_CONFIG['lab_name_short']
-            cfg['lab_name_full'] = (request.form.get('lab_name_full') or '').strip() or DEFAULT_SITE_CONFIG['lab_name_full']
-            cfg['site_version'] = (request.form.get('site_version') or '').strip() or DEFAULT_SITE_CONFIG['site_version']
-            cfg['show_external_access_note'] = (request.form.get('show_external_access_note') == 'on')
-            cfg['footer_copyright'] = (request.form.get('footer_copyright') or '').strip() or DEFAULT_SITE_CONFIG['footer_copyright']
-            cfg['lab_name'] = cfg['lab_name_full']
-        if action in ('edit_site_content', 'edit_friend_links'):
-            friend_links = []
-            for index, default_item in enumerate(DEFAULT_FRIEND_LINKS, start=1):
-                current_links = cfg.get('friend_links') or []
-                current = current_links[index - 1] if index - 1 < len(current_links) and isinstance(current_links[index - 1], dict) else {}
-                friend_links.append({
-                    'title': (request.form.get(f'friend_title_{index}') or '').strip(),
-                    'caption': (request.form.get(f'friend_caption_{index}') or '').strip(),
-                    'url': (request.form.get(f'friend_url_{index}') or '').strip(),
-                    'image_filename': (current.get('image_filename') or '').strip()
-                })
-            cfg['friend_links'] = _normalize_friend_links(friend_links)
-        if action in ('edit_site_content', 'edit_research_highlights'):
-            highlights = []
-            for index, default_item in enumerate(DEFAULT_RESEARCH_HIGHLIGHTS, start=1):
-                highlights.append({
-                    'title': (request.form.get(f'highlight_title_{index}') or '').strip() or default_item['title'],
-                    'summary': (request.form.get(f'highlight_summary_{index}') or '').strip() or default_item['summary']
-                })
-            cfg['research_highlights'] = _normalize_research_highlights(highlights)
-        if action in ('edit_site_content', 'edit_person_tags'):
-            raw_text = request.form.get('person_tags_text', '')
-            cfg['person_tags'] = _normalize_person_tags(raw_text.splitlines())
-        save_site_config(cfg)
-        return redirect(url_for('admin_dashboard'))
-    elif action == 'publish_content_to_github':
-        publish_result = _publish_site_content(request.form.get('commit_message', ''))
-        session['admin_notice'] = publish_result
-        return redirect(url_for('admin_dashboard') + '#local-cms-panel')
-    elif action == 'delete':
-        item_id = request.args.get('id')
-        if item_type == 'person':
-            _delete_person(item_id)
-        elif item_type == 'news':
-            _delete_news(item_id)
-        else:
-            _delete_item(item_type, item_id)
-        return redirect(url_for('admin_dashboard'))
+def _admin_text_value(form, key, current_value, default_value=''):
+    if key in form:
+        value = (form.get(key) or '').strip()
+        return value if value else default_value
+    return current_value if current_value is not None else default_value
 
-    # === Load data for display ===
+def _build_admin_common_context(pop_notice=False):
+    site_cfg = load_site_config()
+    local_cms_status = _get_local_cms_status()
+    return {
+        'start_time': START_TIME,
+        'admin_login_time': session.get('admin_login_at') or START_TIME,
+        'content_last_modified': _latest_content_modified_time(),
+        'lab_name': site_cfg.get('lab_name_full', LAB_NAME),
+        'site_cfg': site_cfg,
+        'local_cms_status': local_cms_status,
+        'analytics_backend': 'Supabase only' if _supabase_logs_ready() else 'Supabase not configured',
+        'admin_notice': session.pop('admin_notice', None) if pop_notice else session.get('admin_notice'),
+    }
+
+def _build_admin_analytics_context():
     now = datetime.now()
     today = now.date()
     trend_dates = [today - timedelta(days=offset) for offset in range(6, -1, -1)]
@@ -1598,10 +1556,7 @@ def admin_dashboard():
                 if (prev is None) or (t > prev):
                     last_download_times[item_id] = t
 
-    # Load articles
     articles = load_articles_data()
-    people = load_people_data()
-    news_items = load_news_data()
     article_titles = {item['id']: item.get('title', item['id']) for item in articles}
 
     # Load page view stats
@@ -1727,7 +1682,19 @@ def admin_dashboard():
         'publication_conversion_rate': publication_conversion_rate
     }
 
-    # People photo status/info
+    return {
+        'total_downloads': total_downloads,
+        'download_counts': download_counts,
+        'last_download_times': last_download_times,
+        'page_view_stats': page_view_stats,
+        'trend_data': trend_data,
+        'top_pages': top_pages,
+        'top_articles_by_views': top_articles_by_views,
+        'article_view_counts': article_view_counts,
+        'article_metrics': article_metrics,
+    }
+
+def _build_people_photo_context(people):
     people_photo_status = {}
     people_photo_info = {}
     for p in people:
@@ -1749,42 +1716,207 @@ def admin_dashboard():
             except Exception:
                 pass
         people_photo_info[p['id']] = info
-    
-    # Get file statuses for all articles
-    file_statuses = {item['id']: get_file_status(item['id']) for item in articles}
-    file_infos = {item['id']: {'paper': _file_info(item['id'], 'paper'), 'resource': _file_info(item['id'], 'resource')} for item in articles}
-    unique_counts = {aid: len(unique_downloaders.get(aid, set())) for aid in download_counts.keys()}
+    return {
+        'people_photo_status': people_photo_status,
+        'people_photo_info': people_photo_info
+    }
 
-    site_cfg = load_site_config()
-    local_cms_status = _get_local_cms_status()
-    admin_notice = session.pop('admin_notice', None)
+def _build_admin_content_context():
+    articles = load_articles_data()
+    people = load_people_data()
+    news_items = load_news_data()
+    analytics = _build_admin_analytics_context()
+    unique_downloaders = {}
+    for row in _load_resource_open_rows():
+        item_id = row.get('resource_id')
+        if item_id:
+            unique_downloaders.setdefault(item_id, set()).add((row.get('name',''), row.get('affiliation',''), row.get('email','')))
+    return {
+        'articles': articles,
+        'people': people,
+        'news_items': news_items,
+        'download_counts': analytics['download_counts'],
+        'total_downloads': analytics['total_downloads'],
+        'last_download_times': analytics['last_download_times'],
+        'unique_counts': {aid: len(unique_downloaders.get(aid, set())) for aid in analytics['download_counts'].keys()},
+        'article_view_counts': analytics['article_view_counts'],
+        **_build_people_photo_context(people)
+    }
+
+def _build_admin_assets_context():
+    articles = load_articles_data()
+    people = load_people_data()
+    return {
+        'articles': articles,
+        'people': people,
+        **_build_people_photo_context(people)
+    }
+
+def _build_admin_settings_context():
+    return {
+        'news_items': load_news_data()
+    }
+
+def _handle_admin_actions(default_module):
+    action = request.form.get('action') or request.args.get('action')
+    item_type = request.form.get('item_type') or request.args.get('item_type')
+    if not action:
+        return None
+
+    if action == 'publish_content_to_github':
+        publish_result = _publish_site_content(request.form.get('commit_message', ''))
+        session['admin_notice'] = publish_result
+        return redirect(_admin_module_url('home', '#local-cms-panel'))
+
+    if action == 'add':
+        if item_type == 'person':
+            _add_person(request.form, request.files.get('photo'))
+            return redirect(_admin_module_url('content', '#people-section'))
+        if item_type == 'news':
+            _add_news(request.form, request.files.get('image'))
+            return redirect(_admin_module_url('content', '#news-section'))
+        _add_item(item_type, request.form)
+        return redirect(_admin_module_url('content', '#publications-section'))
+
+    if action == 'edit':
+        item_id = request.form.get('id')
+        if item_type == 'person':
+            _update_person(item_id, request.form, request.files.get('photo'))
+            return redirect(_admin_module_url('content', f'#person-{item_id}'))
+        if item_type == 'news':
+            _update_news(item_id, request.form, request.files.get('image'))
+            return redirect(_admin_module_url('content', f'#news-{item_id}'))
+        _update_item(item_type, item_id, request.form)
+        return redirect(_admin_module_url('content', f'#article-{item_id}'))
+
+    if action == 'delete':
+        item_id = request.args.get('id')
+        if item_type == 'person':
+            _delete_person(item_id)
+            return redirect(_admin_module_url('content', '#people-section'))
+        if item_type == 'news':
+            _delete_news(item_id)
+            return redirect(_admin_module_url('content', '#news-section'))
+        _delete_item(item_type, item_id)
+        return redirect(_admin_module_url('content', '#publications-section'))
+
+    if action in ('edit_site_welcome', 'edit_site_content', 'edit_site_branding', 'edit_friend_links', 'edit_research_highlights', 'edit_person_tags'):
+        cfg = load_site_config()
+        if action in ('edit_site_welcome', 'edit_site_content', 'edit_site_branding'):
+            cfg['home_welcome'] = _admin_text_value(request.form, 'home_welcome', cfg.get('home_welcome', ''), DEFAULT_SITE_CONFIG['home_welcome'])
+            cfg['home_note'] = _admin_text_value(request.form, 'home_note', cfg.get('home_note', ''), DEFAULT_SITE_CONFIG['home_note'])
+            cfg['hero_summary'] = _admin_text_value(request.form, 'hero_summary', cfg.get('hero_summary', ''), DEFAULT_SITE_CONFIG['hero_summary'])
+            cfg['lab_name_short'] = _admin_text_value(request.form, 'lab_name_short', cfg.get('lab_name_short', ''), DEFAULT_SITE_CONFIG['lab_name_short'])
+            cfg['lab_name_full'] = _admin_text_value(request.form, 'lab_name_full', cfg.get('lab_name_full', ''), DEFAULT_SITE_CONFIG['lab_name_full'])
+            cfg['site_version'] = _admin_text_value(request.form, 'site_version', cfg.get('site_version', ''), DEFAULT_SITE_CONFIG['site_version'])
+            if '_show_external_access_note_present' in request.form:
+                cfg['show_external_access_note'] = (request.form.get('show_external_access_note') == 'on')
+            cfg['footer_copyright'] = _admin_text_value(request.form, 'footer_copyright', cfg.get('footer_copyright', ''), DEFAULT_SITE_CONFIG['footer_copyright'])
+            cfg['lab_name'] = cfg['lab_name_full']
+        if action in ('edit_site_content', 'edit_friend_links'):
+            friend_links = []
+            for index, default_item in enumerate(DEFAULT_FRIEND_LINKS, start=1):
+                current_links = cfg.get('friend_links') or []
+                current = current_links[index - 1] if index - 1 < len(current_links) and isinstance(current_links[index - 1], dict) else {}
+                friend_links.append({
+                    'title': _admin_text_value(request.form, f'friend_title_{index}', current.get('title', ''), ''),
+                    'caption': _admin_text_value(request.form, f'friend_caption_{index}', current.get('caption', ''), ''),
+                    'url': _admin_text_value(request.form, f'friend_url_{index}', current.get('url', ''), ''),
+                    'image_filename': (current.get('image_filename') or '').strip()
+                })
+            cfg['friend_links'] = _normalize_friend_links(friend_links)
+        if action in ('edit_site_content', 'edit_research_highlights'):
+            highlights = []
+            current_highlights = cfg.get('research_highlights') or []
+            for index, default_item in enumerate(DEFAULT_RESEARCH_HIGHLIGHTS, start=1):
+                current = current_highlights[index - 1] if index - 1 < len(current_highlights) and isinstance(current_highlights[index - 1], dict) else {}
+                highlights.append({
+                    'title': _admin_text_value(request.form, f'highlight_title_{index}', current.get('title', ''), default_item['title']),
+                    'summary': _admin_text_value(request.form, f'highlight_summary_{index}', current.get('summary', ''), default_item['summary'])
+                })
+            cfg['research_highlights'] = _normalize_research_highlights(highlights)
+        if action in ('edit_site_content', 'edit_person_tags') and 'person_tags_text' in request.form:
+            raw_text = request.form.get('person_tags_text', '')
+            cfg['person_tags'] = _normalize_person_tags(raw_text.splitlines())
+        save_site_config(cfg)
+
+        if action == 'edit_site_welcome':
+            return redirect(_admin_module_url('content', '#homepage-copy-section'))
+        if action == 'edit_site_branding':
+            return redirect(_admin_module_url('settings', '#branding-section'))
+        if action == 'edit_friend_links':
+            return redirect(_admin_module_url('settings', '#friendly-links-section'))
+        if action == 'edit_research_highlights':
+            return redirect(_admin_module_url('settings', '#research-focus-section'))
+        if action == 'edit_person_tags':
+            return redirect(_admin_module_url('settings', '#person-tags-section'))
+        return redirect(_admin_module_url(default_module))
+
+    return None
+
+@app.route('/admin', methods=['GET', 'POST'])
+def admin_dashboard():
+    if not session.get('is_admin'):
+        return redirect(url_for('register'))
+    response = _handle_admin_actions('home')
+    if response:
+        return response
     return render_template(
-        'admin.html',
-        articles=articles,
-        download_counts=download_counts,
-        total_downloads=total_downloads,
-        file_statuses=file_statuses,
-        file_infos=file_infos,
-        unique_counts=unique_counts,
-        last_download_times=last_download_times,
-        page_view_stats=page_view_stats,
-        trend_data=trend_data,
-        top_pages=top_pages,
-        top_articles_by_views=top_articles_by_views,
-        article_view_counts=article_view_counts,
-        article_metrics=article_metrics,
-        people=people,
-        news_items=news_items,
-        people_photo_status=people_photo_status,
-        people_photo_info=people_photo_info,
-        start_time=START_TIME,
-        admin_login_time=session.get('admin_login_at') or START_TIME,
-        content_last_modified=_latest_content_modified_time(),
-        lab_name=site_cfg.get('lab_name_full', LAB_NAME),
-        site_cfg=site_cfg,
-        local_cms_status=local_cms_status,
-        admin_notice=admin_notice,
-        analytics_backend='Supabase only' if _supabase_logs_ready() else 'Supabase not configured'
+        'admin_home.html',
+        active_module='home',
+        **_build_admin_common_context(pop_notice=True)
+    )
+
+@app.route('/admin/content', methods=['GET', 'POST'])
+def admin_content():
+    if not session.get('is_admin'):
+        return redirect(url_for('register'))
+    response = _handle_admin_actions('content')
+    if response:
+        return response
+    return render_template(
+        'admin_content.html',
+        active_module='content',
+        module_endpoint='admin_content',
+        **_build_admin_common_context(pop_notice=True),
+        **_build_admin_content_context()
+    )
+
+@app.route('/admin/analytics')
+def admin_analytics():
+    if not session.get('is_admin'):
+        return redirect(url_for('register'))
+    return render_template(
+        'admin_analytics.html',
+        active_module='analytics',
+        **_build_admin_common_context(pop_notice=True),
+        **_build_admin_analytics_context()
+    )
+
+@app.route('/admin/assets')
+def admin_assets():
+    if not session.get('is_admin'):
+        return redirect(url_for('register'))
+    return render_template(
+        'admin_assets.html',
+        active_module='assets',
+        **_build_admin_common_context(pop_notice=True),
+        **_build_admin_assets_context()
+    )
+
+@app.route('/admin/settings', methods=['GET', 'POST'])
+def admin_settings():
+    if not session.get('is_admin'):
+        return redirect(url_for('register'))
+    response = _handle_admin_actions('settings')
+    if response:
+        return response
+    return render_template(
+        'admin_settings.html',
+        active_module='settings',
+        module_endpoint='admin_settings',
+        **_build_admin_common_context(pop_notice=True),
+        **_build_admin_settings_context()
     )
 
 @app.route('/admin/view-as-user')
@@ -1858,7 +1990,8 @@ def admin_upload_file(file_type, resource_id):
             break
     save_json_data('articles.json', articles)
 
-    return redirect(url_for('admin_dashboard') + '#article-' + resource_id)
+    redirect_module = request.args.get('redirect_module') or request.form.get('redirect_module') or 'content'
+    return redirect(_admin_module_url(redirect_module, '#publications-section'))
 
 @app.route('/admin/upload-thumb/<article_id>', methods=['POST'])
 def admin_upload_thumbnail(article_id):
@@ -1893,7 +2026,9 @@ def admin_upload_thumbnail(article_id):
             articles[i] = target
             break
     save_json_data('articles.json', articles)
-    return redirect(url_for('admin_dashboard') + '#article-' + article_id)
+    redirect_module = request.args.get('redirect_module') or request.form.get('redirect_module') or 'assets'
+    anchor = f'#thumb-{article_id}' if redirect_module == 'assets' else f'#article-{article_id}'
+    return redirect(_admin_module_url(redirect_module, anchor))
 
 @app.route('/admin/upload-site-image/<slot>', methods=['POST'])
 def admin_upload_site_image(slot):
@@ -1947,7 +2082,8 @@ def admin_upload_site_image(slot):
         cfg['friend_links'] = links
 
     save_site_config(cfg)
-    return redirect(url_for('admin_dashboard') + '#site-section')
+    redirect_module = request.args.get('redirect_module') or request.form.get('redirect_module') or 'assets'
+    return redirect(_admin_module_url(redirect_module, '#site-images'))
 
 # ==============================================================================
 # 8. Asset Serving (from render_data)
@@ -2219,12 +2355,13 @@ def _download_file_compat(file_type, resource_id):
 def _admin_upload_file_retired(file_type, resource_id):
     if not session.get('is_admin'):
         return "Unauthorized", 403
+    redirect_module = request.args.get('redirect_module') or request.form.get('redirect_module') or 'assets'
     session['admin_notice'] = {
         'kind': 'info',
         'message': 'Local paper/resource file uploads have been retired in Version 1.2.0.',
         'details': 'Please use Paper URL, Official Free Access URL, and Resources URL instead. This keeps the site diskless and easier to maintain.'
     }
-    return redirect(url_for('admin_dashboard') + f'#article-{resource_id}')
+    return redirect(_admin_module_url(redirect_module, '#site-images'))
 
 app.view_functions['download_logs_csv'] = _download_logs_csv_supabase_only
 app.view_functions['download_page_views_csv'] = _download_page_views_csv_supabase_only

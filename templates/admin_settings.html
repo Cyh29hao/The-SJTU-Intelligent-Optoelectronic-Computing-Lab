@@ -1,0 +1,76 @@
+{% extends "admin_layout.html" %}
+
+{% block admin_body %}
+<div id="branding-section" class="section-card">
+    <h2 style="margin-top:0;">Branding</h2>
+    <form method="POST" action="{{ url_for(module_endpoint) }}">
+        <input type="hidden" name="action" value="edit_site_branding">
+        <input type="hidden" name="item_type" value="site">
+        <label>Lab Name (Header / Short)</label>
+        <input name="lab_name_short" value="{{ site_cfg.lab_name_short }}">
+        <label>Lab Name (Homepage / Full)</label>
+        <input name="lab_name_full" value="{{ site_cfg.lab_name_full }}">
+        <label>Site Version</label>
+        <input name="site_version" value="{{ site_cfg.site_version }}">
+        <label>Footer Copyright Text</label>
+        <input name="footer_copyright" value="{{ site_cfg.footer_copyright }}">
+        <input type="hidden" name="_show_external_access_note_present" value="1">
+        <label class="helper-note" style="display:flex; align-items:center; gap:8px; margin-top:10px;">
+            <input type="checkbox" name="show_external_access_note" {% if site_cfg.show_external_access_note %}checked{% endif %}>
+            Show the small external-access note on article detail pages
+        </label>
+        <button type="submit">Save Branding</button>
+    </form>
+</div>
+
+<div id="friendly-links-section" class="section-card">
+    <h2 style="margin-top:0;">Friendly Links</h2>
+    <form method="POST" action="{{ url_for(module_endpoint) }}">
+        <input type="hidden" name="action" value="edit_friend_links">
+        <input type="hidden" name="item_type" value="site">
+        <div class="settings-grid">
+            {% for item in site_cfg.friend_links %}
+            <div class="settings-card">
+                <h3>Link {{ loop.index }}</h3>
+                <label>Title</label>
+                <input name="friend_title_{{ loop.index }}" value="{{ item.title }}">
+                <label>Caption</label>
+                <input name="friend_caption_{{ loop.index }}" value="{{ item.caption }}">
+                <label>URL</label>
+                <input name="friend_url_{{ loop.index }}" value="{{ item.url }}">
+            </div>
+            {% endfor %}
+        </div>
+        <button type="submit">Save Friendly Links</button>
+    </form>
+</div>
+
+<div id="research-focus-section" class="section-card">
+    <h2 style="margin-top:0;">Research Focus</h2>
+    <form method="POST" action="{{ url_for(module_endpoint) }}">
+        <input type="hidden" name="action" value="edit_research_highlights">
+        <input type="hidden" name="item_type" value="site">
+        {% for highlight in site_cfg.research_highlights %}
+        <div class="settings-card" style="margin-bottom:14px;">
+            <h3>Keyword {{ loop.index }}</h3>
+            <label>Title</label>
+            <input name="highlight_title_{{ loop.index }}" value="{{ highlight.title }}">
+            <label>Summary</label>
+            <textarea name="highlight_summary_{{ loop.index }}" rows="3">{{ highlight.summary }}</textarea>
+        </div>
+        {% endfor %}
+        <button type="submit">Save Research Focus</button>
+    </form>
+</div>
+
+<div id="person-tags-section" class="section-card">
+    <h2 style="margin-top:0;">People Tags</h2>
+    <form method="POST" action="{{ url_for(module_endpoint) }}">
+        <input type="hidden" name="action" value="edit_person_tags">
+        <input type="hidden" name="item_type" value="site">
+        <label>Available Tags</label>
+        <textarea name="person_tags_text" rows="8">{{ site_cfg.person_tags|join('\n') }}</textarea>
+        <button type="submit">Save People Tags</button>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,147 @@
+{% extends "admin_layout.html" %}
+
+{% block admin_body %}
+<div class="stats-grid">
+    <div class="stat-card">
+        <span class="stat-label">Total Page Views</span>
+        <div class="stat-value">{{ page_view_stats.total_views }}</div>
+        <div class="stat-subtext">Today: {{ page_view_stats.views_today }} | Last 7 days: {{ page_view_stats.views_last_7_days }}</div>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">Unique Visitors</span>
+        <div class="stat-value">{{ page_view_stats.unique_visitors }}</div>
+        <div class="stat-subtext">Last 7 days: {{ page_view_stats.unique_visitors_last_7_days }} approximate visitors.</div>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">Publication Detail Views</span>
+        <div class="stat-value">{{ page_view_stats.article_detail_views }}</div>
+        <div class="stat-subtext">These are the visits that matter most for open conversion.</div>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">Tracked Opens</span>
+        <div class="stat-value">{{ total_downloads }}</div>
+        <div class="stat-subtext">Today: {{ page_view_stats.downloads_today }} | Last 7 days: {{ page_view_stats.downloads_last_7_days }}</div>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">View to Open</span>
+        <div class="stat-value">
+            {% if page_view_stats.publication_conversion_rate is not none %}
+                {{ "%.1f"|format(page_view_stats.publication_conversion_rate) }}%
+            {% else %}
+                --
+            {% endif %}
+        </div>
+        <div class="stat-subtext">Rough conversion from publication-detail views to gated paper/resource opens.</div>
+    </div>
+</div>
+
+<div class="insights-grid">
+    <div class="insight-card">
+        <h3>Top Pages</h3>
+        {% if top_pages %}
+        <table>
+            <thead>
+                <tr><th>Page</th><th>Views</th><th>Path</th></tr>
+            </thead>
+            <tbody>
+                {% for page in top_pages %}
+                <tr>
+                    <td><strong>{{ page.label }}</strong><br><span class="mono">{{ page.page_type }}</span></td>
+                    <td>{{ page.count }}</td>
+                    <td class="mono">{{ page.path }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="helper-note">No page-view data yet. Browse a few public pages and refresh this workspace.</p>
+        {% endif %}
+    </div>
+    <div class="insight-card">
+        <h3>Top Publications by Views</h3>
+        {% if top_articles_by_views %}
+        <table>
+            <thead>
+                <tr><th>Publication</th><th>Views</th><th>Opens</th><th>CVR</th></tr>
+            </thead>
+            <tbody>
+                {% for item in top_articles_by_views %}
+                <tr>
+                    <td><strong>{{ item.title }}</strong><br><span class="mono">{{ item.id }}</span></td>
+                    <td>{{ item.count }}</td>
+                    <td>{{ item.downloads }}</td>
+                    <td>{% if item.conversion_rate is not none %}{{ "%.1f"|format(item.conversion_rate) }}%{% else %}--{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="helper-note">Publication-detail views will appear here after visitors open paper pages.</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="insights-grid">
+    <div class="insight-card">
+        <h3>Last 7 Days Trend</h3>
+        {% for day in trend_data %}
+        <div style="margin-bottom:14px;">
+            <div style="font-weight:700; margin-bottom:6px;">{{ day.label }}</div>
+            <div style="background:#edf3f9; border-radius:999px; height:12px; position:relative; margin-bottom:6px;">
+                <div style="height:12px; width: {{ day.views_width }}%; background:#5d8fe6; border-radius:999px;"></div>
+            </div>
+            <div class="helper-note">Views {{ day.views }}</div>
+            <div style="background:#edf3f9; border-radius:999px; height:12px; position:relative; margin:8px 0 6px;">
+                <div style="height:12px; width: {{ day.downloads_width }}%; background:#40b17c; border-radius:999px;"></div>
+            </div>
+            <div class="helper-note">Opens {{ day.downloads }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    <div class="insight-card">
+        <h3>Analytics Export</h3>
+        <p class="helper-note">Everything here now comes from Supabase. No runtime disk backup or upload flow is needed anymore.</p>
+        <div class="inline-actions" style="margin-top:16px;">
+            <a href="{{ url_for('download_logs_csv') }}" class="btn-link btn-secondary">Download resource_opens.csv</a>
+            <a href="{{ url_for('download_page_views_csv') }}" class="btn-link btn-secondary">Download page_views.csv</a>
+            <a href="{{ url_for('download_render_data_zip') }}" class="btn-link btn-muted">Download analytics_export_bundle.zip</a>
+        </div>
+    </div>
+</div>
+
+<div class="section-card">
+    <h3>Publication Funnel Snapshot</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Publication</th>
+                <th>Views</th>
+                <th>Opens</th>
+                <th>Users</th>
+                <th>CVR</th>
+                <th>Last Activity</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in article_metrics %}
+            <tr>
+                <td><strong>{{ item.title }}</strong><br><span class="mono">{{ item.id }}</span></td>
+                <td>{{ item.views }}</td>
+                <td>{{ item.downloads }}</td>
+                <td>{{ item.unique_users }}</td>
+                <td>{% if item.conversion_rate is not none %}{{ "%.1f"|format(item.conversion_rate) }}%{% else %}--{% endif %}</td>
+                <td class="mono">
+                    {% if item.last_downloaded %}
+                    download {{ item.last_downloaded.strftime("%m-%d %H:%M") }}
+                    {% elif item.last_viewed %}
+                    view {{ item.last_viewed.strftime("%m-%d %H:%M") }}
+                    {% else %}
+                    No activity
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

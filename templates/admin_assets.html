@@ -1,0 +1,67 @@
+{% extends "admin_layout.html" %}
+
+{% block admin_body %}
+<div id="site-images" class="section-card">
+    <h2 style="margin-top:0;">Site Images</h2>
+    <p class="helper-note">Header logo and footer-link icons live in git-tracked <code>site_content/images/</code>. People and news images stay editable inside the Content workspace.</p>
+
+    <div class="asset-grid">
+        <div class="asset-card">
+            <h3>Header Logo</h3>
+            <div class="inline-actions" style="margin-bottom:12px;">
+                <img src="{{ url_for('asset_site_image', filename=site_cfg.logo_filename) if site_cfg.logo_filename else url_for('static', filename='images/placeholder-site.svg') }}" alt="Site logo" class="asset-thumb">
+                <div class="mono">{{ site_cfg.logo_filename or 'No logo uploaded yet' }}</div>
+            </div>
+            <form method="POST" enctype="multipart/form-data" action="{{ url_for('admin_upload_site_image', slot='logo', redirect_module='assets') }}">
+                <input type="file" name="image" accept="image/png,image/jpeg,image/jpg,image/gif,image/svg+xml,image/webp" required>
+                <button type="submit">Upload Logo</button>
+            </form>
+        </div>
+
+        {% for item in site_cfg.friend_links %}
+        <div class="asset-card">
+            <h3>Footer Link {{ loop.index }}</h3>
+            <div class="inline-actions" style="margin-bottom:12px;">
+                {% if item.image_filename %}
+                <img src="{{ url_for('asset_site_image', filename=item.image_filename) }}" alt="{{ item.title }}" class="asset-thumb">
+                {% else %}
+                <div class="asset-thumb" style="display:flex; align-items:center; justify-content:center; font-weight:700;">{{ item.title[:4] }}</div>
+                {% endif %}
+                <div>
+                    <div><strong>{{ item.title or ('Link ' ~ loop.index) }}</strong></div>
+                    <div class="mono">{{ item.image_filename or 'No image set' }}</div>
+                </div>
+            </div>
+            <form method="POST" enctype="multipart/form-data" action="{{ url_for('admin_upload_site_image', slot='friend-' ~ loop.index, redirect_module='assets') }}">
+                <input type="file" name="image" accept="image/png,image/jpeg,image/jpg,image/gif,image/svg+xml,image/webp" required>
+                <button type="submit">Upload Link Image</button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="section-card">
+    <h2 style="margin-top:0;">Article Thumbnails</h2>
+    <p class="helper-note">Upload and refresh thumbnails here without digging through the main publication editor.</p>
+    {% for item in articles %}
+    <details id="thumb-{{ item.id }}">
+        <summary>{{ item.title }} <span class="mono" style="margin-left:8px;">{{ item.id }}</span></summary>
+        <div class="details-body">
+            <div class="inline-actions" style="margin-bottom:12px;">
+                {% if item.thumbnail_filename %}
+                <img src="{{ url_for('asset_article_thumb', filename=item.thumbnail_filename) }}" alt="{{ item.title }}" class="asset-thumb">
+                <div class="mono">{{ item.thumbnail_filename }}</div>
+                {% else %}
+                <div class="asset-thumb" style="display:flex; align-items:center; justify-content:center;">No thumbnail</div>
+                {% endif %}
+            </div>
+            <form method="POST" enctype="multipart/form-data" action="{{ url_for('admin_upload_thumbnail', article_id=item.id, redirect_module='assets') }}">
+                <input type="file" name="thumbnail" accept="image/png,image/jpeg,image/jpg,image/gif" required>
+                <button type="submit">Upload Thumbnail</button>
+            </form>
+        </div>
+    </details>
+    {% endfor %}
+</div>
+{% endblock %}
