@@ -5,9 +5,11 @@
 # 1. Imports
 # ==============================================================================
 import csv
+import io
 import json
 import logging
 import os
+import requests
 import shutil
 import subprocess
 import sys
@@ -25,22 +27,44 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # --- Global Settings ---
-IS_LOCAL = 0  # Set to 0 for production/deployment
+def _resolve_app_mode():
+    explicit_mode = (os.environ.get('APP_MODE') or '').strip().lower()
+    if explicit_mode in ('local', 'dev', 'development'):
+        return 'local', True
+    if explicit_mode in ('prod', 'production', 'deploy', 'deployed', 'hosted'):
+        return 'production', False
+
+    hosted_env_hints = any(
+        (os.environ.get(name) or '').strip()
+        for name in ('RENDER', 'RAILWAY_ENVIRONMENT', 'VERCEL', 'KOYEB_APP_NAME', 'FLY_APP_NAME')
+    )
+    has_local_port = bool((os.environ.get('LOCAL_PORT') or '').strip())
+    has_hosted_port = bool((os.environ.get('PORT') or '').strip())
+
+    if has_local_port:
+        return 'local', True
+    if hosted_env_hints or has_hosted_port:
+        return 'production', False
+    return 'local', True
+
+APP_MODE, IS_LOCAL = _resolve_app_mode()
 PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
-BASE_ROOT = os.environ.get('PERSISTENT_ROOT', PROJECT_ROOT).strip()
-PERSISTENT_ROOT = os.path.join(BASE_ROOT, 'render_data')
 CONTENT_ROOT = (os.environ.get('CONTENT_ROOT') or os.path.join(PROJECT_ROOT, 'site_content')).strip()
+LEGACY_CONTENT_ROOT = os.path.join(PROJECT_ROOT, 'render_data')
 LOCAL_HOST = (os.environ.get('LOCAL_HOST', '127.0.0.1') or '127.0.0.1').strip()
 LOCAL_PORT = int(os.environ.get('LOCAL_PORT') or os.environ.get('PORT') or 5000)
-
-# --- Directory Paths ---
-PRIVATE_DOWNLOADS_DIR = os.path.join(PERSISTENT_ROOT, 'private_downloads')
-DATA_LOGS_DIR = os.path.join(PERSISTENT_ROOT, 'data_logs')
-LEGACY_CONTENT_ROOT = os.path.join(PROJECT_ROOT, 'render_data')
+APP_SECRET_KEY = (os.environ.get('APP_SECRET_KEY') or '').strip()
+PERSISTENT_ROOT = 'No persistent disk (Supabase only)'
+PRIVATE_DOWNLOADS_DIR = 'External link mode'
+DATA_LOGS_DIR = 'Supabase tables'
+PAGE_VIEWS_CSV_PATH = ''
+SUPABASE_URL = (os.environ.get('SUPABASE_URL') or '').strip()
+SUPABASE_SECRET_KEY = (os.environ.get('SUPABASE_SECRET_KEY') or '').strip()
+SUPABASE_LOGS_ENABLED = (os.environ.get('SUPABASE_LOGS_ENABLED') or '0').strip().lower() in ('1', 'true', 'yes', 'on')
+SUPABASE_REST_ROOT = f"{SUPABASE_URL.rstrip('/')}/rest/v1" if SUPABASE_URL else ''
 
 # Ensure directories exist (Safety check on every launch)
 os.makedirs(CONTENT_ROOT, exist_ok=True)
-os.makedirs(DATA_LOGS_DIR, exist_ok=True)
 
 def _bootstrap_content_root():
     """One-time migration: seed git-tracked site_content/ from legacy render_data/."""
@@ -70,25 +94,27 @@ ADMIN_CREDENTIALS = {
 
 # --- Flask App Initialization ---
 app = Flask(__name__)
-app.config['ENV'] = 'development'
-app.config['DEBUG'] = True
+app.config['ENV'] = 'development' if IS_LOCAL else 'production'
+app.config['DEBUG'] = bool(IS_LOCAL)
 
 # --- Security Configuration ---
-# Generate/Load secret key for session management
+# Generate/Load secret key for session management without requiring persistent disk
 SECRET_KEY_FILE = 'secret_key.bin'
-if IS_LOCAL:
-    # Regenerate secret key on every launch in local mode (invalidates old sessions)
-    app.secret_key = os.urandom(24)
+if APP_SECRET_KEY:
+    app.secret_key = APP_SECRET_KEY.encode('utf-8')
 else:
-    # Use persistent secret key for production
-    if os.path.exists(SECRET_KEY_FILE):
-        with open(SECRET_KEY_FILE, 'rb') as f:
-            secret_key = f.read()
+    legacy_secret_path = os.path.join(PROJECT_ROOT, SECRET_KEY_FILE)
+    if os.path.exists(legacy_secret_path):
+        try:
+            with open(legacy_secret_path, 'rb') as f:
+                app.secret_key = f.read()
+            print("Using legacy secret_key.bin for session compatibility.")
+        except Exception:
+            app.secret_key = os.urandom(24)
     else:
-        secret_key = os.urandom(24)
-        with open(SECRET_KEY_FILE, 'wb') as f:
-            f.write(secret_key)
-    app.secret_key = secret_key
+        app.secret_key = os.urandom(24)
+        if not IS_LOCAL:
+            print("APP_SECRET_KEY is not set in deployed mode; using an ephemeral session secret for this run.")
 
 # Cloudflare/R2 disabled — local-only storage and download
 
@@ -120,12 +146,12 @@ print(f"📂 Runtime Root: {PERSISTENT_ROOT}")
 print(f"📂 Content Root: {CONTENT_ROOT}")
 print(f"📂 Downloads Dir: {PRIVATE_DOWNLOADS_DIR}")
 print(f"📂 Logs Dir: {DATA_LOGS_DIR}")
+print(f"🗄️ Supabase Logs: {'enabled' if SUPABASE_LOGS_ENABLED and SUPABASE_URL and SUPABASE_SECRET_KEY else 'disabled'}")
 
 # Runtime & Lab info
 START_TIME = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 LAB_NAME = "Intelligent Optoelectronic Computing Lab"
 SITE_CONFIG_PATH = os.path.join(CONTENT_ROOT, 'site.json')
-PAGE_VIEWS_CSV_PATH = os.path.join(DATA_LOGS_DIR, 'page_views.csv')
 VIEW_LOG_COOLDOWN_SECONDS = 30
 PAGE_TYPE_LABELS = {
     'home': 'Home',
@@ -162,7 +188,7 @@ DEFAULT_PERSON_TAGS = [
     'Systems',
     'Resources'
 ]
-DEFAULT_SITE_VERSION = '1.1.0'
+DEFAULT_SITE_VERSION = '1.2.0'
 DEFAULT_FRIEND_LINKS = [
     {
         'title': 'SJTU',
@@ -224,25 +250,13 @@ def _find_existing_ext(resource_id, file_type):
     return None
 
 def _file_info(resource_id, file_type):
-    ext = _find_existing_ext(resource_id, file_type)
-    if not ext:
-        return {'exists': False}
-    key = _build_key(resource_id, file_type, ext)
-    path = os.path.join(PRIVATE_DOWNLOADS_DIR, key)
-    try:
-        stat = os.stat(path)
-        size = stat.st_size
-        mtime = datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S")
-    except Exception:
-        size = None
-        mtime = None
     return {
-        'exists': True,
-        'ext': ext,
-        'filename': os.path.basename(path),
-        'size': size,
-        'mtime': mtime,
-        'path': path
+        'exists': False,
+        'ext': '',
+        'filename': '',
+        'size': None,
+        'mtime': None,
+        'path': ''
     }
 
 def _human_size(n):
@@ -254,6 +268,173 @@ def _human_size(n):
     except Exception:
         pass
     return None
+
+def _supabase_logs_ready():
+    return bool(SUPABASE_LOGS_ENABLED and SUPABASE_REST_ROOT and SUPABASE_SECRET_KEY)
+
+def _supabase_headers(prefer=None):
+    headers = {
+        'apikey': SUPABASE_SECRET_KEY,
+        'Content-Type': 'application/json'
+    }
+    if prefer:
+        headers['Prefer'] = prefer
+    return headers
+
+def _supabase_request(method, table_name, params=None, payload=None, prefer=None, timeout=10):
+    if not _supabase_logs_ready():
+        return None
+    try:
+        response = requests.request(
+            method=method,
+            url=f"{SUPABASE_REST_ROOT}/{table_name}",
+            headers=_supabase_headers(prefer=prefer),
+            params=params,
+            json=payload,
+            timeout=timeout
+        )
+        if response.status_code >= 400:
+            print(f"Supabase {table_name} {method} failed: {response.status_code} {response.text[:240]}")
+            return None
+        return response
+    except Exception as exc:
+        print(f"Supabase request failed for {table_name}: {exc}")
+        return None
+
+def _parse_log_datetime(raw_value):
+    value = (raw_value or '').strip()
+    if not value:
+        return None
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(value, fmt)
+        except Exception:
+            pass
+    try:
+        cleaned = value.replace('Z', '+00:00')
+        dt = datetime.fromisoformat(cleaned)
+        if getattr(dt, 'tzinfo', None):
+            return dt.astimezone().replace(tzinfo=None)
+        return dt
+    except Exception:
+        return None
+
+def _format_log_timestamp(dt):
+    if not dt:
+        return ''
+    return dt.strftime("%Y-%m-%d %H:%M:%S")
+
+def _load_resource_open_rows_from_csv():
+    return []
+
+def _load_page_view_rows_from_csv():
+    return []
+
+def _fetch_supabase_rows(table_name, columns):
+    rows = []
+    if not _supabase_logs_ready():
+        return rows
+    limit = 1000
+    offset = 0
+    while True:
+        response = _supabase_request(
+            'GET',
+            table_name,
+            params={
+                'select': columns,
+                'order': 'created_at.asc',
+                'limit': limit,
+                'offset': offset
+            },
+            timeout=12
+        )
+        if response is None:
+            return []
+        try:
+            chunk = response.json()
+        except Exception:
+            return []
+        if not isinstance(chunk, list) or not chunk:
+            break
+        rows.extend(chunk)
+        if len(chunk) < limit:
+            break
+        offset += limit
+    return rows
+
+def _load_resource_open_rows():
+    if _supabase_logs_ready():
+        rows = _fetch_supabase_rows(
+            'resource_opens',
+            'created_at,resource_id,open_type,target_url,user_name,user_affiliation,user_email'
+        )
+        return [{
+            'time': _format_log_timestamp(_parse_log_datetime(row.get('created_at'))),
+            'name': row.get('user_name', '') or '',
+            'affiliation': row.get('user_affiliation', '') or '',
+            'email': row.get('user_email', '') or '',
+            'resource_id': row.get('resource_id', '') or '',
+            'type': row.get('open_type', '') or '',
+            'target_url': row.get('target_url', '') or ''
+        } for row in rows]
+    return []
+
+def _load_page_view_rows():
+    if _supabase_logs_ready():
+        rows = _fetch_supabase_rows(
+            'page_views',
+            'created_at,visitor_id,path,page_type,item_id,title,user_name,user_affiliation,user_email'
+        )
+        return [{
+            'time': _format_log_timestamp(_parse_log_datetime(row.get('created_at'))),
+            'visitor_id': row.get('visitor_id', '') or '',
+            'path': row.get('path', '') or '',
+            'page_type': row.get('page_type', '') or '',
+            'item_id': row.get('item_id', '') or '',
+            'title': row.get('title', '') or '',
+            'name': row.get('user_name', '') or '',
+            'affiliation': row.get('user_affiliation', '') or '',
+            'email': row.get('user_email', '') or ''
+        } for row in rows]
+    return []
+
+def _write_supabase_page_view(now, visitor_id, page_type, item_id, title, user_info):
+    response = _supabase_request(
+        'POST',
+        'page_views',
+        payload={
+            'created_at': now.astimezone().isoformat(),
+            'visitor_id': visitor_id,
+            'path': request.path,
+            'page_type': page_type,
+            'item_id': item_id or None,
+            'title': title or None,
+            'user_name': user_info.get('name') or None,
+            'user_affiliation': user_info.get('affiliation') or None,
+            'user_email': user_info.get('email') or None
+        },
+        prefer='return=minimal'
+    )
+    return response is not None
+
+def _write_supabase_resource_open(now, resource_id, open_type, target_url, user_info):
+    response = _supabase_request(
+        'POST',
+        'resource_opens',
+        payload={
+            'created_at': now.astimezone().isoformat(),
+            'resource_id': resource_id,
+            'open_type': open_type,
+            'target_url': target_url,
+            'user_name': user_info.get('name') or None,
+            'user_affiliation': user_info.get('affiliation') or None,
+            'user_email': user_info.get('email') or None
+        },
+        prefer='return=minimal'
+    )
+    return response is not None
+
+# Phase 2.5: runtime analytics now live only in Supabase, so no local backfill marker is required.
 
 def _normalize_research_highlights(items):
     normalized = []
@@ -340,8 +521,10 @@ def _get_local_cms_status():
 
     return {
         'local_mode': bool(IS_LOCAL),
+        'app_mode': APP_MODE,
         'content_root': CONTENT_ROOT,
-        'runtime_root': PERSISTENT_ROOT,
+        'runtime_root': 'No persistent disk',
+        'analytics_storage': SUPABASE_URL or 'Supabase not configured',
         'branch': branch_result['stdout'] if branch_result['ok'] else 'unknown',
         'remote': remote_result['stdout'] if remote_result['ok'] else '',
         'last_commit': last_commit_result['stdout'] if last_commit_result['ok'] else 'Unavailable',
@@ -525,34 +708,18 @@ def _read_download_log_summary():
     download_counts = {}
     unique_downloaders = {}
     last_download_times = {}
-    csv_path = os.path.join(DATA_LOGS_DIR, 'downloads.csv')
-    if not os.path.exists(csv_path):
-        return {
-            'download_counts': download_counts,
-            'unique_downloaders': unique_downloaders,
-            'last_download_times': last_download_times,
-            'total_downloads': 0
-        }
-
-    try:
-        with open(csv_path, 'r', encoding='utf-8') as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                item_id = row.get('resource_id') or ''
-                if not item_id:
-                    continue
-                download_counts[item_id] = download_counts.get(item_id, 0) + 1
-                key_triplet = (row.get('name', ''), row.get('affiliation', ''), row.get('email', ''))
-                unique_downloaders.setdefault(item_id, set()).add(key_triplet)
-                try:
-                    stamp = datetime.strptime(row.get('time', ''), "%Y-%m-%d %H:%M:%S")
-                    previous = last_download_times.get(item_id)
-                    if previous is None or stamp > previous:
-                        last_download_times[item_id] = stamp
-                except Exception:
-                    pass
-    except Exception as e:
-        print(f"CSV read error: {e}")
+    for row in _load_resource_open_rows():
+        item_id = row.get('resource_id') or ''
+        if not item_id:
+            continue
+        download_counts[item_id] = download_counts.get(item_id, 0) + 1
+        key_triplet = (row.get('name', ''), row.get('affiliation', ''), row.get('email', ''))
+        unique_downloaders.setdefault(item_id, set()).add(key_triplet)
+        stamp = _parse_log_datetime(row.get('time', ''))
+        if stamp:
+            previous = last_download_times.get(item_id)
+            if previous is None or stamp > previous:
+                last_download_times[item_id] = stamp
 
     return {
         'download_counts': download_counts,
@@ -564,23 +731,12 @@ def _read_download_log_summary():
 def _read_page_view_log_summary():
     total_views = 0
     article_view_counts = {}
-    if not os.path.exists(PAGE_VIEWS_CSV_PATH):
-        return {
-            'total_views': total_views,
-            'article_view_counts': article_view_counts
-        }
-
-    try:
-        with open(PAGE_VIEWS_CSV_PATH, 'r', encoding='utf-8-sig') as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                total_views += 1
-                if (row.get('page_type') or '') == 'article_detail':
-                    article_id = row.get('item_id') or ''
-                    if article_id:
-                        article_view_counts[article_id] = article_view_counts.get(article_id, 0) + 1
-    except Exception as e:
-        print(f"Page view CSV read error: {e}")
+    for row in _load_page_view_rows():
+        total_views += 1
+        if (row.get('page_type') or '') == 'article_detail':
+            article_id = row.get('item_id') or ''
+            if article_id:
+                article_view_counts[article_id] = article_view_counts.get(article_id, 0) + 1
 
     return {
         'total_views': total_views,
@@ -772,43 +928,17 @@ def log_page_view(page_type, item_id='', title=''):
     if _should_skip_view_log(page_key, now):
         return
 
-    os.makedirs(DATA_LOGS_DIR, exist_ok=True)
-    file_exists = os.path.isfile(PAGE_VIEWS_CSV_PATH)
     timestamp = now.strftime("%Y-%m-%d %H:%M:%S")
     visitor_id = _ensure_visitor_id()
     user_info = session.get('user_info') or {}
 
-    try:
-        with open(PAGE_VIEWS_CSV_PATH, 'a', encoding='utf-8-sig', newline='') as f:
-            writer = csv.writer(f)
-            if not file_exists:
-                writer.writerow([
-                    'time', 'visitor_id', 'path', 'page_type', 'item_id',
-                    'title', 'name', 'affiliation', 'email'
-                ])
-            writer.writerow([
-                timestamp,
-                visitor_id,
-                request.path,
-                page_type,
-                item_id,
-                title,
-                user_info.get('name', ''),
-                user_info.get('affiliation', ''),
-                user_info.get('email', '')
-            ])
-        session['last_view_key'] = page_key
-        session['last_view_time'] = timestamp
-    except Exception as e:
-        print(f"View log write failed: {e}")
+    if _supabase_logs_ready():
+        _write_supabase_page_view(now, visitor_id, page_type, item_id, title, user_info)
+    session['last_view_key'] = page_key
+    session['last_view_time'] = timestamp
 
 def get_file_status(item_id):
-    status = {'paper': False, 'resource': False}
-    for t in ['paper', 'resource']:
-        ext = _find_existing_ext(item_id, t)
-        if ext:
-            status[t] = True
-    return status
+    return {'paper': False, 'resource': False}
 
 def _add_item(item_type, form_data):
     """Helper to add new article"""
@@ -1294,6 +1424,8 @@ def download_file(file_type, resource_id):
     key = _build_key(resource_id, file_type, ext)
     actual_path = os.path.join(PRIVATE_DOWNLOADS_DIR, key)
     filename = os.path.basename(actual_path)
+    if _supabase_logs_ready():
+        _write_supabase_resource_open(now, resource_id, file_type, filename, user_info)
     return send_file(actual_path, as_attachment=True, download_name=filename)
 
 @app.route('/open_link/<link_type>/<resource_id>')
@@ -1324,7 +1456,8 @@ def open_link(link_type, resource_id):
 
     csv_file = os.path.join(DATA_LOGS_DIR, 'downloads.csv')
     os.makedirs(DATA_LOGS_DIR, exist_ok=True)
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    now = datetime.now()
+    timestamp = now.strftime("%Y-%m-%d %H:%M:%S")
     file_exists = os.path.isfile(csv_file)
     try:
         with open(csv_file, 'a', encoding='utf-8-sig', newline='') as f:
@@ -1343,6 +1476,8 @@ def open_link(link_type, resource_id):
     except Exception as e:
         print(f"Link-open CSV write failed: {e}")
 
+    if _supabase_logs_ready():
+        _write_supabase_resource_open(now, resource_id, link_type, target_url, user_info)
     return redirect(target_url)
 
 
@@ -1440,36 +1575,27 @@ def admin_dashboard():
     last_download_times = {}
     downloads_last_7_days = 0
     downloads_today = 0
-    csv_path = os.path.join(DATA_LOGS_DIR, 'downloads.csv')
-    if os.path.exists(csv_path):
-        try:
-            with open(csv_path, 'r', encoding='utf-8') as f:
-                reader = csv.DictReader(f)
-                for row in reader:
-                    item_id = row.get('resource_id')
-                    if item_id:
-                        download_counts[item_id] = download_counts.get(item_id, 0) + 1
-                        key_triplet = (row.get('name',''), row.get('affiliation',''), row.get('email',''))
-                        s = unique_downloaders.get(item_id)
-                        if s is None:
-                            s = set()
-                            unique_downloaders[item_id] = s
-                        s.add(key_triplet)
-                        try:
-                            t = datetime.strptime(row.get('time',''), "%Y-%m-%d %H:%M:%S")
-                            date_key = t.strftime("%Y-%m-%d")
-                            if date_key in trend_keys:
-                                trend_keys[date_key]['downloads'] += 1
-                                downloads_last_7_days += 1
-                            if t.date() == today:
-                                downloads_today += 1
-                            prev = last_download_times.get(item_id)
-                            if (prev is None) or (t > prev):
-                                last_download_times[item_id] = t
-                        except Exception:
-                            pass
-        except Exception as e:
-            print(f"CSV read error: {e}")
+    for row in _load_resource_open_rows():
+        item_id = row.get('resource_id')
+        if item_id:
+            download_counts[item_id] = download_counts.get(item_id, 0) + 1
+            key_triplet = (row.get('name',''), row.get('affiliation',''), row.get('email',''))
+            s = unique_downloaders.get(item_id)
+            if s is None:
+                s = set()
+                unique_downloaders[item_id] = s
+            s.add(key_triplet)
+            t = _parse_log_datetime(row.get('time',''))
+            if t:
+                date_key = t.strftime("%Y-%m-%d")
+                if date_key in trend_keys:
+                    trend_keys[date_key]['downloads'] += 1
+                    downloads_last_7_days += 1
+                if t.date() == today:
+                    downloads_today += 1
+                prev = last_download_times.get(item_id)
+                if (prev is None) or (t > prev):
+                    last_download_times[item_id] = t
 
     # Load articles
     articles = load_articles_data()
@@ -1488,59 +1614,51 @@ def admin_dashboard():
     views_today = 0
     article_detail_views = 0
     cutoff = now - timedelta(days=7)
-    if os.path.exists(PAGE_VIEWS_CSV_PATH):
-        try:
-            with open(PAGE_VIEWS_CSV_PATH, 'r', encoding='utf-8-sig') as f:
-                reader = csv.DictReader(f)
-                for row in reader:
-                    path = row.get('path') or ''
-                    page_type = row.get('page_type') or ''
-                    item_id = row.get('item_id') or ''
-                    title = row.get('title') or PAGE_TYPE_LABELS.get(page_type, path or page_type or 'Unknown')
-                    visitor_id = row.get('visitor_id') or ''
-                    stamp = row.get('time') or ''
+    for row in _load_page_view_rows():
+        path = row.get('path') or ''
+        page_type = row.get('page_type') or ''
+        item_id = row.get('item_id') or ''
+        title = row.get('title') or PAGE_TYPE_LABELS.get(page_type, path or page_type or 'Unknown')
+        visitor_id = row.get('visitor_id') or ''
+        stamp = row.get('time') or ''
 
-                    if visitor_id:
-                        unique_visitors.add(visitor_id)
+        if visitor_id:
+            unique_visitors.add(visitor_id)
 
-                    page_view_counts[path] = page_view_counts.get(path, 0) + 1
-                    meta = page_view_meta.get(path)
-                    if meta is None:
-                        meta = {
-                            'path': path,
-                            'label': title,
-                            'page_type': page_type,
-                            'count': 0,
-                            'last_viewed': None
-                        }
-                        page_view_meta[path] = meta
-                    meta['count'] += 1
+        page_view_counts[path] = page_view_counts.get(path, 0) + 1
+        meta = page_view_meta.get(path)
+        if meta is None:
+            meta = {
+                'path': path,
+                'label': title,
+                'page_type': page_type,
+                'count': 0,
+                'last_viewed': None
+            }
+            page_view_meta[path] = meta
+        meta['count'] += 1
 
-                    try:
-                        viewed_at = datetime.strptime(stamp, "%Y-%m-%d %H:%M:%S")
-                        if viewed_at >= cutoff:
-                            views_last_7_days += 1
-                            if visitor_id:
-                                unique_visitors_last_7_days.add(visitor_id)
-                        if viewed_at.date() == today:
-                            views_today += 1
-                        date_key = viewed_at.strftime("%Y-%m-%d")
-                        if date_key in trend_keys:
-                            trend_keys[date_key]['views'] += 1
-                        prev = meta.get('last_viewed')
-                        if prev is None or viewed_at > prev:
-                            meta['last_viewed'] = viewed_at
-                    except Exception:
-                        viewed_at = None
+        viewed_at = _parse_log_datetime(stamp)
+        if viewed_at:
+            if viewed_at >= cutoff:
+                views_last_7_days += 1
+                if visitor_id:
+                    unique_visitors_last_7_days.add(visitor_id)
+            if viewed_at.date() == today:
+                views_today += 1
+            date_key = viewed_at.strftime("%Y-%m-%d")
+            if date_key in trend_keys:
+                trend_keys[date_key]['views'] += 1
+            prev = meta.get('last_viewed')
+            if prev is None or viewed_at > prev:
+                meta['last_viewed'] = viewed_at
 
-                    if page_type == 'article_detail':
-                        article_detail_views += 1
-                        article_view_counts[item_id] = article_view_counts.get(item_id, 0) + 1
-                        prev = article_last_view_times.get(item_id)
-                        if viewed_at and (prev is None or viewed_at > prev):
-                            article_last_view_times[item_id] = viewed_at
-        except Exception as e:
-            print(f"Page view CSV read error: {e}")
+        if page_type == 'article_detail':
+            article_detail_views += 1
+            article_view_counts[item_id] = article_view_counts.get(item_id, 0) + 1
+            prev = article_last_view_times.get(item_id)
+            if viewed_at and (prev is None or viewed_at > prev):
+                article_last_view_times[item_id] = viewed_at
 
     top_pages = sorted(
         page_view_meta.values(),
@@ -1664,7 +1782,8 @@ def admin_dashboard():
         lab_name=site_cfg.get('lab_name_full', LAB_NAME),
         site_cfg=site_cfg,
         local_cms_status=local_cms_status,
-        admin_notice=admin_notice
+        admin_notice=admin_notice,
+        analytics_backend='Supabase only' if _supabase_logs_ready() else 'Supabase not configured'
     )
 
 @app.route('/admin/view-as-user')
@@ -1987,6 +2106,132 @@ def upload_render_data_zip():
 
 
 # Cloudflare upload API removed — using only local admin upload
+
+
+# ==========================================================================
+# Phase 2.5 overrides - diskless analytics & compatibility shells
+# ==========================================================================
+
+def _csv_bytes(fieldnames, rows):
+    text_buffer = io.StringIO()
+    writer = csv.DictWriter(text_buffer, fieldnames=fieldnames)
+    writer.writeheader()
+    for row in rows:
+        writer.writerow({key: row.get(key, '') for key in fieldnames})
+    return io.BytesIO(text_buffer.getvalue().encode('utf-8-sig'))
+
+def _download_logs_csv_supabase_only():
+    if not session.get('is_admin'):
+        return "Unauthorized", 403
+    rows = _load_resource_open_rows()
+    return send_file(
+        _csv_bytes(
+            ['time', 'name', 'affiliation', 'email', 'resource_id', 'type', 'target_url'],
+            rows
+        ),
+        as_attachment=True,
+        download_name='lightchip_resource_opens.csv',
+        mimetype='text/csv'
+    )
+
+def _download_page_views_csv_supabase_only():
+    if not session.get('is_admin'):
+        return "Unauthorized", 403
+    rows = _load_page_view_rows()
+    return send_file(
+        _csv_bytes(
+            ['time', 'visitor_id', 'path', 'page_type', 'item_id', 'title', 'name', 'affiliation', 'email'],
+            rows
+        ),
+        as_attachment=True,
+        download_name='lightchip_page_views.csv',
+        mimetype='text/csv'
+    )
+
+def _download_analytics_bundle_supabase_only():
+    if not session.get('is_admin'):
+        return "Unauthorized", 403
+    import zipfile
+
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr(
+            'resource_opens.csv',
+            _csv_bytes(
+                ['time', 'name', 'affiliation', 'email', 'resource_id', 'type', 'target_url'],
+                _load_resource_open_rows()
+            ).getvalue()
+        )
+        zf.writestr(
+            'page_views.csv',
+            _csv_bytes(
+                ['time', 'visitor_id', 'path', 'page_type', 'item_id', 'title', 'name', 'affiliation', 'email'],
+                _load_page_view_rows()
+            ).getvalue()
+        )
+    buffer.seek(0)
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name='analytics_export_bundle.zip',
+        mimetype='application/zip'
+    )
+
+def _upload_runtime_bundle_retired():
+    if not session.get('is_admin'):
+        return "Unauthorized", 403
+    session['admin_notice'] = {
+        'kind': 'info',
+        'message': 'Runtime ZIP upload has been retired in Version 1.2.0.',
+        'details': 'Analytics now live in Supabase, and editable site content already lives in git-tracked site_content/.'
+    }
+    return redirect(url_for('admin_dashboard') + '#local-cms-panel')
+
+def _open_link_supabase_only(link_type, resource_id):
+    user_info = session.get('user_info')
+    if not user_info:
+        return redirect(url_for('register'))
+    if link_type not in ['paper', 'resource', 'official_free_access']:
+        return "Invalid link type", 400
+
+    article = next((a for a in load_articles_data() if a.get('id') == resource_id), None)
+    if not article:
+        return "Article not found", 404
+
+    if link_type == 'paper':
+        target_url = (article.get('paper_url') or '').strip()
+    elif link_type == 'resource':
+        target_url = (article.get('resource_url') or '').strip()
+    else:
+        target_url = (article.get('official_free_access_url') or '').strip()
+
+    if not target_url:
+        return "Requested link is not available", 404
+
+    if _supabase_logs_ready():
+        _write_supabase_resource_open(datetime.now(), resource_id, link_type, target_url, user_info)
+    return redirect(target_url)
+
+def _download_file_compat(file_type, resource_id):
+    return redirect(url_for('open_link', link_type=file_type, resource_id=resource_id))
+
+def _admin_upload_file_retired(file_type, resource_id):
+    if not session.get('is_admin'):
+        return "Unauthorized", 403
+    session['admin_notice'] = {
+        'kind': 'info',
+        'message': 'Local paper/resource file uploads have been retired in Version 1.2.0.',
+        'details': 'Please use Paper URL, Official Free Access URL, and Resources URL instead. This keeps the site diskless and easier to maintain.'
+    }
+    return redirect(url_for('admin_dashboard') + f'#article-{resource_id}')
+
+app.view_functions['download_logs_csv'] = _download_logs_csv_supabase_only
+app.view_functions['download_page_views_csv'] = _download_page_views_csv_supabase_only
+app.view_functions['download_render_data_zip'] = _download_analytics_bundle_supabase_only
+app.view_functions['upload_render_data_zip'] = _upload_runtime_bundle_retired
+app.view_functions['open_link'] = _open_link_supabase_only
+app.view_functions['download_file'] = _download_file_compat
+app.view_functions['admin_upload_file'] = _admin_upload_file_retired
 
 
 # ==============================================================================

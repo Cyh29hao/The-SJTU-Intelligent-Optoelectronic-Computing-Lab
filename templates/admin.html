@@ -166,6 +166,9 @@
         #site-section > .form-section {
             display: none !important;
         }
+        form[action*="upload_render_data"] {
+            display: none !important;
+        }
         label { 
             display: block; 
             margin: 12px 0 6px; 
@@ -483,6 +486,7 @@
     <h1>Admin Dashboard
         <span class="header-right">
             {{ lab_name }}<br>
+            Analytics backend: {{ analytics_backend }}<br>
             Last content update: {{ content_last_modified }}<br>
             Admin login: {{ admin_login_time }}<br>
             App started: {{ start_time }}
@@ -491,7 +495,7 @@
 
     <div id="local-cms-panel" class="form-section local-cms-card">
         <h3 style="margin-top:0; color:#2c3e50;">Local CMS Workspace</h3>
-        <p class="cms-note">Phase 1 content editing now treats <code>site_content/</code> as the git-tracked source of truth. Runtime logs stay in <code>render_data/</code> for now, so your local admin can focus on editing content and publishing it cleanly to GitHub.</p>
+        <p class="cms-note">Content editing now treats <code>site_content/</code> as the git-tracked source of truth, while runtime analytics live in Supabase. This local admin stays focused on editing content and publishing it cleanly to GitHub.</p>
 
         {% if admin_notice %}
         <div class="admin-notice {{ admin_notice.kind }}">
@@ -506,9 +510,9 @@
             <div class="cms-status-item">
                 <strong>Mode</strong>
                 {% if local_cms_status.local_mode %}
-                Local CMS mode is active.
+                Local CMS mode is active (auto-detected).
                 {% else %}
-                Running in deployed mode.
+                Running in deployed mode (auto-detected).
                 {% endif %}
             </div>
             <div class="cms-status-item">
@@ -516,8 +520,8 @@
                 <code>{{ local_cms_status.content_root }}</code>
             </div>
             <div class="cms-status-item">
-                <strong>Runtime Root</strong>
-                <code>{{ local_cms_status.runtime_root }}</code>
+                <strong>Analytics Storage</strong>
+                <code>{{ local_cms_status.analytics_storage }}</code>
             </div>
             <div class="cms-status-item">
                 <strong>Git Branch</strong>
@@ -535,7 +539,7 @@
 
         <div class="cms-inline-actions">
             <a href="{{ url_for('download_site_content_zip') }}" class="secondary">Download site_content backup</a>
-            <a href="{{ url_for('download_render_data_zip') }}" class="tertiary">Download runtime logs backup</a>
+            <a href="{{ url_for('download_render_data_zip') }}" class="tertiary">Download analytics export bundle</a>
         </div>
 
         {% if local_cms_status.has_changes %}
@@ -696,20 +700,20 @@
             <p class="table-note">This is a lightweight trend chart rendered directly in the template, so it works without any JS chart library.</p>
         </div>
         <div class="insight-card">
-            <h3>Tracking Files</h3>
+            <h3>Analytics Storage</h3>
             <table class="mini-table">
                 <tbody>
                     <tr>
-                        <td><strong>downloads.csv</strong></td>
-                        <td>Records gated outbound opens, user info, article ID, and link type.</td>
+                        <td><strong>Supabase page_views</strong></td>
+                        <td>Stores public-page browsing activity, page type, visitor IDs, and article/profile context.</td>
                     </tr>
                     <tr>
-                        <td><strong>page_views.csv</strong></td>
-                        <td>Records public-page visits, page type, path, and article/profile context.</td>
+                        <td><strong>Supabase resource_opens</strong></td>
+                        <td>Stores gated paper/resource/free-access opens, article IDs, and the outbound target URL.</td>
                     </tr>
                     <tr>
-                        <td><strong>render_data bundle</strong></td>
-                        <td>The sync ZIP already includes both logs, so your analytics travel with the site data.</td>
+                        <td><strong>Analytics export bundle</strong></td>
+                        <td>CSV exports are generated on demand from Supabase, so no persistent disk is required for analytics.</td>
                     </tr>
                 </tbody>
             </table>
@@ -764,13 +768,13 @@
 
 
     <!-- Download Logs -->
-    <h2>Runtime Logs</h2>
+    <h2>Analytics Exports</h2>
     <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);">
-        <p>Download raw runtime logs as CSV files for deeper analysis or to keep snapshots of the site's performance over time. These files still live under <code>render_data/data_logs/</code> during Phase 1.</p>
+        <p>Download fresh CSV exports generated directly from Supabase. This keeps analytics portable without relying on local runtime files or a persistent disk.</p>
         <a href="{{ url_for('download_logs_csv') }}" 
         style="display: inline-block; background: #3498db; color: white; text-decoration: none; 
                 padding: 10px 20px; border-radius: 4px; font-weight: bold; margin-top: 10px;">
-            Download opens.csv
+            Download resource_opens.csv
         </a>
         <a href="{{ url_for('download_page_views_csv') }}" 
         style="display: inline-block; background: #16a085; color: white; text-decoration: none; 
@@ -778,20 +782,20 @@
             Download page_views.csv
         </a>
         <p style="font-size: 14px; color: #7f8c8d; margin-top: 15px;">
-            downloads.csv currently stores gated outbound opens. page_views.csv stores public-page browsing activity.
+            resource_opens.csv stores gated outbound opens. page_views.csv stores public-page browsing activity.
         </p>
     </div>
 
     <!-- Render Data Sync -->
-    <h2>Runtime Data Sync</h2>
+    <h2>Analytics Backup</h2>
     <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);">
-        <p>This backup now covers runtime-only data under <code>render_data/</code>, mainly logs and any legacy runtime files. Admin-managed content and images now live in git-tracked <code>site_content/</code>.</p>
+        <p>This ZIP is now a generated analytics export bundle from Supabase. Editable content and images already live in git-tracked <code>site_content/</code>, so there is no longer a runtime disk payload to upload back into the app.</p>
         <a href="{{ url_for('download_render_data_zip') }}" 
            style="display:inline-block;background:#27ae60;color:white;text-decoration:none;padding:10px 20px;border-radius:4px;font-weight:bold;margin-top:10px;">
-           Download runtime_data_bundle.zip
+           Download analytics_export_bundle.zip
         </a>
         <p style="font-size: 14px; color: #7f8c8d; margin-top: 10px;">
-            Tip: keep this as a runtime/log backup only. Content publishing should now happen through GitHub from the Local CMS panel above.
+            Tip: content publishing happens through GitHub from the Local CMS panel above. This ZIP is only for off-platform analytics backup.
         </p>
         <form method="POST" action="{{ url_for('upload_render_data_zip') }}" enctype="multipart/form-data" style="margin-top:12px;">
             <label>Upload runtime_data_bundle.zip</label>
@@ -801,7 +805,7 @@
             </button>
         </form>
         <p style="font-size: 14px; color: #7f8c8d; margin-top: 8px;">
-            Tip: this overwrites files under <code>render_data/</code> only. It does not change <code>site_content/</code>.
+            Upload/replace runtime bundles has been retired in the diskless analytics architecture.
         </p>
     </div>
     
