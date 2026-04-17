@@ -126,6 +126,10 @@
             transform: translateY(-2px);
             box-shadow: 0 14px 28px rgba(48, 74, 104, 0.12);
         }
+        .module-card.large {
+            min-height: 220px;
+            padding: 28px;
+        }
         .module-card-title {
             font-size: 1.35rem;
             font-weight: 800;
@@ -283,16 +287,36 @@
             flex-wrap: wrap;
             align-items: center;
         }
+        .home-shell {
+            min-height: 72vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .home-shell .admin-topbar {
+            justify-content: center;
+            margin-bottom: 34px;
+        }
+        .home-shell h1 {
+            font-size: 3rem;
+            text-align: center;
+        }
+        .home-grid {
+            max-width: 980px;
+            margin: 0 auto;
+        }
         @media (max-width: 860px) {
             body { padding: 16px; }
             .admin-topbar { flex-direction: column; }
             .admin-meta { text-align: left; }
+            .home-shell h1 { font-size: 2.3rem; }
         }
     </style>
 </head>
-<body>
+<body{% if active_module == 'home' %} class="home-shell"{% endif %}>
     <div class="admin-topbar">
         <h1>{% block admin_header %}Admin Dashboard{% endblock %}</h1>
+        {% if active_module != 'home' %}
         <div class="admin-meta">
             {{ lab_name }}<br>
             Analytics backend: {{ analytics_backend }}<br>
@@ -300,8 +324,10 @@
             Admin login: {{ admin_login_time }}<br>
             App started: {{ start_time }}
         </div>
+        {% endif %}
     </div>
 
+    {% if active_module != 'home' %}
     <div class="module-nav">
         <a href="{{ url_for('admin_dashboard') }}" class="{% if active_module == 'home' %}active{% endif %}">Home</a>
         <a href="{{ url_for('admin_content') }}" class="{% if active_module == 'content' %}active{% endif %}">Content</a>
@@ -323,6 +349,7 @@
         <pre>{{ admin_notice.details }}</pre>
         {% endif %}
     </div>
+    {% endif %}
     {% endif %}
 
     {% block admin_body %}{% endblock %}

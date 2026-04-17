@@ -1,94 +1,24 @@
 {% extends "admin_layout.html" %}
 
 {% block admin_body %}
-<div id="local-cms-panel" class="page-card">
-    <h2 style="margin-top:0;">Local CMS Workspace</h2>
-    <p class="helper-note">This local admin edits git-tracked <code>site_content/</code>. Runtime analytics now live in Supabase, so the deployed site stays lightweight.</p>
-
-    <div class="status-grid">
-        <div class="status-item">
-            <strong>Mode</strong>
-            {% if local_cms_status.local_mode %}
-            Local CMS mode is active (auto-detected).
-            {% else %}
-            Running in deployed mode (auto-detected).
-            {% endif %}
-        </div>
-        <div class="status-item">
-            <strong>Content Root</strong>
-            <div class="mono">{{ local_cms_status.content_root }}</div>
-        </div>
-        <div class="status-item">
-            <strong>Analytics Storage</strong>
-            <div class="mono">{{ local_cms_status.analytics_storage }}</div>
-        </div>
-        <div class="status-item">
-            <strong>Git Branch</strong>
-            {{ local_cms_status.branch }}
-        </div>
-        <div class="status-item">
-            <strong>Last Commit</strong>
-            {{ local_cms_status.last_commit }}
-        </div>
-        <div class="status-item">
-            <strong>Git Remote</strong>
-            <div class="mono">{{ local_cms_status.remote or 'No origin remote detected' }}</div>
-        </div>
+<div class="home-grid">
+    <div class="card-grid">
+        <a href="{{ url_for('admin_content') }}" class="module-card large">
+            <div class="module-card-title">Edit Content</div>
+            <div class="module-card-text">Homepage, publications, people, and news.</div>
+        </a>
+        <a href="{{ url_for('admin_analytics') }}" class="module-card large">
+            <div class="module-card-title">View Analytics</div>
+            <div class="module-card-text">Views, tracked opens, funnels, and clean exports.</div>
+        </a>
+        <a href="{{ url_for('admin_assets') }}" class="module-card large">
+            <div class="module-card-title">Manage Assets</div>
+            <div class="module-card-text">Logo, thumbnails, and footer-link icons.</div>
+        </a>
+        <a href="{{ url_for('admin_settings') }}" class="module-card large">
+            <div class="module-card-title">Site Settings</div>
+            <div class="module-card-text">Branding, links, research focus, tags, and version.</div>
+        </a>
     </div>
-
-    <div class="inline-actions" style="margin-top:18px;">
-        <a href="{{ url_for('download_site_content_zip') }}" class="btn-link btn-secondary">Download site_content backup</a>
-        <a href="{{ url_for('download_render_data_zip') }}" class="btn-link btn-muted">Download analytics export bundle</a>
-    </div>
-
-    {% if local_cms_status.has_changes %}
-    <p style="margin:18px 0 10px; font-weight:800; color:#2a4260;">Pending git-tracked content changes</p>
-    <ul style="margin:0; color:#5e7389; line-height:1.8;">
-        {% for file in local_cms_status.changed_files[:12] %}
-        <li><strong>{{ file.status }}</strong> <span class="mono">{{ file.path }}</span></li>
-        {% endfor %}
-        {% if local_cms_status.changed_files|length > 12 %}
-        <li>...and {{ local_cms_status.changed_files|length - 12 }} more files.</li>
-        {% endif %}
-    </ul>
-    {% else %}
-    <p class="helper-note" style="margin-top:18px;">No unpublished <code>site_content/</code> changes were detected right now.</p>
-    {% endif %}
-
-    {% if local_cms_status.allow_publish %}
-    <form method="POST" action="{{ url_for('admin_dashboard') }}" style="margin-top:18px;">
-        <input type="hidden" name="action" value="publish_content_to_github">
-        <input type="hidden" name="item_type" value="site">
-        <label>Commit Message</label>
-        <input name="commit_message" placeholder="Update site content">
-        <button type="submit">Publish site_content to GitHub</button>
-    </form>
-    <p class="helper-note">This publish button is for content only. Template or Python changes still need one normal Git push.</p>
-    {% else %}
-    <p class="helper-note" style="margin-top:18px;">Publish to GitHub is only enabled while the app is running locally.</p>
-    {% endif %}
-
-    {% if local_cms_status.git_error %}
-    <p class="helper-note" style="margin-top:12px;"><strong>Git status warning:</strong> {{ local_cms_status.git_error }}</p>
-    {% endif %}
-</div>
-
-<div class="card-grid">
-    <a href="{{ url_for('admin_content') }}" class="module-card">
-        <div class="module-card-title">Edit Content</div>
-        <div class="module-card-text">Homepage copy, publications, people, and news. Save operations stay inside this workspace.</div>
-    </a>
-    <a href="{{ url_for('admin_analytics') }}" class="module-card">
-        <div class="module-card-title">View Analytics</div>
-        <div class="module-card-text">Inspect page views, tracked opens, publication funnels, and download clean exports from Supabase.</div>
-    </a>
-    <a href="{{ url_for('admin_assets') }}" class="module-card">
-        <div class="module-card-title">Manage Assets</div>
-        <div class="module-card-text">Update the site logo, footer link icons, and article thumbnails without digging through long forms.</div>
-    </a>
-    <a href="{{ url_for('admin_settings') }}" class="module-card">
-        <div class="module-card-title">Site Settings</div>
-        <div class="module-card-text">Branding, links, research focus, tags, and lightweight site-level switches live here.</div>
-    </a>
 </div>
 {% endblock %}
