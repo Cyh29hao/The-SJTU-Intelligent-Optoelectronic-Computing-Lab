@@ -91,21 +91,6 @@
   </div>
 </section>
 
-{% if latest_news %}
-<section class="portal-news-preview">
-  <div class="portal-section-head">
-    <h3>News</h3>
-    <a href="{{ url_for('news') }}" class="portal-slide-link">View All &rarr;</a>
-  </div>
-  {% set news_item = latest_news[0] %}
-  <article class="portal-news-card">
-    <div class="portal-news-meta">{{ news_item.date }}</div>
-    <a href="{{ url_for('news_detail', id=news_item.id) }}" class="portal-news-title">{{ news_item.title }}</a>
-    <p class="portal-news-summary">{{ news_item.summary }}</p>
-  </article>
-</section>
-{% endif %}
-
 <section class="portal-lower">
   <div class="portal-about">
     <div class="portal-section-head">
@@ -144,6 +129,17 @@
           <div class="portal-side-metric">Page Views</div>
         </div>
       </div>
+
+      {% if latest_news %}
+      {% set news_item = latest_news[0] %}
+      <div class="portal-latest-news">
+        <div class="portal-side-label">Latest News</div>
+        <div class="portal-news-meta">{{ news_item.date }}</div>
+        <a href="{{ url_for('news_detail', id=news_item.id) }}" class="portal-news-title portal-news-title-inline">{{ news_item.title }}</a>
+        <p class="portal-news-summary portal-news-summary-inline">{{ news_item.summary }}</p>
+        <a href="{{ url_for('news') }}" class="portal-inline-link">View All News</a>
+      </div>
+      {% endif %}
     </div>
   </aside>
 </section>
