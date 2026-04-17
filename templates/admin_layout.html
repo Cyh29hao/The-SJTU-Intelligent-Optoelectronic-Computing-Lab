@@ -98,6 +98,9 @@
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
             gap: 18px;
         }
+        .card-grid.two-by-two {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
         .module-card {
             display: block;
             padding: 22px;
@@ -298,6 +301,7 @@
             .admin-topbar { flex-direction: column; }
             .home-shell h1 { font-size: 2.3rem; }
             .card-grid { grid-template-columns: 1fr; }
+            .card-grid.two-by-two { grid-template-columns: 1fr; }
         }
     </style>
 </head>
