@@ -5,18 +5,18 @@
   <div class="portal-hero-content">
     <div class="portal-hero-main">
       <div class="portal-hero-copy">
-        <div class="portal-hero-kicker">Shanghai Jiao Tong University</div>
-        <h2 class="portal-hero-title"><a href="{{ url_for('index') }}" class="portal-hero-title-link">{{ site_cfg.lab_name_full }}</a></h2>
-        <p class="portal-hero-subtitle"><a href="{{ url_for('person_detail', id='person_001') }}" class="portal-hero-subtitle-link">Prof. Yitong Chen</a></p>
+        <div class="portal-hero-kicker">{{ t('sjtu_full_name') }}</div>
+        <h2 class="portal-hero-title"><a href="{{ url_for('index') }}" class="portal-hero-title-link">{{ lang_value(site_cfg, 'lab_name_full') }}</a></h2>
+        <p class="portal-hero-subtitle"><a href="{{ url_for('person_detail', id='person_001') }}" class="portal-hero-subtitle-link">{{ t('prof_yitong_chen') }}</a></p>
         <p class="portal-hero-summary">
-          {{ site_cfg.hero_summary }}
+          {{ lang_value(site_cfg, 'hero_summary') }}
         </p>
       </div>
 
       {% if site_cfg.research_highlights %}
       <div class="portal-hero-side">
         <div class="portal-hero-panel" data-highlight-panel>
-          <div class="portal-hero-panel-label">Research Focus</div>
+          <div class="portal-hero-panel-label">{{ t('research_focus') }}</div>
           <div class="portal-highlights portal-highlights-hero">
             <div class="portal-highlight-nav" role="tablist" aria-label="Research focus">
               {% for highlight in site_cfg.research_highlights %}
@@ -26,7 +26,7 @@
                 data-highlight-index="{{ loop.index0 }}"
                 aria-selected="{{ 'true' if loop.first else 'false' }}"
               >
-                {{ highlight.title.replace(' ', '<br>', 1)|safe }}
+                {{ lang_value(highlight, 'title').replace(' ', '<br>', 1)|safe }}
               </button>
               {% endfor %}
             </div>
@@ -34,8 +34,8 @@
               {% for highlight in site_cfg.research_highlights %}
               <article class="portal-highlight-card{% if loop.first %} is-active{% endif %}" data-highlight-panel-index="{{ loop.index0 }}">
                 <div class="portal-highlight-index">0{{ loop.index }}</div>
-                <h4>{{ highlight.title.replace(' ', '<br>', 1)|safe }}</h4>
-                <p>{{ highlight.summary }}</p>
+                <h4>{{ lang_value(highlight, 'title').replace(' ', '<br>', 1)|safe }}</h4>
+                <p>{{ lang_value(highlight, 'summary') }}</p>
               </article>
               {% endfor %}
             </div>
@@ -49,7 +49,7 @@
 
 <section class="portal-carousel-section">
   <div class="portal-section-head">
-    <h3>Selected Publications</h3>
+    <h3>{{ t('selected_publications') }}</h3>
   </div>
   <div class="portal-carousel" data-carousel>
     <div class="portal-carousel-track">
@@ -77,7 +77,7 @@
             {{ (article.abstract[:200] ~ '...') if article.abstract and article.abstract|length > 200 else article.abstract }}
           </p>
           <div class="portal-slide-actions">
-            <a href="{{ url_for('article_detail', id=article.id) }}" class="portal-slide-link">Read Article &rarr;</a>
+            <a href="{{ url_for('article_detail', id=article.id) }}" class="portal-slide-link">{{ t('read_article') }} &rarr;</a>
           </div>
         </div>
       </article>
@@ -94,50 +94,50 @@
 <section class="portal-lower">
   <div class="portal-about">
     <div class="portal-section-head">
-      <h3>About the Lab</h3>
+      <h3>{{ t('about_lab') }}</h3>
     </div>
     <div class="portal-about-body">
-      {{ site_cfg.home_welcome }}
+      {{ lang_value(site_cfg, 'home_welcome') }}
     </div>
   </div>
 
   <aside class="portal-side-note">
     <div class="portal-side-card">
-      <div class="portal-side-label">Resources</div>
+      <div class="portal-side-label">{{ t('resources') }}</div>
       {% if not session.user_info %}
-        <p class="portal-side-text">{{ site_cfg.home_note }}</p>
-        <a href="{{ url_for('register') }}" class="portal-inline-link">Go to LOGIN page</a>
+        <p class="portal-side-text">{{ lang_value(site_cfg, 'home_note') }}</p>
+        <a href="{{ url_for('register') }}" class="portal-inline-link">{{ t('login_page') }}</a>
       {% else %}
         <p class="portal-side-text">
-          You are currently logged in and can open paper and resource pages directly from each publication detail page.
+          {{ t('logged_in_open_note') }}
         </p>
         <p class="portal-user-line">
-          Current user: {{ session.user_info.name }} ({{ session.user_info.affiliation }}) {{ session.user_info.email }}
+          {{ t('current_user') }}: {{ session.user_info.name }} ({{ session.user_info.affiliation }}) {{ session.user_info.email }}
         </p>
       {% endif %}
       <div class="portal-side-stats portal-side-stats-wide">
         <div class="portal-side-stat">
           <div class="portal-side-value">{{ article_count }}</div>
-          <div class="portal-side-metric">Publications</div>
+          <div class="portal-side-metric">{{ t('publications_count') }}</div>
         </div>
         <div class="portal-side-stat">
           <div class="portal-side-value">{{ people_count }}</div>
-          <div class="portal-side-metric">People</div>
+          <div class="portal-side-metric">{{ t('people_count') }}</div>
         </div>
         <div class="portal-side-stat">
           <div class="portal-side-value">{{ total_page_views }}</div>
-          <div class="portal-side-metric">Page Views</div>
+          <div class="portal-side-metric">{{ t('page_views') }}</div>
         </div>
       </div>
 
       {% if latest_news %}
       {% set news_item = latest_news[0] %}
       <div class="portal-latest-news">
-        <div class="portal-side-label">Latest News</div>
+        <div class="portal-side-label">{{ t('latest_news') }}</div>
         <div class="portal-news-meta">{{ news_item.date }}</div>
-        <a href="{{ url_for('news_detail', id=news_item.id) }}" class="portal-news-title portal-news-title-inline">{{ news_item.title }}</a>
-        <p class="portal-news-summary portal-news-summary-inline">{{ news_item.summary }}</p>
-        <a href="{{ url_for('news') }}" class="portal-inline-link">View All News</a>
+        <a href="{{ url_for('news_detail', id=news_item.id) }}" class="portal-news-title portal-news-title-inline">{{ lang_value(news_item, 'title') }}</a>
+        <p class="portal-news-summary portal-news-summary-inline">{{ lang_value(news_item, 'summary') }}</p>
+        <a href="{{ url_for('news') }}" class="portal-inline-link">{{ t('view_all_news') }}</a>
       </div>
       {% endif %}
     </div>

@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% block title %}News - {{ site_cfg_global.lab_name_short }}{% endblock %}
+{% block title %}{{ t('nav_news') }} - {{ lang_value(site_cfg_global, 'lab_name_short') }}{% endblock %}
 {% block content %}
 
 <div class="news-page" style="max-width: 920px; margin: 0 auto; text-align: left;">
   <div class="portal-section-head" style="margin-bottom: 18px;">
-    <h3>News</h3>
-    <p class="portal-section-note">Announcements, milestones, and lab updates.</p>
+    <h3>{{ t('nav_news') }}</h3>
+    <p class="portal-section-note">{{ t('news_intro') }}</p>
   </div>
 
   <div class="news-list">
@@ -14,15 +14,15 @@
       <a href="{{ url_for('news_detail', id=item.id) }}" class="news-card-image-link">
         <img
           src="{{ url_for('asset_news_image', filename=item.image_filename) if item.image_filename else url_for('static', filename='images/placeholder-news.svg') }}"
-          alt="{{ item.title }}"
+          alt="{{ lang_value(item, 'title') }}"
           class="news-card-image"
         >
       </a>
       <div class="news-card-body">
         <div class="news-card-date">{{ item.date }}</div>
-        <a href="{{ url_for('news_detail', id=item.id) }}" class="news-card-title">{{ item.title }}</a>
-        <p class="news-card-summary">{{ item.summary or item.content[:180] }}</p>
-        <a href="{{ url_for('news_detail', id=item.id) }}" class="portal-slide-link">Read More &rarr;</a>
+        <a href="{{ url_for('news_detail', id=item.id) }}" class="news-card-title">{{ lang_value(item, 'title') }}</a>
+        <p class="news-card-summary">{{ lang_value(item, 'summary') or lang_value(item, 'content')[:180] }}</p>
+        <a href="{{ url_for('news_detail', id=item.id) }}" class="portal-slide-link">{{ t('read_more') }} &rarr;</a>
       </div>
     </article>
     {% endfor %}

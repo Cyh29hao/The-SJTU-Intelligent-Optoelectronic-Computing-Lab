@@ -1,11 +1,14 @@
 {% extends "base.html" %}
-{% block title %}{{ person.name }} - {{ site_cfg_global.lab_name_short }}{% endblock %}
+{% block title %}{{ person_name(person) }} - {{ lang_value(site_cfg_global, 'lab_name_short') }}{% endblock %}
 {% block content %}
-<h2>👤 {{ person.name }}</h2>
+<h2>{{ person_name(person) }}</h2>
+{% if secondary_person_name(person) %}
+<p style="text-align:center; margin-top:-10px; color:#7f8c8d;">{{ secondary_person_name(person) }}</p>
+{% endif %}
 
 <div class="person-detail-layout" style="max-width: 800px; margin: 0 auto; display: grid; grid-template-columns: 220px 1fr; gap: 24px; align-items: start;">
   <div>
-    <img src="{{ url_for('asset_people', filename=person.photo_filename) if person.photo_filename else url_for('static', filename='images/placeholder-person.svg') }}" alt="{{ person.name }}" class="person-detail-photo" style="width: 200px; height: 200px; object-fit: cover; border-radius: 8px;">
+    <img src="{{ url_for('asset_people', filename=person.photo_filename) if person.photo_filename else url_for('static', filename='images/placeholder-person.svg') }}" alt="{{ person_name(person) }}" class="person-detail-photo" style="width: 200px; height: 200px; object-fit: cover; border-radius: 8px;">
   </div>
   <div>
     {% if person.tags %}
@@ -16,7 +19,7 @@
     </div>
     {% endif %}
     {% if person.email %}
-    <p style="margin: 4px 0;"><strong>Email:</strong> <a href="mailto:{{ person.email }}">{{ person.email }}</a></p>
+    <p style="margin: 4px 0;"><strong>{{ t('email') }}:</strong> <a href="mailto:{{ person.email }}">{{ person.email }}</a></p>
     {% endif %}
     {% if person.links %}
     <div class="person-links" style="margin: 6px 0; text-align: center;">
@@ -28,9 +31,9 @@
       {% endfor %}
     </div>
     {% endif %}
-    <p style="margin: 12px 0; white-space: pre-wrap;">{{ person.bio or 'Profile will be updated.' }}</p>
+    <p style="margin: 12px 0; white-space: pre-wrap;">{{ lang_value(person, 'bio') or t('profile_will_be_updated') }}</p>
     {% if person.last_edited %}
-    <p style="color: #999; font-size: 0.9em;">Last edited: {{ person.last_edited }}</p>
+    <p style="color: #999; font-size: 0.9em;">{{ t('last_edited') }}: {{ person.last_edited }}</p>
     {% endif %}
   </div>
 </div>

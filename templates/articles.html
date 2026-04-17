@@ -1,19 +1,19 @@
 {% extends "base.html" %}
-{% block title %}Publications - {{ site_cfg_global.lab_name_short }}{% endblock %}
+{% block title %}{{ t('nav_publications') }} - {{ lang_value(site_cfg_global, 'lab_name_short') }}{% endblock %}
 {% block content %}
 
 <div class="publications-page" style="text-align: left; max-width: 900px; margin: 0 auto;">
   <section class="publications-access-card">
-    <div class="portal-side-label">Resources</div>
+    <div class="portal-side-label">{{ t('resources') }}</div>
     {% if not session.user_info %}
-      <p class="portal-side-text">{{ site_cfg.home_note }}</p>
-      <a href="{{ url_for('register') }}" class="portal-inline-link">Go to LOGIN page</a>
+      <p class="portal-side-text">{{ lang_value(site_cfg, 'home_note') }}</p>
+      <a href="{{ url_for('register') }}" class="portal-inline-link">{{ t('login_page') }}</a>
     {% else %}
       <p class="portal-side-text">
-        You are currently logged in and can access downloadable resources directly from each publication detail page.
+        {{ t('logged_in_open_note') }}
       </p>
       <p class="portal-user-line">
-        Current user: {{ session.user_info.name }} ({{ session.user_info.affiliation }}) {{ session.user_info.email }}
+        {{ t('current_user') }}: {{ session.user_info.name }} ({{ session.user_info.affiliation }}) {{ session.user_info.email }}
       </p>
     {% endif %}
   </section>
@@ -50,7 +50,7 @@
       </div>
       {% endfor %}
     {% else %}
-      <p class="publication-empty">No entries yet.</p>
+      <p class="publication-empty">{{ t('no_entries_yet') }}</p>
     {% endif %}
   </section>
   {% endfor %}

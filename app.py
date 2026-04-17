@@ -14,6 +14,7 @@ import shutil
 import subprocess
 import sys
 from datetime import datetime, timedelta
+from urllib.parse import urlencode
 from flask import Flask, render_template, request, redirect, url_for, send_file, session
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
@@ -166,19 +167,27 @@ PAGE_TYPE_LABELS = {
 DEFAULT_RESEARCH_HIGHLIGHTS = [
     {
         'title': 'Photonic AI',
-        'summary': 'Exploring photonic hardware and system design for AI workloads, with a focus on efficient optical-domain inference.'
+        'title_zh': '光子智能',
+        'summary': 'Exploring photonic hardware and system design for AI workloads, with a focus on efficient optical-domain inference.',
+        'summary_zh': '探索面向智能任务的光子硬件与系统设计，强调高效的光学域推理与计算能力。'
     },
     {
         'title': 'Optical Computing',
-        'summary': 'Studying computation schemes that leverage the parallelism and propagation properties of light to process information.'
+        'title_zh': '光计算',
+        'summary': 'Studying computation schemes that leverage the parallelism and propagation properties of light to process information.',
+        'summary_zh': '研究利用光的并行性与传播特性的计算方案，用于高效率的信息处理。'
     },
     {
         'title': 'Diffractive Networks',
-        'summary': 'Investigating diffractive deep neural networks and related free-space optical architectures for compact intelligent systems.'
+        'title_zh': '衍射网络',
+        'summary': 'Investigating diffractive deep neural networks and related free-space optical architectures for compact intelligent systems.',
+        'summary_zh': '探索衍射深度神经网络及相关自由空间光学架构，用于构建紧凑型智能系统。'
     },
     {
         'title': 'Integrated Photonics',
-        'summary': 'Connecting algorithms, devices, and chip-level implementation to build practical intelligent optoelectronic platforms.'
+        'title_zh': '集成光子',
+        'summary': 'Connecting algorithms, devices, and chip-level implementation to build practical intelligent optoelectronic platforms.',
+        'summary_zh': '打通算法、器件与芯片级实现，构建实用化的智能光电平台。'
     }
 ]
 DEFAULT_PERSON_TAGS = [
@@ -188,7 +197,7 @@ DEFAULT_PERSON_TAGS = [
     'Systems',
     'Resources'
 ]
-DEFAULT_SITE_VERSION = '1.2.0'
+DEFAULT_SITE_VERSION = '1.3.0'
 DEFAULT_FRIEND_LINKS = [
     {
         'title': 'SJTU',
@@ -217,18 +226,89 @@ DEFAULT_FRIEND_LINKS = [
 ]
 DEFAULT_SITE_CONFIG = {
     'home_note': 'To open our paper and resource pages, please first fill in your information on the Login page.',
+    'home_note_zh': '如需访问论文和资源页面，请先在登录页填写信息。',
     'home_welcome': "Our lab focuses on research in all-optical neural networks, diffractive deep learning, and intelligent photonic chips.\n\nThis website provides publicly available publications, code repositories, and dataset links from our group.",
+    'home_welcome_zh': "本课题组主要围绕全光神经网络、衍射深度学习与智能光子芯片开展研究。\n\n本网站汇集了课题组公开发表的论文、代码仓库与数据集链接。",
     'hero_summary': 'Research in photonic neural networks, intelligent photonic integrated circuits, and open academic resources for optical computing.',
+    'hero_summary_zh': '聚焦光子神经网络、智能光子集成电路与面向光计算的开放学术资源。',
     'lab_name': LAB_NAME,
     'lab_name_short': 'SJTU IOC Lab',
+    'lab_name_short_zh': '上海交大智能光电计算实验室',
     'lab_name_full': 'the SJTU Intelligent Optoelectronic Computing Lab',
+    'lab_name_full_zh': '上海交通大学智能光电计算实验室',
     'site_version': DEFAULT_SITE_VERSION,
     'show_external_access_note': False,
     'footer_copyright': '2026 AI Intelligent Optoelectronic Computing Lab',
+    'footer_copyright_zh': '2026 上海交通大学智能光电计算实验室',
     'logo_filename': 'site_logo.svg',
     'friend_links': DEFAULT_FRIEND_LINKS,
     'research_highlights': DEFAULT_RESEARCH_HIGHLIGHTS,
     'person_tags': DEFAULT_PERSON_TAGS
+}
+
+SUPPORTED_LANGS = ('en', 'zh')
+CATEGORY_TRANSLATIONS = {
+    'Professor': {'en': 'Professor', 'zh': '导师'},
+    'Postdoc & PhD': {'en': 'Postdoc & PhD', 'zh': '博士后与博士生'},
+    'Master': {'en': 'Master', 'zh': '硕士生'},
+    'Undergraduate': {'en': 'Undergraduate', 'zh': '本科生'},
+    'Alumni': {'en': 'Alumni', 'zh': '往届成员'},
+    'Visiting': {'en': 'Visiting', 'zh': '访问成员'},
+    'PhD': {'en': 'PhD', 'zh': '博士生'}
+}
+I18N = {
+    'nav_home': {'en': 'Home', 'zh': '首页'},
+    'nav_publications': {'en': 'Publications', 'zh': '论文'},
+    'nav_news': {'en': 'News', 'zh': '新闻'},
+    'nav_people': {'en': 'People', 'zh': '成员'},
+    'sjtu_full_name': {'en': 'Shanghai Jiao Tong University', 'zh': '上海交通大学'},
+    'return_to_admin': {'en': 'Return to Admin', 'zh': '返回后台'},
+    'about_lab': {'en': 'About the Lab', 'zh': '课题组简介'},
+    'resources': {'en': 'Resources', 'zh': '资源'},
+    'selected_publications': {'en': 'Selected Publications', 'zh': '代表性论文'},
+    'research_focus': {'en': 'Research Focus', 'zh': '研究方向'},
+    'latest_news': {'en': 'Latest News', 'zh': '最新动态'},
+    'view_all': {'en': 'View All', 'zh': '查看全部'},
+    'view_all_news': {'en': 'View All News', 'zh': '查看全部新闻'},
+    'read_article': {'en': 'Read Article', 'zh': '查看论文'},
+    'read_more': {'en': 'Read More', 'zh': '阅读更多'},
+    'publications_count': {'en': 'Publications', 'zh': '论文'},
+    'people_count': {'en': 'People', 'zh': '成员'},
+    'page_views': {'en': 'Page Views', 'zh': '浏览量'},
+    'login_page': {'en': 'Go to LOGIN page', 'zh': '前往登录页'},
+    'current_user': {'en': 'Current user', 'zh': '当前用户'},
+    'logged_in_open_note': {'en': 'You are currently logged in and can open paper and resource pages directly from each publication detail page.', 'zh': '您当前已登录，可直接从每篇论文详情页访问论文与资源页面。'},
+    'authors': {'en': 'Authors', 'zh': '作者'},
+    'published_in': {'en': 'Published in', 'zh': '发表于'},
+    'last_edited': {'en': 'Last edited', 'zh': '最近更新'},
+    'opened_times': {'en': 'Opened {count} times', 'zh': '已打开 {count} 次'},
+    'paper_link': {'en': 'Paper Link', 'zh': '论文链接'},
+    'official_free_access': {'en': 'Official Free Access', 'zh': '官方免费访问'},
+    'resources_link': {'en': 'Resources Link', 'zh': '资源链接'},
+    'external_access_note': {'en': 'External links are unlocked after login so the lab can keep lightweight access records without hosting the files locally.', 'zh': '登录后可访问外部链接，这样课题组可以在不托管文件的情况下保留轻量级访问记录。'},
+    'back_to_news': {'en': 'Back to News', 'zh': '返回新闻列表'},
+    'news_intro': {'en': 'Announcements, milestones, and lab updates.', 'zh': '实验室公告、进展与阶段性动态。'},
+    'user_registration': {'en': 'User Registration', 'zh': '用户登记'},
+    'register_intro': {'en': 'Please provide your information to access downloadable resources.', 'zh': '请填写基本信息以访问论文与资源页面。'},
+    'register_notice': {'en': 'Please fill in your details carefully. After login, personal information cannot be modified.', 'zh': '请认真填写信息。登录后个人信息将无法直接修改。'},
+    'label_name': {'en': 'Name *', 'zh': '姓名 *'},
+    'label_affiliation': {'en': 'Affiliation *', 'zh': '单位 / 身份 *'},
+    'label_email': {'en': 'Email *', 'zh': '邮箱 *'},
+    'register_consent': {'en': 'I confirm the information provided is accurate and all downloads are for academic use only.', 'zh': '我确认所填信息准确无误，且所有访问与下载仅用于学术用途。'},
+    'submit_and_access': {'en': 'Submit and Access Resources', 'zh': '提交并访问资源'},
+    'privacy_notice_title': {'en': 'Privacy Notice:', 'zh': '隐私说明：'},
+    'privacy_notice_body': {'en': 'Your information is used solely for research collaboration tracking and will not be shared or used commercially.', 'zh': '您提供的信息仅用于科研协作与访问记录统计，不会被共享或用于商业用途。'},
+    'no_entries_yet': {'en': 'No entries yet.', 'zh': '暂无内容。'},
+    'profile_will_be_updated': {'en': 'Profile will be updated.', 'zh': '个人简介将后续补充。'},
+    'email': {'en': 'Email', 'zh': '邮箱'},
+    'prof_yitong_chen': {'en': 'Prof. Yitong Chen', 'zh': '陈逸同教授'},
+    'developed_by': {'en': 'Developed by', 'zh': '开发者'},
+    'footer_school_1': {'en': 'School of Integrated Circuits', 'zh': '集成电路学院'},
+    'footer_school_2': {'en': '(School of Information Science and Electronic Engineering)', 'zh': '（信息科学与电子工程学院）'},
+    'footer_school_3': {'en': '(ICISEE), Shanghai Jiao Tong University', 'zh': '（ICISEE），上海交通大学'},
+    'footer_school_4': {'en': '800 Dong Chuan Road, Minhang District, Shanghai, China 200240', 'zh': '中国上海市闵行区东川路 800 号，200240'},
+    'language_en': {'en': 'EN', 'zh': 'EN'},
+    'language_zh': {'en': '中文', 'zh': '中文'}
 }
 
 
@@ -437,16 +517,80 @@ def _write_supabase_resource_open(now, resource_id, open_type, target_url, user_
 
 # Phase 2.5: runtime analytics now live only in Supabase, so no local backfill marker is required.
 
+def get_lang():
+    lang = (request.args.get('lang') or '').strip().lower()
+    if lang in SUPPORTED_LANGS:
+        session['lang'] = lang
+        return lang
+    stored = (session.get('lang') or '').strip().lower()
+    return stored if stored in SUPPORTED_LANGS else 'en'
+
+def t(key, lang=None, **kwargs):
+    target_lang = lang or get_lang()
+    translations = I18N.get(key, {})
+    text = translations.get(target_lang) or translations.get('en') or key
+    try:
+        return text.format(**kwargs)
+    except Exception:
+        return text
+
+def _lang_value(item, key, lang=None):
+    if not isinstance(item, dict):
+        return ''
+    target_lang = lang or get_lang()
+    if target_lang == 'zh':
+        zh_value = item.get(f'{key}_zh')
+        if isinstance(zh_value, str) and zh_value.strip():
+            return zh_value
+    value = item.get(key)
+    return value if isinstance(value, str) else ''
+
+def category_label(category, lang=None):
+    target_lang = lang or get_lang()
+    translations = CATEGORY_TRANSLATIONS.get(category or '', {})
+    return translations.get(target_lang) or translations.get('en') or category or ''
+
+def person_name(person, lang=None):
+    return _lang_value(person, 'name', lang=lang)
+
+def secondary_person_name(person, lang=None):
+    if not isinstance(person, dict):
+        return ''
+    target_lang = lang or get_lang()
+    primary = person_name(person, lang=target_lang).strip()
+    alternate_lang = 'zh' if target_lang == 'en' else 'en'
+    alternate = person_name(person, lang=alternate_lang).strip()
+    return alternate if alternate and alternate != primary else ''
+
+def current_path_with_query():
+    params = []
+    for key in request.args:
+        if key == 'lang':
+            continue
+        for value in request.args.getlist(key):
+            params.append((key, value))
+    query = urlencode(params, doseq=True)
+    if query:
+        return f"{request.path}?{query}"
+    return request.path or '/'
+
+def switch_language_url(lang):
+    return url_for('set_language', lang=lang, next=current_path_with_query())
+
 def _normalize_research_highlights(items):
     normalized = []
     source_items = items if isinstance(items, list) else []
     for index, default_item in enumerate(DEFAULT_RESEARCH_HIGHLIGHTS):
         current = source_items[index] if index < len(source_items) and isinstance(source_items[index], dict) else {}
         title = (current.get('title') or '').strip() or default_item['title']
+        title_zh = (current.get('title_zh') or '').strip() or default_item.get('title_zh', '')
         summary = (current.get('summary') or '').strip() or default_item['summary']
+        summary_zh = (current.get('summary_zh') or '').strip() or default_item.get('summary_zh', '')
         normalized.append({
             'title': title,
-            'summary': summary
+            'title_zh': title_zh,
+            'summary': summary,
+            'summary_zh': summary_zh
         })
     return normalized
 
@@ -626,10 +770,12 @@ def _normalize_person_record(item):
     return {
         'id': item.get('id', ''),
         'name': (item.get('name') or '').strip(),
+        'name_zh': (item.get('name_zh') or '').strip(),
         'category': (item.get('category') or '').strip(),
         'email': (item.get('email') or '').strip(),
         'photo_filename': (item.get('photo_filename') or '').strip(),
         'bio': (item.get('bio') or '').strip(),
+        'bio_zh': (item.get('bio_zh') or '').strip(),
         'links': links,
         'tags': _normalize_selected_tags(item.get('tags') or []),
         'last_edited': (item.get('last_edited') or '').strip()
@@ -654,13 +800,20 @@ def _default_news_items():
     return [{
         'id': 'news_001',
         'title': 'SJTU IOC Lab website is now online',
+        'title_zh': 'SJTU IOC Lab 网站现已上线',
         'date': today,
         'summary': f'Version {DEFAULT_SITE_VERSION} is now available with publications, people profiles, external resource access, and admin analytics.',
+        'summary_zh': f'当前版本 {DEFAULT_SITE_VERSION} 已上线，支持论文页面、成员页面、外部资源访问与后台数据统计。',
         'content': (
             f'Our lab website officially went online on {today}.\n\n'
             f'The current release is Version {DEFAULT_SITE_VERSION}. It includes publication pages, people pages, '
             'external paper and resource access, simple analytics, and a lightweight content-management workflow.\n\n'
             'Welcome to browse the site, read our publications, open available resources, and use the shared materials for academic purposes.'
+        ),
+        'content_zh': (
+            f'本课题组网站已于 {today} 正式上线。\n\n'
+            f'当前版本为 {DEFAULT_SITE_VERSION}，已支持论文页面、成员页面、外部论文与资源访问、基础统计功能，以及轻量级本地内容管理流程。\n\n'
+            '欢迎浏览网站、阅读论文、访问公开资源，并在学术用途范围内使用共享材料。'
         ),
         'image_filename': '',
         'last_edited': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -672,9 +825,12 @@ def _normalize_news_record(item):
     return {
         'id': (item.get('id') or '').strip(),
         'title': (item.get('title') or '').strip(),
+        'title_zh': (item.get('title_zh') or '').strip(),
         'date': (item.get('date') or '').strip() or datetime.now().strftime("%Y-%m-%d"),
         'summary': (item.get('summary') or '').strip(),
+        'summary_zh': (item.get('summary_zh') or '').strip(),
         'content': (item.get('content') or '').strip(),
+        'content_zh': (item.get('content_zh') or '').strip(),
         'image_filename': (item.get('image_filename') or '').strip(),
         'last_edited': (item.get('last_edited') or '').strip()
     }
@@ -756,7 +912,17 @@ def load_site_config():
         with open(SITE_CONFIG_PATH, 'r', encoding='utf-8-sig') as f:
             cfg = json.load(f)
         changed = False
-        for key in ('home_note', 'home_welcome', 'hero_summary', 'lab_name', 'lab_name_short', 'lab_name_full', 'logo_filename', 'footer_copyright', 'site_version'):
+        for key in (
+            'home_note', 'home_note_zh',
+            'home_welcome', 'home_welcome_zh',
+            'hero_summary', 'hero_summary_zh',
+            'lab_name',
+            'lab_name_short', 'lab_name_short_zh',
+            'lab_name_full', 'lab_name_full_zh',
+            'logo_filename',
+            'footer_copyright', 'footer_copyright_zh',
+            'site_version'
+        ):
             if key not in cfg or not isinstance(cfg.get(key), str):
                 cfg[key] = DEFAULT_SITE_CONFIG[key]
                 changed = True
@@ -899,7 +1065,14 @@ def load_articles_data():
 @app.context_processor
 def inject_site_globals():
     return {
-        'site_cfg_global': load_site_config()
+        'site_cfg_global': load_site_config(),
+        'current_lang': get_lang(),
+        't': t,
+        'lang_value': _lang_value,
+        'person_name': person_name,
+        'secondary_person_name': secondary_person_name,
+        'category_label': category_label,
+        'switch_language_url': switch_language_url
     }
 
 def _ensure_visitor_id():
@@ -937,6 +1110,16 @@ def log_page_view(page_type, item_id='', title=''):
         _write_supabase_page_view(now, visitor_id, page_type, item_id, title, user_info)
     session['last_view_key'] = page_key
     session['last_view_time'] = timestamp
+
+@app.route('/set-language/<lang>')
+def set_language(lang):
+    lang = (lang or '').strip().lower()
+    if lang in SUPPORTED_LANGS:
+        session['lang'] = lang
+    next_url = (request.args.get('next') or '').strip()
+    if not next_url.startswith('/') or next_url.startswith('//'):
+        next_url = url_for('index')
+    return redirect(next_url)
 
 def get_file_status(item_id):
     return {'paper': False, 'resource': False}
@@ -1057,10 +1240,12 @@ def _add_person(form_data, photo_file=None):
     item = {
         'id': new_id,
         'name': form_data.get('name', '').strip(),
+        'name_zh': form_data.get('name_zh', '').strip(),
         'category': form_data.get('category', '').strip(),
         'email': form_data.get('email', '').strip(),
         'photo_filename': photo_filename,
         'bio': form_data.get('bio', '').strip(),
+        'bio_zh': form_data.get('bio_zh', '').strip(),
         'links': links,
         'tags': _normalize_selected_tags(form_data.getlist('person_tags') if hasattr(form_data, 'getlist') else []),
         'last_edited': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -1075,6 +1260,7 @@ def _update_person(person_id, form_data, photo_file=None):
     for item in data:
         if item['id'] == person_id:
             item['name'] = form_data.get('name', item.get('name', '')).strip()
+            item['name_zh'] = form_data.get('name_zh', item.get('name_zh', '')).strip()
             item['category'] = form_data.get('category', item.get('category', '')).strip()
             item['email'] = form_data.get('email', item.get('email', '')).strip()
             if photo_file and photo_file.filename:
@@ -1093,6 +1279,7 @@ def _update_person(person_id, form_data, photo_file=None):
                     photo_file.save(save_path)
                     item['photo_filename'] = photo_filename
             item['bio'] = form_data.get('bio', item.get('bio', '')).strip()
+            item['bio_zh'] = form_data.get('bio_zh', item.get('bio_zh', '')).strip()
             # Update links (up to 3)
             links = []
             for i in range(1, 4):
@@ -1130,9 +1317,12 @@ def _add_news(form_data, image_file=None):
     item = {
         'id': new_id,
         'title': (form_data.get('title') or '').strip(),
+        'title_zh': (form_data.get('title_zh') or '').strip(),
         'date': (form_data.get('date') or '').strip() or datetime.now().strftime("%Y-%m-%d"),
         'summary': (form_data.get('summary') or '').strip(),
+        'summary_zh': (form_data.get('summary_zh') or '').strip(),
         'content': (form_data.get('content') or '').strip(),
+        'content_zh': (form_data.get('content_zh') or '').strip(),
         'image_filename': image_filename,
         'last_edited': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
@@ -1148,9 +1338,12 @@ def _update_news(news_id, form_data, image_file=None):
         if item['id'] != news_id:
             continue
         item['title'] = (form_data.get('title') or item.get('title') or '').strip()
+        item['title_zh'] = (form_data.get('title_zh') or item.get('title_zh') or '').strip()
         item['date'] = (form_data.get('date') or item.get('date') or '').strip() or datetime.now().strftime("%Y-%m-%d")
         item['summary'] = (form_data.get('summary') or item.get('summary') or '').strip()
+        item['summary_zh'] = (form_data.get('summary_zh') or item.get('summary_zh') or '').strip()
         item['content'] = (form_data.get('content') or item.get('content') or '').strip()
+        item['content_zh'] = (form_data.get('content_zh') or item.get('content_zh') or '').strip()
         if image_file and image_file.filename:
             for ext in ['.png', '.jpg', '.jpeg', '.gif', '.webp']:
                 path = os.path.join(NEWS_IMAGES_DIR, f"{news_id}{ext}")
@@ -1807,14 +2000,20 @@ def _handle_admin_actions(default_module):
         cfg = load_site_config()
         if action in ('edit_site_welcome', 'edit_site_content', 'edit_site_branding'):
             cfg['home_welcome'] = _admin_text_value(request.form, 'home_welcome', cfg.get('home_welcome', ''), DEFAULT_SITE_CONFIG['home_welcome'])
+            cfg['home_welcome_zh'] = _admin_text_value(request.form, 'home_welcome_zh', cfg.get('home_welcome_zh', ''), DEFAULT_SITE_CONFIG['home_welcome_zh'])
             cfg['home_note'] = _admin_text_value(request.form, 'home_note', cfg.get('home_note', ''), DEFAULT_SITE_CONFIG['home_note'])
+            cfg['home_note_zh'] = _admin_text_value(request.form, 'home_note_zh', cfg.get('home_note_zh', ''), DEFAULT_SITE_CONFIG['home_note_zh'])
             cfg['hero_summary'] = _admin_text_value(request.form, 'hero_summary', cfg.get('hero_summary', ''), DEFAULT_SITE_CONFIG['hero_summary'])
+            cfg['hero_summary_zh'] = _admin_text_value(request.form, 'hero_summary_zh', cfg.get('hero_summary_zh', ''), DEFAULT_SITE_CONFIG['hero_summary_zh'])
             cfg['lab_name_short'] = _admin_text_value(request.form, 'lab_name_short', cfg.get('lab_name_short', ''), DEFAULT_SITE_CONFIG['lab_name_short'])
+            cfg['lab_name_short_zh'] = _admin_text_value(request.form, 'lab_name_short_zh', cfg.get('lab_name_short_zh', ''), DEFAULT_SITE_CONFIG['lab_name_short_zh'])
             cfg['lab_name_full'] = _admin_text_value(request.form, 'lab_name_full', cfg.get('lab_name_full', ''), DEFAULT_SITE_CONFIG['lab_name_full'])
+            cfg['lab_name_full_zh'] = _admin_text_value(request.form, 'lab_name_full_zh', cfg.get('lab_name_full_zh', ''), DEFAULT_SITE_CONFIG['lab_name_full_zh'])
             cfg['site_version'] = _admin_text_value(request.form, 'site_version', cfg.get('site_version', ''), DEFAULT_SITE_CONFIG['site_version'])
             if '_show_external_access_note_present' in request.form:
                 cfg['show_external_access_note'] = (request.form.get('show_external_access_note') == 'on')
             cfg['footer_copyright'] = _admin_text_value(request.form, 'footer_copyright', cfg.get('footer_copyright', ''), DEFAULT_SITE_CONFIG['footer_copyright'])
+            cfg['footer_copyright_zh'] = _admin_text_value(request.form, 'footer_copyright_zh', cfg.get('footer_copyright_zh', ''), DEFAULT_SITE_CONFIG['footer_copyright_zh'])
             cfg['lab_name'] = cfg['lab_name_full']
         if action in ('edit_site_content', 'edit_friend_links'):
             friend_links = []
@@ -1835,7 +2034,9 @@ def _handle_admin_actions(default_module):
                 current = current_highlights[index - 1] if index - 1 < len(current_highlights) and isinstance(current_highlights[index - 1], dict) else {}
                 highlights.append({
                     'title': _admin_text_value(request.form, f'highlight_title_{index}', current.get('title', ''), default_item['title']),
-                    'summary': _admin_text_value(request.form, f'highlight_summary_{index}', current.get('summary', ''), default_item['summary'])
+                    'title_zh': _admin_text_value(request.form, f'highlight_title_zh_{index}', current.get('title_zh', ''), default_item.get('title_zh', '')),
+                    'summary': _admin_text_value(request.form, f'highlight_summary_{index}', current.get('summary', ''), default_item['summary']),
+                    'summary_zh': _admin_text_value(request.form, f'highlight_summary_zh_{index}', current.get('summary_zh', ''), default_item.get('summary_zh', ''))
                 })
             cfg['research_highlights'] = _normalize_research_highlights(highlights)
         if action in ('edit_site_content', 'edit_person_tags') and 'person_tags_text' in request.form:

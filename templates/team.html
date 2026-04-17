@@ -1,19 +1,22 @@
 <!-- templates/team.html -->
 {% extends "base.html" %}
-{% block title %}People - {{ site_cfg_global.lab_name_short }}{% endblock %}
+{% block title %}{{ t('nav_people') }} - {{ lang_value(site_cfg_global, 'lab_name_short') }}{% endblock %}
 {% block content %}
 
 <div class="team-page" style="text-align: left; max-width: 900px; margin: 0 auto;">
 
   {% set categories = ['Professor', 'Postdoc & PhD', 'Master', 'Undergraduate', 'Alumni'] %}
   {% for cat in categories %}
-    <h3 style="margin-top: 24px;">{{ cat }}</h3>
+    <h3 style="margin-top: 24px;">{{ category_label(cat) }}</h3>
     <div class="team-grid" style="display: flex; flex-wrap: wrap; gap: 20px;">
       {% for p in people if p.category == cat %}
       <div class="team-entry" style="flex: 0 0 calc(50% - 10px); display: flex; align-items: center; gap: 14px; padding: 12px; border: 1px solid #eee; border-radius: 8px; background: {% if cat == 'Professor' %}#f9fbff{% else %}#fff{% endif %}; box-shadow: {% if cat == 'Professor' %}0 0 0 2px #e8f0fe inset{% else %}none{% endif %};">
-        <img src="{{ url_for('asset_people', filename=p.photo_filename) if p.photo_filename else url_for('static', filename='images/placeholder-person.svg') }}" alt="{{ p.name }}" class="team-entry-photo" style="width: 100px; height: 100px; object-fit: cover; border-radius: 6px;">
+        <img src="{{ url_for('asset_people', filename=p.photo_filename) if p.photo_filename else url_for('static', filename='images/placeholder-person.svg') }}" alt="{{ person_name(p) }}" class="team-entry-photo" style="width: 100px; height: 100px; object-fit: cover; border-radius: 6px;">
         <div class="team-entry-body">
-          <a href="{{ url_for('person_detail', id=p.id) }}" style="font-weight: bold; color: #2c3e50; text-decoration: none; transition: color 0.15s, text-decoration-color 0.15s;" onmouseover="this.style.color='#1a73e8'; this.style.textDecoration='underline';" onmouseout="this.style.color='#2c3e50'; this.style.textDecoration='none';">{{ p.name }}</a>
+          <a href="{{ url_for('person_detail', id=p.id) }}" style="font-weight: bold; color: #2c3e50; text-decoration: none; transition: color 0.15s, text-decoration-color 0.15s;" onmouseover="this.style.color='#1a73e8'; this.style.textDecoration='underline';" onmouseout="this.style.color='#2c3e50'; this.style.textDecoration='none';">{{ person_name(p) }}</a>
+          {% if secondary_person_name(p) %}
+          <div style="color: #7f8c8d; font-size: 0.92em; margin-top: 2px;">{{ secondary_person_name(p) }}</div>
+          {% endif %}
           {% if p.email %}
           <div style="color: #7f8c8d; font-size: 0.95em; margin-top: 4px;">{{ p.email }}</div>
           {% endif %}
@@ -21,7 +24,7 @@
       </div>
       {% endfor %}
       {% if not people|selectattr('category', 'equalto', cat)|list %}
-        <p style="color: #95a5a6;">No entries yet.</p>
+        <p style="color: #95a5a6;">{{ t('no_entries_yet') }}</p>
       {% endif %}
     </div>
   {% endfor %}

@@ -1,20 +1,20 @@
 {% extends "base.html" %}
-{% block title %}{{ item.title }} - {{ site_cfg_global.lab_name_short }}{% endblock %}
+{% block title %}{{ lang_value(item, 'title') }} - {{ lang_value(site_cfg_global, 'lab_name_short') }}{% endblock %}
 {% block content %}
 
 <article class="news-detail-page" style="max-width: 860px; margin: 0 auto; text-align: left;">
   <div class="news-detail-meta">{{ item.date }}</div>
-  <h2 class="news-detail-title" style="text-align:left; margin-bottom: 14px;">{{ item.title }}</h2>
+  <h2 class="news-detail-title" style="text-align:left; margin-bottom: 14px;">{{ lang_value(item, 'title') }}</h2>
   <img
     src="{{ url_for('asset_news_image', filename=item.image_filename) if item.image_filename else url_for('static', filename='images/placeholder-news.svg') }}"
-    alt="{{ item.title }}"
+    alt="{{ lang_value(item, 'title') }}"
     class="news-detail-image"
   >
-  {% if item.summary %}
-  <p class="news-detail-summary">{{ item.summary }}</p>
+  {% if lang_value(item, 'summary') %}
+  <p class="news-detail-summary">{{ lang_value(item, 'summary') }}</p>
   {% endif %}
-  <div class="news-detail-content">{{ item.content }}</div>
-  <p style="text-align:left; margin-top: 18px;"><a href="{{ url_for('news') }}" class="portal-slide-link">&larr; Back to News</a></p>
+  <div class="news-detail-content" style="white-space: pre-wrap;">{{ lang_value(item, 'content') }}</div>
+  <p style="text-align:left; margin-top: 18px;"><a href="{{ url_for('news') }}" class="portal-slide-link">&larr; {{ t('back_to_news') }}</a></p>
 </article>
 
 {% endblock %}

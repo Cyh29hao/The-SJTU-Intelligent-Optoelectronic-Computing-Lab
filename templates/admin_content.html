@@ -11,10 +11,16 @@
             <input type="hidden" name="item_type" value="site">
             <label>Hero Summary Text</label>
             <textarea name="hero_summary" rows="3">{{ site_cfg.hero_summary }}</textarea>
+            <label>Hero Summary Text (ZH)</label>
+            <textarea name="hero_summary_zh" rows="3">{{ site_cfg.hero_summary_zh }}</textarea>
             <label>Home Welcome Text</label>
             <textarea name="home_welcome" rows="5">{{ site_cfg.home_welcome }}</textarea>
+            <label>Home Welcome Text (ZH)</label>
+            <textarea name="home_welcome_zh" rows="5">{{ site_cfg.home_welcome_zh }}</textarea>
             <label>Resources / Login Note</label>
             <textarea name="home_note" rows="3">{{ site_cfg.home_note }}</textarea>
+            <label>Resources / Login Note (ZH)</label>
+            <textarea name="home_note_zh" rows="3">{{ site_cfg.home_note_zh }}</textarea>
             <button type="submit">Save Homepage Copy</button>
         </form>
     </div>
@@ -115,6 +121,8 @@
                 <input type="hidden" name="item_type" value="person">
                 <label>Name</label>
                 <input name="name" required>
+                <label>Name (ZH)</label>
+                <input name="name_zh">
                 <label>Category</label>
                 <select name="category">
                     <option>Professor</option>
@@ -129,6 +137,8 @@
                 <input type="file" name="photo" accept="image/png,image/jpeg,image/jpg,image/gif">
                 <label>Bio</label>
                 <textarea name="bio" rows="5"></textarea>
+                <label>Bio (ZH)</label>
+                <textarea name="bio_zh" rows="5"></textarea>
                 {% for i in range(1, 4) %}
                 <label>Link {{ i }} Name</label>
                 <input name="link_name_{{ i }}">
@@ -156,6 +166,8 @@
                 <input type="hidden" name="id" value="{{ person.id }}">
                 <label>Name</label>
                 <input name="name" value="{{ person.name }}" required>
+                <label>Name (ZH)</label>
+                <input name="name_zh" value="{{ person.name_zh }}">
                 <label>Category</label>
                 <input name="category" value="{{ person.category }}">
                 <label>Email</label>
@@ -167,6 +179,8 @@
                 {% endif %}
                 <label>Bio</label>
                 <textarea name="bio" rows="5">{{ person.bio }}</textarea>
+                <label>Bio (ZH)</label>
+                <textarea name="bio_zh" rows="5">{{ person.bio_zh }}</textarea>
                 {% set links = person.links or [] %}
                 {% for i in range(1, 4) %}
                 {% set current_link = links[i-1] if links|length >= i else None %}
@@ -204,12 +218,18 @@
                 <input type="hidden" name="item_type" value="news">
                 <label>Title</label>
                 <input name="title" required>
+                <label>Title (ZH)</label>
+                <input name="title_zh">
                 <label>Date</label>
                 <input name="date" type="date">
                 <label>Summary</label>
                 <textarea name="summary" rows="3"></textarea>
+                <label>Summary (ZH)</label>
+                <textarea name="summary_zh" rows="3"></textarea>
                 <label>Content</label>
                 <textarea name="content" rows="6" required></textarea>
+                <label>Content (ZH)</label>
+                <textarea name="content_zh" rows="6"></textarea>
                 <label>Image</label>
                 <input type="file" name="image" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp">
                 <button type="submit">Add News</button>
@@ -227,12 +247,18 @@
                 <input type="hidden" name="id" value="{{ item.id }}">
                 <label>Title</label>
                 <input name="title" value="{{ item.title }}" required>
+                <label>Title (ZH)</label>
+                <input name="title_zh" value="{{ item.title_zh }}">
                 <label>Date</label>
                 <input name="date" type="date" value="{{ item.date }}">
                 <label>Summary</label>
                 <textarea name="summary" rows="3">{{ item.summary }}</textarea>
+                <label>Summary (ZH)</label>
+                <textarea name="summary_zh" rows="3">{{ item.summary_zh }}</textarea>
                 <label>Content</label>
                 <textarea name="content" rows="6" required>{{ item.content }}</textarea>
+                <label>Content (ZH)</label>
+                <textarea name="content_zh" rows="6">{{ item.content_zh }}</textarea>
                 <label>Replace Image</label>
                 <input type="file" name="image" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp">
                 {% if item.image_filename %}

@@ -1,10 +1,10 @@
 <!-- templates/base.html -->
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ current_lang }}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>{% block title %}{{ site_cfg_global.lab_name_short }} - {{ site_cfg_global.lab_name_full }}{% endblock %}</title>
+  <title>{% block title %}{{ lang_value(site_cfg_global, 'lab_name_short') }} - {{ lang_value(site_cfg_global, 'lab_name_full') }}{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
@@ -19,18 +19,23 @@
       <a href="/" class="site-brand">
         <img src="{{ url_for('asset_site_image', filename=site_cfg_global.logo_filename) if site_cfg_global.logo_filename else url_for('static', filename='images/placeholder-site.svg') }}" alt="Lab Logo" class="site-brand-logo">
         <span class="site-brand-text">
-          <span class="site-brand-name">{{ site_cfg_global.lab_name_short }}</span>
-          <span class="site-brand-subtitle">{{ site_cfg_global.lab_name_full }}</span>
+          <span class="site-brand-name">{{ lang_value(site_cfg_global, 'lab_name_short') }}</span>
+          <span class="site-brand-subtitle">{{ lang_value(site_cfg_global, 'lab_name_full') }}</span>
         </span>
       </a>
       <nav class="main-nav">
-          <a href="/" class="{% if request.path == '/' %}is-active{% endif %}">Home</a>
-          <a href="/articles" class="{% if request.path.startswith('/articles') or request.path.startswith('/article/') %}is-active{% endif %}">Publications</a>
-          <a href="/news" class="{% if request.path.startswith('/news') %}is-active{% endif %}">News</a>
-          <a href="/team" class="{% if request.path.startswith('/team') or request.path.startswith('/person/') %}is-active{% endif %}">People</a>
+          <a href="/" class="{% if request.path == '/' %}is-active{% endif %}">{{ t('nav_home') }}</a>
+          <a href="/articles" class="{% if request.path.startswith('/articles') or request.path.startswith('/article/') %}is-active{% endif %}">{{ t('nav_publications') }}</a>
+          <a href="/news" class="{% if request.path.startswith('/news') %}is-active{% endif %}">{{ t('nav_news') }}</a>
+          <a href="/team" class="{% if request.path.startswith('/team') or request.path.startswith('/person/') %}is-active{% endif %}">{{ t('nav_people') }}</a>
+          <span class="lang-switch">
+            <a href="{{ switch_language_url('en') }}" class="{% if current_lang == 'en' %}is-active{% endif %}">{{ t('language_en') }}</a>
+            <span class="lang-divider">/</span>
+            <a href="{{ switch_language_url('zh') }}" class="{% if current_lang == 'zh' %}is-active{% endif %}">{{ t('language_zh') }}</a>
+          </span>
       </nav>
       {% if session.get('admin_shadow') %}
-      <a href="{{ url_for('admin_return') }}" class="admin-return-link">Return to Admin</a>
+      <a href="{{ url_for('admin_return') }}" class="admin-return-link">{{ t('return_to_admin') }}</a>
       {% endif %}
     </header>
 
@@ -55,16 +60,16 @@
           {% endfor %}
         </div>
         <div class="footer-meta">
-          <div>&copy; {{ site_cfg_global.footer_copyright }}</div>
-          <div class="footer-credit">Developed by <a href="https://github.com/Cyh29hao" target="_blank" rel="noopener">cyh29hao</a>{% if site_cfg_global.site_version %} <span class="footer-version">v{{ site_cfg_global.site_version }}</span>{% endif %}</div>
+          <div>&copy; {{ lang_value(site_cfg_global, 'footer_copyright') }}</div>
+          <div class="footer-credit">{{ t('developed_by') }} <a href="https://github.com/Cyh29hao" target="_blank" rel="noopener">cyh29hao</a>{% if site_cfg_global.site_version %} <span class="footer-version">v{{ site_cfg_global.site_version }}</span>{% endif %}</div>
         </div>
       </div>
       <div class="footer-right">
         <div class="footer-text">
-          School of Integrated Circuits<br>
-          (School of Information Science and Electronic Engineering)<br>
-          (ICISEE), Shanghai Jiao Tong University<br>
-          800 Dong Chuan Road, Minhang District, Shanghai, China 200240
+          {{ t('footer_school_1') }}<br>
+          {{ t('footer_school_2') }}<br>
+          {{ t('footer_school_3') }}<br>
+          {{ t('footer_school_4') }}
         </div>
         <!-- <div class="footer-logos">
           <img src="{{ url_for('static', filename='images/sjtu_logo.png') }}" alt="SJTU Logo" class="footer-logo">

@@ -140,6 +140,33 @@ body {
   transform: scaleX(1);
 }
 
+.lang-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 6px;
+  font-size: 0.98rem;
+  color: var(--text-light);
+}
+
+.lang-switch a {
+  padding: 6px 0;
+  font-size: 0.98rem;
+}
+
+.lang-switch a::after {
+  display: none;
+}
+
+.lang-switch a.is-active {
+  color: var(--primary);
+  font-weight: 800;
+}
+
+.lang-divider {
+  color: #8da0b3;
+}
+
 .admin-return-link {
   margin-left: 16px;
   color: var(--secondary);

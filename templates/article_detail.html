@@ -1,15 +1,15 @@
 {% extends "base.html" %}
-{% block title %}{{ item.title }} - {{ site_cfg_global.lab_name_short }}{% endblock %}
+{% block title %}{{ item.title }} - {{ lang_value(site_cfg_global, 'lab_name_short') }}{% endblock %}
 {% block content %}
 <div class="paper-detail-page" style="text-align: left; max-width: 750px; margin: 0 auto;">
   <div class="paper-detail-header">
     <h2 class="paper-detail-title">&#128196; {{ item.title }}</h2>
-    <span class="paper-download-inline">Opened {{ open_count }} times</span>
+    <span class="paper-download-inline">{{ t('opened_times', count=open_count) }}</span>
   </div>
-  <p><strong>Authors:</strong> {{ item.authors|join(', ') }}</p>
-  <p><strong>Published in:</strong> {{ item.venue }}, {{ item.year }}</p>
+  <p><strong>{{ t('authors') }}:</strong> {{ item.authors|join(', ') }}</p>
+  <p><strong>{{ t('published_in') }}:</strong> {{ item.venue }}, {{ item.year }}</p>
   {% if item.last_edited %}
-  <p style="margin: 2px 0; color: #999; font-size: 0.9em;">Last edited: {{ item.last_edited }}</p>
+  <p style="margin: 2px 0; color: #999; font-size: 0.9em;">{{ t('last_edited') }}: {{ item.last_edited }}</p>
   {% endif %}
 
   <div style="margin-top: 20px; padding: 16px; background: #f8fafc; border-radius: 8px; text-align: left;">
@@ -18,29 +18,29 @@
 
   <div class="paper-action-row" style="margin-top: 24px; display: flex; gap: 12px; justify-content: center;">
     {% if item.official_free_access_url %}
-      <a href="{{ url_for('open_link', link_type='official_free_access', resource_id=item.id) }}" class="btn" target="_blank" rel="noopener">Official Free Access</a>
+      <a href="{{ url_for('open_link', link_type='official_free_access', resource_id=item.id) }}" class="btn" target="_blank" rel="noopener">{{ t('official_free_access') }}</a>
     {% elif item.paper_url %}
-      <a href="{{ url_for('open_link', link_type='paper', resource_id=item.id) }}" class="btn" target="_blank" rel="noopener">Paper Link</a>
+      <a href="{{ url_for('open_link', link_type='paper', resource_id=item.id) }}" class="btn" target="_blank" rel="noopener">{{ t('paper_link') }}</a>
     {% endif %}
   </div>
 
   {% if item.resource_url %}
   <div class="paper-action-row" style="margin-top: 16px; display: flex; gap: 12px; justify-content: center;">
-    <a href="{{ url_for('open_link', link_type='resource', resource_id=item.id) }}" class="btn" target="_blank" rel="noopener">Resources Link</a>
+    <a href="{{ url_for('open_link', link_type='resource', resource_id=item.id) }}" class="btn" target="_blank" rel="noopener">{{ t('resources_link') }}</a>
   </div>
   {% endif %}
 
   {% if item.paper_url or item.resource_url %}
   <div class="paper-links-row" style="margin-top: 12px; display: flex; gap: 15px; justify-content: center; font-size: 0.95em;">
     {% if item.paper_url and item.official_free_access_url %}
-      <a href="{{ url_for('open_link', link_type='paper', resource_id=item.id) }}" target="_blank" rel="noopener" style="color:#2c3e50;">Paper Link &#8599;</a>
+      <a href="{{ url_for('open_link', link_type='paper', resource_id=item.id) }}" target="_blank" rel="noopener" style="color:#2c3e50;">{{ t('paper_link') }} &#8599;</a>
     {% endif %}
   </div>
   {% endif %}
 
   {% if site_cfg_global.show_external_access_note %}
   <p style="margin-top: 12px; text-align:center; color:#7f8c8d; font-size: 0.88em;">
-    External links are unlocked after login so the lab can keep lightweight access records without hosting the files locally.
+    {{ t('external_access_note') }}
   </p>
   {% endif %}
 </div>

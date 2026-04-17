@@ -2,10 +2,12 @@
   {
     "id": "person_001",
     "name": "Yitong Chen",
+    "name_zh": "陈逸同",
     "category": "Professor",
     "email": "yitongchen@sjtu.edu.cn",
     "photo_filename": "person_001.png",
     "bio": "Research Interests: Photonic neural networks, intelligent photonic integrated circuits.",
+    "bio_zh": "研究方向：光子神经网络、智能光子集成电路。",
     "links": [
       {
         "name": "github",
@@ -23,10 +25,12 @@
   {
     "id": "person_004",
     "name": "Yunhai Chen",
+    "name_zh": "陈云海",
     "category": "Undergraduate",
     "email": "cyh29hao@sjtu.edu.cn",
     "photo_filename": "person_004.jpg",
     "bio": "A sophomore majoring in electronic science and technology.\r\nCurrent Work: web development",
+    "bio_zh": "电子科学与技术专业本科二年级。\r\n当前工作：网站开发",
     "links": [
       {
         "name": "github",
@@ -43,10 +47,12 @@
   {
     "id": "person_005",
     "name": "Siyu Guan",
+    "name_zh": "",
     "category": "Master",
     "email": "",
     "photo_filename": "",
     "bio": "",
+    "bio_zh": "",
     "links": [],
     "tags": [],
     "last_edited": "2026-02-06 01:55:08"

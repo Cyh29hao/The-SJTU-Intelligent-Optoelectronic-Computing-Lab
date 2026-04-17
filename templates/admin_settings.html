@@ -11,12 +11,18 @@
         <input type="hidden" name="item_type" value="site">
         <label>Lab Name (Header / Short)</label>
         <input name="lab_name_short" value="{{ site_cfg.lab_name_short }}">
+        <label>Lab Name (Header / Short, ZH)</label>
+        <input name="lab_name_short_zh" value="{{ site_cfg.lab_name_short_zh }}">
         <label>Lab Name (Homepage / Full)</label>
         <input name="lab_name_full" value="{{ site_cfg.lab_name_full }}">
+        <label>Lab Name (Homepage / Full, ZH)</label>
+        <input name="lab_name_full_zh" value="{{ site_cfg.lab_name_full_zh }}">
         <label>Site Version</label>
         <input name="site_version" value="{{ site_cfg.site_version }}">
         <label>Footer Copyright Text</label>
         <input name="footer_copyright" value="{{ site_cfg.footer_copyright }}">
+        <label>Footer Copyright Text (ZH)</label>
+        <input name="footer_copyright_zh" value="{{ site_cfg.footer_copyright_zh }}">
         <input type="hidden" name="_show_external_access_note_present" value="1">
         <label class="helper-note" style="display:flex; align-items:center; gap:8px; margin-top:10px;">
             <input type="checkbox" name="show_external_access_note" {% if site_cfg.show_external_access_note %}checked{% endif %}>
@@ -62,8 +68,12 @@
             <h3>Keyword {{ loop.index }}</h3>
             <label>Title</label>
             <input name="highlight_title_{{ loop.index }}" value="{{ highlight.title }}">
+            <label>Title (ZH)</label>
+            <input name="highlight_title_zh_{{ loop.index }}" value="{{ highlight.title_zh }}">
             <label>Summary</label>
             <textarea name="highlight_summary_{{ loop.index }}" rows="3">{{ highlight.summary }}</textarea>
+            <label>Summary (ZH)</label>
+            <textarea name="highlight_summary_zh_{{ loop.index }}" rows="3">{{ highlight.summary_zh }}</textarea>
         </div>
         {% endfor %}
         <button type="submit">Save Research Focus</button>

@@ -1,27 +1,27 @@
-<!-- templates/register.html -->
 {% extends "base.html" %}
+{% block title %}{{ t('user_registration') }} - {{ lang_value(site_cfg_global, 'lab_name_short') }}{% endblock %}
 {% block content %}
-<h2>🔐 User Registration</h2>
-<p>Please provide your information to access downloadable resources.</p>
+<h2>{{ t('user_registration') }}</h2>
+<p>{{ t('register_intro') }}</p>
 <div style="margin: 10px 0; padding: 10px; background:#fff7e6; border:1px solid #ffe08a; border-radius:8px; color:#8a6d3b; font-size:14px;">
-  Please fill in your details carefully. After login, personal information cannot be modified.
+  {{ t('register_notice') }}
 </div>
 
 <form method="POST" action="{{ url_for('submit_register') }}" style="max-width: 500px; margin-top: 20px;">
   <div style="margin-bottom: 15px;">
-    <label for="name" style="display: block; margin-bottom: 5px; font-weight: bold;">Name *</label>
+    <label for="name" style="display: block; margin-bottom: 5px; font-weight: bold;">{{ t('label_name') }}</label>
     <input type="text" id="name" name="name" required 
            style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px;">
   </div>
 
   <div style="margin-bottom: 15px;">
-    <label for="affiliation" style="display: block; margin-bottom: 5px; font-weight: bold;">Affiliation *</label>
+    <label for="affiliation" style="display: block; margin-bottom: 5px; font-weight: bold;">{{ t('label_affiliation') }}</label>
     <input type="text" id="affiliation" name="affiliation" required 
            style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px;">
   </div>
 
   <div style="margin-bottom: 20px;">
-    <label for="email" style="display: block; margin-bottom: 5px; font-weight: bold;">Email *</label>
+    <label for="email" style="display: block; margin-bottom: 5px; font-weight: bold;">{{ t('label_email') }}</label>
     <input type="email" id="email" name="email" required 
            style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px;">
   </div>
@@ -29,18 +29,18 @@
   <div style="margin-top:10px;">
     <label style="font-size:14px;">
       <input type="checkbox" name="consent" required>
-      I confirm the information provided is accurate and all downloads are for academic use only.
+      {{ t('register_consent') }}
     </label>
   </div>
   <button type="submit" 
           style="background-color: #3498db; color: white; border: none; padding: 12px 24px; 
                  font-size: 16px; border-radius: 4px; cursor: pointer; width: 100%;">
-    ✅ Submit and Access Resources
+    {{ t('submit_and_access') }}
   </button>
 </form>
 
 <div style="margin-top: 30px; padding: 15px; background-color: #f8f9fa; border-left: 4px solid #3498db; font-size: 14px;">
-  <strong>🔒 Privacy Notice:</strong><br>
-  Your information is used solely for research collaboration tracking and will not be shared or used commercially.
+  <strong>{{ t('privacy_notice_title') }}</strong><br>
+  {{ t('privacy_notice_body') }}
 </div>
 {% endblock %}
