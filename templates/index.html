@@ -131,12 +131,16 @@
       </div>
 
       {% if latest_news %}
-      {% set news_item = latest_news[0] %}
       <div class="portal-latest-news">
         <div class="portal-side-label">{{ t('latest_news') }}</div>
-        <div class="portal-news-meta">{{ news_item.date }}</div>
-        <a href="{{ url_for('news_detail', id=news_item.id) }}" class="portal-news-title portal-news-title-inline">{{ lang_value(news_item, 'title') }}</a>
-        <p class="portal-news-summary portal-news-summary-inline">{{ lang_value(news_item, 'summary') }}</p>
+        <ul class="portal-latest-news-list">
+          {% for news_item in latest_news[:3] %}
+          <li class="portal-latest-news-item">
+            <span class="portal-news-meta">{{ news_item.date }}</span>
+            <a href="{{ url_for('news_detail', id=news_item.id) }}" class="portal-news-title portal-news-title-inline">{{ lang_value(news_item, 'title') }}</a>
+          </li>
+          {% endfor %}
+        </ul>
         <a href="{{ url_for('news') }}" class="portal-inline-link">{{ t('view_all_news') }}</a>
       </div>
       {% endif %}

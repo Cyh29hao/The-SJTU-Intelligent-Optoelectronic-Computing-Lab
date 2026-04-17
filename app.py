@@ -209,7 +209,7 @@ DEFAULT_FRIEND_LINKS = [
         'title': 'ICISEE',
         'caption': 'School of Integrated Circuits',
         'url': 'https://icisee.sjtu.edu.cn/',
-        'image_filename': 'ic_logo.png'
+        'image_filename': 'icisee.jpg'
     },
     {
         'title': 'Contact Us',
@@ -301,10 +301,10 @@ I18N = {
     'no_entries_yet': {'en': 'No entries yet.', 'zh': '暂无内容。'},
     'profile_will_be_updated': {'en': 'Profile will be updated.', 'zh': '个人简介将后续补充。'},
     'email': {'en': 'Email', 'zh': '邮箱'},
-    'prof_yitong_chen': {'en': 'Prof. Yitong Chen', 'zh': '陈逸同教授'},
+    'prof_yitong_chen': {'en': 'Prof. Yitong Chen', 'zh': '陈一彤教授'},
     'developed_by': {'en': 'Developed by', 'zh': '开发者'},
     'footer_school_1': {'en': 'School of Integrated Circuits', 'zh': '集成电路学院'},
-    'footer_school_2': {'en': '(School of Information Science and Electronic Engineering)', 'zh': '（信息科学与电子工程学院）'},
+    'footer_school_2': {'en': '(School of Information Science and Electronic Engineering)', 'zh': '（信息与电子工程学院）'},
     'footer_school_3': {'en': '(ICISEE), Shanghai Jiao Tong University', 'zh': '（ICISEE），上海交通大学'},
     'footer_school_4': {'en': '800 Dong Chuan Road, Minhang District, Shanghai, China 200240', 'zh': '中国上海市闵行区东川路 800 号，200240'},
     'language_en': {'en': 'EN', 'zh': 'EN'},
@@ -1400,7 +1400,7 @@ def index():
         people_count=len(people),
         featured_articles=featured_articles,
         total_page_views=page_view_summary['total_views'],
-        latest_news=news_items[:1]
+        latest_news=news_items[:3]
     )
 
 @app.route('/team')

@@ -1,5 +1,17 @@
 [
   {
+    "id": "news_002",
+    "title": "Bilingual interface is now available",
+    "title_zh": "中英双语界面现已上线",
+    "date": "2026-04-17",
+    "summary": "The website now supports one-click English and Chinese switching for the main user interface.",
+    "summary_zh": "网站前台现已支持中英一键切换，方便不同访客浏览与使用。",
+    "content": "The lab website now supports one-click switching between English and Chinese for the main user interface.\n\nThis update covers the homepage, People page, News page, Register page, and shared interface labels across the site. Publication content remains primarily in its original language, while interface labels are translated for clarity.\n\nWelcome to switch languages and continue browsing the site.",
+    "content_zh": "课题组网站前台现已支持中英双语一键切换。\n\n本次更新覆盖了首页、成员页面、新闻页面、登记页面以及全站通用界面标签。论文内容仍以原始语言为主，但界面标签已经完成双语支持，以提升浏览体验。\n\n欢迎切换语言继续浏览网站。",
+    "image_filename": "",
+    "last_edited": "2026-04-17 20:00:00"
+  },
+  {
     "id": "news_001",
     "title": "SJTU IOC Lab website is now online",
     "title_zh": "SJTU IOC Lab 网站现已上线",

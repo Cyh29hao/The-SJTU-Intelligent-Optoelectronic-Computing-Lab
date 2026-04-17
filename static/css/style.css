@@ -897,10 +897,23 @@ input[type="email"]:focus {
   border-top: 1px solid #e3eaf2;
 }
 
+.portal-latest-news-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.portal-latest-news-item {
+  display: grid;
+  gap: 3px;
+}
+
 .portal-news-title-inline {
   display: inline-block;
-  margin-top: 6px;
-  font-size: 1.04rem;
+  margin-top: 0;
+  font-size: 1rem;
   line-height: 1.45;
 }
 
