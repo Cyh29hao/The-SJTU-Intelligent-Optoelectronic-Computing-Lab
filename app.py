@@ -1496,8 +1496,11 @@ def _admin_module_endpoint(module_name):
     }
     return mapping.get(module_name, 'admin_dashboard')
 
-def _admin_module_url(module_name, anchor=''):
+def _admin_module_url(module_name, anchor='', section=''):
     url = url_for(_admin_module_endpoint(module_name))
+    if section:
+        joiner = '&' if '?' in url else '?'
+        url = f"{url}{joiner}section={section}"
     if anchor:
         return f"{url}{anchor}"
     return url
@@ -1771,34 +1774,34 @@ def _handle_admin_actions(default_module):
     if action == 'add':
         if item_type == 'person':
             _add_person(request.form, request.files.get('photo'))
-            return redirect(_admin_module_url('content', '#people-section'))
+            return redirect(_admin_module_url('content', '#people-section', 'people'))
         if item_type == 'news':
             _add_news(request.form, request.files.get('image'))
-            return redirect(_admin_module_url('content', '#news-section'))
+            return redirect(_admin_module_url('content', '#news-section', 'news'))
         _add_item(item_type, request.form)
-        return redirect(_admin_module_url('content', '#publications-section'))
+        return redirect(_admin_module_url('content', '#publications-section', 'publications'))
 
     if action == 'edit':
         item_id = request.form.get('id')
         if item_type == 'person':
             _update_person(item_id, request.form, request.files.get('photo'))
-            return redirect(_admin_module_url('content', f'#person-{item_id}'))
+            return redirect(_admin_module_url('content', f'#person-{item_id}', 'people'))
         if item_type == 'news':
             _update_news(item_id, request.form, request.files.get('image'))
-            return redirect(_admin_module_url('content', f'#news-{item_id}'))
+            return redirect(_admin_module_url('content', f'#news-{item_id}', 'news'))
         _update_item(item_type, item_id, request.form)
-        return redirect(_admin_module_url('content', f'#article-{item_id}'))
+        return redirect(_admin_module_url('content', f'#article-{item_id}', 'publications'))
 
     if action == 'delete':
         item_id = request.args.get('id')
         if item_type == 'person':
             _delete_person(item_id)
-            return redirect(_admin_module_url('content', '#people-section'))
+            return redirect(_admin_module_url('content', '#people-section', 'people'))
         if item_type == 'news':
             _delete_news(item_id)
-            return redirect(_admin_module_url('content', '#news-section'))
+            return redirect(_admin_module_url('content', '#news-section', 'news'))
         _delete_item(item_type, item_id)
-        return redirect(_admin_module_url('content', '#publications-section'))
+        return redirect(_admin_module_url('content', '#publications-section', 'publications'))
 
     if action in ('edit_site_welcome', 'edit_site_content', 'edit_site_branding', 'edit_friend_links', 'edit_research_highlights', 'edit_person_tags'):
         cfg = load_site_config()
@@ -1841,15 +1844,15 @@ def _handle_admin_actions(default_module):
         save_site_config(cfg)
 
         if action == 'edit_site_welcome':
-            return redirect(_admin_module_url('content', '#homepage-copy-section'))
+            return redirect(_admin_module_url('content', '#homepage-copy-section', 'homepage'))
         if action == 'edit_site_branding':
-            return redirect(_admin_module_url('settings', '#branding-section'))
+            return redirect(_admin_module_url('settings', '#branding-section', 'branding'))
         if action == 'edit_friend_links':
-            return redirect(_admin_module_url('settings', '#friendly-links-section'))
+            return redirect(_admin_module_url('settings', '#friendly-links-section', 'friendly-links'))
         if action == 'edit_research_highlights':
-            return redirect(_admin_module_url('settings', '#research-focus-section'))
+            return redirect(_admin_module_url('settings', '#research-focus-section', 'research-focus'))
         if action == 'edit_person_tags':
-            return redirect(_admin_module_url('settings', '#person-tags-section'))
+            return redirect(_admin_module_url('settings', '#person-tags-section', 'person-tags'))
         return redirect(_admin_module_url(default_module))
 
     return None
@@ -2028,7 +2031,8 @@ def admin_upload_thumbnail(article_id):
     save_json_data('articles.json', articles)
     redirect_module = request.args.get('redirect_module') or request.form.get('redirect_module') or 'assets'
     anchor = f'#thumb-{article_id}' if redirect_module == 'assets' else f'#article-{article_id}'
-    return redirect(_admin_module_url(redirect_module, anchor))
+    section = 'thumbnails' if redirect_module == 'assets' else 'publications'
+    return redirect(_admin_module_url(redirect_module, anchor, section))
 
 @app.route('/admin/upload-site-image/<slot>', methods=['POST'])
 def admin_upload_site_image(slot):
@@ -2083,7 +2087,8 @@ def admin_upload_site_image(slot):
 
     save_site_config(cfg)
     redirect_module = request.args.get('redirect_module') or request.form.get('redirect_module') or 'assets'
-    return redirect(_admin_module_url(redirect_module, '#site-images'))
+    section = 'site-images' if redirect_module == 'assets' else 'branding'
+    return redirect(_admin_module_url(redirect_module, '#site-images', section))
 
 # ==============================================================================
 # 8. Asset Serving (from render_data)
@@ -2361,7 +2366,7 @@ def _admin_upload_file_retired(file_type, resource_id):
         'message': 'Local paper/resource file uploads have been retired in Version 1.2.0.',
         'details': 'Please use Paper URL, Official Free Access URL, and Resources URL instead. This keeps the site diskless and easier to maintain.'
     }
-    return redirect(_admin_module_url(redirect_module, '#site-images'))
+    return redirect(_admin_module_url(redirect_module, '#site-images', 'site-images'))
 
 app.view_functions['download_logs_csv'] = _download_logs_csv_supabase_only
 app.view_functions['download_page_views_csv'] = _download_page_views_csv_supabase_only

@@ -1,23 +1,28 @@
 {% extends "admin_layout.html" %}
 
 {% block admin_body %}
-<div id="homepage-copy-section" class="section-card">
-    <h2 style="margin-top:0;">Homepage Copy</h2>
-    <form method="POST" action="{{ url_for(module_endpoint) }}">
-        <input type="hidden" name="action" value="edit_site_welcome">
-        <input type="hidden" name="item_type" value="site">
-        <label>Hero Summary Text</label>
-        <textarea name="hero_summary" rows="3">{{ site_cfg.hero_summary }}</textarea>
-        <label>Home Welcome Text</label>
-        <textarea name="home_welcome" rows="5">{{ site_cfg.home_welcome }}</textarea>
-        <label>Resources / Login Note</label>
-        <textarea name="home_note" rows="3">{{ site_cfg.home_note }}</textarea>
-        <button type="submit">Save Homepage Copy</button>
-    </form>
-</div>
+{% set active_section = request.args.get('section', '') %}
 
-<div id="publications-section" class="section-card">
-    <h2 style="margin-top:0;">Publications</h2>
+<details id="homepage-copy-section" {% if active_section in ('', 'homepage') %}open{% endif %}>
+    <summary>🏠 Homepage Copy</summary>
+    <div class="details-body">
+        <form method="POST" action="{{ url_for(module_endpoint) }}">
+            <input type="hidden" name="action" value="edit_site_welcome">
+            <input type="hidden" name="item_type" value="site">
+            <label>Hero Summary Text</label>
+            <textarea name="hero_summary" rows="3">{{ site_cfg.hero_summary }}</textarea>
+            <label>Home Welcome Text</label>
+            <textarea name="home_welcome" rows="5">{{ site_cfg.home_welcome }}</textarea>
+            <label>Resources / Login Note</label>
+            <textarea name="home_note" rows="3">{{ site_cfg.home_note }}</textarea>
+            <button type="submit">Save Homepage Copy</button>
+        </form>
+    </div>
+</details>
+
+<details id="publications-section" {% if active_section == 'publications' %}open{% endif %}>
+    <summary>📚 Publications</summary>
+    <div class="details-body">
     <details open>
         <summary>Add New Publication</summary>
         <div class="details-body">
@@ -96,10 +101,12 @@
         </div>
     </details>
     {% endfor %}
-</div>
+    </div>
+</details>
 
-<div id="people-section" class="section-card">
-    <h2 style="margin-top:0;">People</h2>
+<details id="people-section" {% if active_section == 'people' %}open{% endif %}>
+    <summary>👥 People</summary>
+    <div class="details-body">
     <details open>
         <summary>Add New Person</summary>
         <div class="details-body">
@@ -183,10 +190,12 @@
         </div>
     </details>
     {% endfor %}
-</div>
+    </div>
+</details>
 
-<div id="news-section" class="section-card">
-    <h2 style="margin-top:0;">News</h2>
+<details id="news-section" {% if active_section == 'news' %}open{% endif %}>
+    <summary>📰 News</summary>
+    <div class="details-body">
     <details open>
         <summary>Add News Item</summary>
         <div class="details-body">
@@ -237,5 +246,6 @@
         </div>
     </details>
     {% endfor %}
-</div>
+    </div>
+</details>
 {% endblock %}

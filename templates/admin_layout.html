@@ -30,31 +30,18 @@
         }
         .admin-topbar {
             display: flex;
-            justify-content: space-between;
+            justify-content: center;
             gap: 24px;
-            align-items: flex-start;
+            align-items: center;
             margin-bottom: 24px;
         }
-        .admin-meta {
-            text-align: right;
-            color: #6a7b8f;
-            font-size: 0.95rem;
-            line-height: 1.6;
-        }
-        .module-nav {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            margin-bottom: 22px;
-        }
-        .module-nav a,
         .quick-actions a,
         .quick-actions button {
             display: inline-flex;
             align-items: center;
             justify-content: center;
             padding: 10px 16px;
-            border-radius: 999px;
+            border-radius: 12px;
             text-decoration: none;
             font-weight: 700;
             border: 1px solid #d5e0eb;
@@ -62,16 +49,16 @@
             color: #35506f;
             cursor: pointer;
         }
-        .module-nav a.active {
-            background: #2d7ff0;
-            border-color: #2d7ff0;
-            color: white;
-        }
         .quick-actions {
             display: flex;
             gap: 12px;
             flex-wrap: wrap;
             margin-bottom: 22px;
+        }
+        .quick-actions a.home {
+            background: #2d7ff0;
+            color: white;
+            border-color: #2d7ff0;
         }
         .quick-actions a.warning {
             background: #f39c12;
@@ -108,17 +95,17 @@
         .admin-notice pre { white-space: pre-wrap; word-break: break-word; font-size: 12px; }
         .card-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
             gap: 18px;
         }
         .module-card {
             display: block;
-            padding: 24px;
+            padding: 22px;
             border-radius: 18px;
             text-decoration: none;
-            color: inherit;
+            color: white;
             border: 1px solid #dde7f0;
-            background: linear-gradient(145deg, #ffffff 0%, #f8fbff 100%);
+            background: linear-gradient(145deg, #4d7ecf 0%, #3665b3 100%);
             transition: transform 0.18s ease, box-shadow 0.18s ease;
             box-shadow: 0 8px 24px rgba(48, 74, 104, 0.08);
         }
@@ -127,18 +114,19 @@
             box-shadow: 0 14px 28px rgba(48, 74, 104, 0.12);
         }
         .module-card.large {
-            min-height: 220px;
-            padding: 28px;
+            min-height: 170px;
+            padding: 22px;
         }
         .module-card-title {
-            font-size: 1.35rem;
+            font-size: 1.2rem;
             font-weight: 800;
-            color: #24384f;
+            color: white;
             margin-bottom: 10px;
         }
         .module-card-text {
-            color: #607387;
-            line-height: 1.7;
+            color: rgba(255,255,255,0.92);
+            line-height: 1.6;
+            font-size: 0.95rem;
         }
         .status-grid,
         .stats-grid,
@@ -298,47 +286,30 @@
             margin-bottom: 34px;
         }
         .home-shell h1 {
-            font-size: 3rem;
+            font-size: 2.8rem;
             text-align: center;
         }
         .home-grid {
-            max-width: 980px;
+            max-width: 760px;
             margin: 0 auto;
         }
         @media (max-width: 860px) {
             body { padding: 16px; }
             .admin-topbar { flex-direction: column; }
-            .admin-meta { text-align: left; }
             .home-shell h1 { font-size: 2.3rem; }
+            .card-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body{% if active_module == 'home' %} class="home-shell"{% endif %}>
     <div class="admin-topbar">
         <h1>{% block admin_header %}Admin Dashboard{% endblock %}</h1>
-        {% if active_module != 'home' %}
-        <div class="admin-meta">
-            {{ lab_name }}<br>
-            Analytics backend: {{ analytics_backend }}<br>
-            Last content update: {{ content_last_modified }}<br>
-            Admin login: {{ admin_login_time }}<br>
-            App started: {{ start_time }}
-        </div>
-        {% endif %}
     </div>
 
     {% if active_module != 'home' %}
-    <div class="module-nav">
-        <a href="{{ url_for('admin_dashboard') }}" class="{% if active_module == 'home' %}active{% endif %}">Home</a>
-        <a href="{{ url_for('admin_content') }}" class="{% if active_module == 'content' %}active{% endif %}">Content</a>
-        <a href="{{ url_for('admin_analytics') }}" class="{% if active_module == 'analytics' %}active{% endif %}">Analytics</a>
-        <a href="{{ url_for('admin_assets') }}" class="{% if active_module == 'assets' %}active{% endif %}">Assets</a>
-        <a href="{{ url_for('admin_settings') }}" class="{% if active_module == 'settings' %}active{% endif %}">Settings</a>
-    </div>
-
     <div class="quick-actions">
+        <a href="{{ url_for('admin_dashboard') }}" class="home">Back to Admin Home</a>
         <a href="{{ url_for('admin_view_as_user') }}" class="warning">View as User</a>
-        <a href="/" >Return to Site</a>
         <a href="{{ url_for('admin_logout') }}" class="danger">Logout</a>
     </div>
 

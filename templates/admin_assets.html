@@ -1,8 +1,11 @@
 {% extends "admin_layout.html" %}
 
 {% block admin_body %}
-<div id="site-images" class="section-card">
-    <h2 style="margin-top:0;">Site Images</h2>
+{% set active_section = request.args.get('section', '') %}
+
+<details id="site-images" {% if active_section in ('', 'site-images') %}open{% endif %}>
+    <summary>🧩 Site Images</summary>
+    <div class="details-body">
     <p class="helper-note">Header logo and footer-link icons live in git-tracked <code>site_content/images/</code>. People and news images stay editable inside the Content workspace.</p>
 
     <div class="asset-grid">
@@ -39,10 +42,12 @@
         </div>
         {% endfor %}
     </div>
-</div>
+    </div>
+</details>
 
-<div class="section-card">
-    <h2 style="margin-top:0;">Article Thumbnails</h2>
+<details {% if active_section == 'thumbnails' %}open{% endif %}>
+    <summary>🖼️ Article Thumbnails</summary>
+    <div class="details-body">
     <p class="helper-note">Upload and refresh thumbnails here without digging through the main publication editor.</p>
     {% for item in articles %}
     <details id="thumb-{{ item.id }}">
@@ -63,5 +68,6 @@
         </div>
     </details>
     {% endfor %}
-</div>
+    </div>
+</details>
 {% endblock %}

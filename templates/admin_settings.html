@@ -1,8 +1,11 @@
 {% extends "admin_layout.html" %}
 
 {% block admin_body %}
-<div id="branding-section" class="section-card">
-    <h2 style="margin-top:0;">Branding</h2>
+{% set active_section = request.args.get('section', '') %}
+
+<details id="branding-section" {% if active_section in ('', 'branding') %}open{% endif %}>
+    <summary>⚙️ Branding</summary>
+    <div class="details-body">
     <form method="POST" action="{{ url_for(module_endpoint) }}">
         <input type="hidden" name="action" value="edit_site_branding">
         <input type="hidden" name="item_type" value="site">
@@ -21,10 +24,12 @@
         </label>
         <button type="submit">Save Branding</button>
     </form>
-</div>
+    </div>
+</details>
 
-<div id="friendly-links-section" class="section-card">
-    <h2 style="margin-top:0;">Friendly Links</h2>
+<details id="friendly-links-section" {% if active_section == 'friendly-links' %}open{% endif %}>
+    <summary>🔗 Friendly Links</summary>
+    <div class="details-body">
     <form method="POST" action="{{ url_for(module_endpoint) }}">
         <input type="hidden" name="action" value="edit_friend_links">
         <input type="hidden" name="item_type" value="site">
@@ -43,10 +48,12 @@
         </div>
         <button type="submit">Save Friendly Links</button>
     </form>
-</div>
+    </div>
+</details>
 
-<div id="research-focus-section" class="section-card">
-    <h2 style="margin-top:0;">Research Focus</h2>
+<details id="research-focus-section" {% if active_section == 'research-focus' %}open{% endif %}>
+    <summary>💡 Research Focus</summary>
+    <div class="details-body">
     <form method="POST" action="{{ url_for(module_endpoint) }}">
         <input type="hidden" name="action" value="edit_research_highlights">
         <input type="hidden" name="item_type" value="site">
@@ -61,10 +68,12 @@
         {% endfor %}
         <button type="submit">Save Research Focus</button>
     </form>
-</div>
+    </div>
+</details>
 
-<div id="person-tags-section" class="section-card">
-    <h2 style="margin-top:0;">People Tags</h2>
+<details id="person-tags-section" {% if active_section == 'person-tags' %}open{% endif %}>
+    <summary>🏷️ People Tags</summary>
+    <div class="details-body">
     <form method="POST" action="{{ url_for(module_endpoint) }}">
         <input type="hidden" name="action" value="edit_person_tags">
         <input type="hidden" name="item_type" value="site">
@@ -72,5 +81,6 @@
         <textarea name="person_tags_text" rows="8">{{ site_cfg.person_tags|join('\n') }}</textarea>
         <button type="submit">Save People Tags</button>
     </form>
-</div>
+    </div>
+</details>
 {% endblock %}
