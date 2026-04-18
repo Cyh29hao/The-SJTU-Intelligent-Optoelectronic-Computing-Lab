@@ -9,7 +9,7 @@
     "content": "Our lab website officially went online on 2026-04-18.\r\n\r\nThe current release is Version 1.3.2. It includes publication pages, people pages, external paper/resource access, simple analytics, and a lightweight local content-management workflow.\r\n\r\nWelcome to browse the site, read our publications, open available resources, and use the shared materials for academic purposes.",
     "content_zh": "本课题组网站已于 2026-04-18 正式上线。\r\n\r\n当前版本为 1.3.2，已支持论文页面、成员页面、外部论文与资源访问、基础统计功能，以及轻量级本地内容管理流程。\r\n\r\n欢迎浏览网站、阅读论文、访问公开资源，并在学术用途范围内使用共享材料。",
     "image_filename": "news_001.jpg",
-    "last_edited": "2026-04-18 16:37:24"
+    "last_edited": "2026-04-18 16:47:11"
   },
   {
     "id": "news_002",
@@ -21,6 +21,6 @@
     "content": "The lab website now supports one-click switching between English and Chinese for the main user interface.\r\n\r\nThis update covers the homepage, People page, News page, Register page, and shared interface labels across the site. Publication content remains primarily in its original language, while interface labels are translated for clarity.\r\n\r\nWelcome to switch languages and continue browsing the site.",
     "content_zh": "课题组网站前台现已支持中英双语一键切换。\r\n\r\n本次更新覆盖了首页、成员页面、新闻页面、登记页面以及全站通用界面标签。论文内容仍以原始语言为主，但界面标签已经完成双语支持，以提升浏览体验。\r\n\r\n欢迎切换语言继续浏览网站。",
     "image_filename": "news_002.jpg",
-    "last_edited": "2026-04-18 16:42:43"
+    "last_edited": "2026-04-18 16:46:54"
   }
 ]
