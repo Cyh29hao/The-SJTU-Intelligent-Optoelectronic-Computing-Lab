@@ -4,12 +4,12 @@
     "title": "SJTU IOC Lab website is now online",
     "title_zh": "SJTU IOC Lab 网站现已上线",
     "date": "2026-04-18",
-    "summary": "Version 1.1.0 is now available with local CMS publishing, publications, people profiles, and admin analytics.",
-    "summary_zh": "当前版本 1.1.0 已上线，支持本地 CMS 发布、论文页面、成员页面与后台数据统计。",
-    "content": "Our lab website officially went online on 2026-04-03.\r\n\r\nThe current release is Version 1.1.0. It includes publication pages, people pages, external paper/resource access, simple analytics, and a lightweight local content-management workflow.\r\n\r\nWelcome to browse the site, read our publications, open available resources, and use the shared materials for academic purposes.",
-    "content_zh": "本课题组网站已于 2026-04-03 正式上线。\r\n\r\n当前版本为 1.1.0，已支持论文页面、成员页面、外部论文与资源访问、基础统计功能，以及轻量级本地内容管理流程。\r\n\r\n欢迎浏览网站、阅读论文、访问公开资源，并在学术用途范围内使用共享材料。",
+    "summary": "Version 1.3.2 is now available.",
+    "summary_zh": "当前版本 1.3.2 已上线。",
+    "content": "Our lab website officially went online on 2026-04-18.\r\n\r\nThe current release is Version 1.3.0. It includes publication pages, people pages, external paper/resource access, simple analytics, and a lightweight local content-management workflow.\r\n\r\nWelcome to browse the site, read our publications, open available resources, and use the shared materials for academic purposes.",
+    "content_zh": "本课题组网站已于 2026-04-18 正式上线。\r\n\r\n当前版本为 1.3.2，已支持论文页面、成员页面、外部论文与资源访问、基础统计功能，以及轻量级本地内容管理流程。\r\n\r\n欢迎浏览网站、阅读论文、访问公开资源，并在学术用途范围内使用共享材料。",
     "image_filename": "",
-    "last_edited": "2026-04-18 22:57:38"
+    "last_edited": "2026-04-18 16:06:19"
   },
   {
     "id": "news_002",
