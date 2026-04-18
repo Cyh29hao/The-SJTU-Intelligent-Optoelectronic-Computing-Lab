@@ -1,8 +1,8 @@
 {
   "home_note": "To open our paper and resource pages, please first fill in your information on the Login page.",
-  "home_note_zh": "如需访问论文和资源页面，请先在登录页填写信息。",
-  "home_welcome": "Our lab focuses on research in all-optical neural networks, diffractive deep learning, and intelligent photonic chips.\n\nThis website provides publicly available publications, code repositories, and dataset links from our group.",
-  "home_welcome_zh": "本课题组主要围绕全光神经网络、衍射深度学习与智能光子芯片开展研究。\n\n本网站汇集了课题组公开发表的论文、代码仓库与数据集链接。",
+  "home_note_zh": "如需访问论文和资源页面，请您先在登录页填写信息。",
+  "home_welcome": "Our lab focuses on research in all-optical neural networks, diffractive deep learning, and intelligent photonic chips.\r\n\r\nThis website provides publicly available publications, code repositories, and dataset links from our group.",
+  "home_welcome_zh": "本课题组主要围绕全光神经网络、衍射深度学习与智能光子芯片开展研究。\r\n\r\n本网站汇集了课题组公开发表的论文、代码仓库与数据集链接。",
   "hero_summary": "Research in photonic neural networks, intelligent photonic integrated circuits, and open academic resources for optical computing.",
   "hero_summary_zh": "聚焦光子神经网络、智能光子集成电路与面向光计算的开放学术资源。",
   "lab_name": "the SJTU Intelligent Optoelectronic Computing Lab",
