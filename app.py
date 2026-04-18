@@ -197,7 +197,7 @@ DEFAULT_PERSON_TAGS = [
     'Systems',
     'Resources'
 ]
-DEFAULT_SITE_VERSION = '1.3.0'
+DEFAULT_SITE_VERSION = '1.3.1'
 DEFAULT_FRIEND_LINKS = [
     {
         'title': 'SJTU',
