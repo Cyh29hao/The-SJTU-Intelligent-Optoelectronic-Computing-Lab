@@ -106,6 +106,42 @@
             <a href="{{ url_for('download_page_views_csv') }}" class="btn-link btn-secondary">Download page_views.csv</a>
             <a href="{{ url_for('download_render_data_zip') }}" class="btn-link btn-muted">Download analytics_export_bundle.zip</a>
         </div>
+
+        <div id="git-sync" style="margin-top:26px; padding-top:20px; border-top:1px solid #e3eaf2;">
+            <h3 style="margin-top:0;">Git Sync</h3>
+            <p class="helper-note">Commit and push the current <code>site_content/</code> changes from this server to GitHub. This keeps online edits and the repository in sync.</p>
+
+            <div class="helper-note" style="margin-bottom:12px;">
+                <strong>Branch:</strong> {{ local_cms_status.branch }}<br>
+                <strong>Remote:</strong> <span class="mono">{{ local_cms_status.remote or 'No origin remote detected' }}</span>
+            </div>
+
+            {% if local_cms_status.has_changes %}
+            <p class="helper-note" style="margin-bottom:8px;"><strong>Pending content changes</strong></p>
+            <ul style="margin:0 0 16px 18px; color:#5e7389; line-height:1.8;">
+                {% for file in local_cms_status.changed_files[:12] %}
+                <li><strong>{{ file.status }}</strong> <span class="mono">{{ file.path }}</span></li>
+                {% endfor %}
+                {% if local_cms_status.changed_files|length > 12 %}
+                <li>...and {{ local_cms_status.changed_files|length - 12 }} more files.</li>
+                {% endif %}
+            </ul>
+            {% else %}
+            <p class="helper-note" style="margin-bottom:16px;">No unpublished <code>site_content/</code> changes were detected right now.</p>
+            {% endif %}
+
+            {% if local_cms_status.allow_publish %}
+            <form method="POST" action="{{ url_for('admin_analytics') }}">
+                <input type="hidden" name="action" value="publish_content_to_github">
+                <input type="hidden" name="item_type" value="site">
+                <label>Commit Message</label>
+                <input name="commit_message" placeholder="Update site content from admin">
+                <button type="submit" {% if not local_cms_status.has_changes %}disabled style="opacity:0.55; cursor:not-allowed;"{% endif %}>Publish site_content to GitHub</button>
+            </form>
+            {% else %}
+            <p class="helper-note">Git sync is unavailable because the repository branch or remote could not be detected on this server.</p>
+            {% endif %}
+        </div>
     </div>
 </div>
 

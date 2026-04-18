@@ -675,20 +675,13 @@ def _get_local_cms_status():
         'last_commit': last_commit_result['stdout'] if last_commit_result['ok'] else 'Unavailable',
         'changed_files': changed_files,
         'has_changes': bool(changed_files),
-        'allow_publish': bool(IS_LOCAL) and branch_result['ok'],
+        'allow_publish': branch_result['ok'] and remote_result['ok'],
         'git_ok': status_result['ok'] and branch_result['ok'],
         'git_error': status_result['stderr'] or branch_result['stderr'] or ''
     }
 
 def _publish_site_content(commit_message):
     """Commit and push git-tracked site_content/ changes from the local CMS."""
-    if not IS_LOCAL:
-        return {
-            'kind': 'error',
-            'message': 'Publish to GitHub is only enabled in Local CMS mode.',
-            'details': ''
-        }
-
     content_rel = os.path.relpath(CONTENT_ROOT, PROJECT_ROOT)
     status_result = _run_git_command(['status', '--short', '--', content_rel])
     if not status_result['ok']:
@@ -1962,7 +1955,7 @@ def _handle_admin_actions(default_module):
     if action == 'publish_content_to_github':
         publish_result = _publish_site_content(request.form.get('commit_message', ''))
         session['admin_notice'] = publish_result
-        return redirect(_admin_module_url('home', '#local-cms-panel'))
+        return redirect(_admin_module_url(default_module, '#git-sync'))
 
     if action == 'add':
         if item_type == 'person':
@@ -2086,10 +2079,13 @@ def admin_content():
         **_build_admin_content_context()
     )
 
-@app.route('/admin/analytics')
+@app.route('/admin/analytics', methods=['GET', 'POST'])
 def admin_analytics():
     if not session.get('is_admin'):
         return redirect(url_for('register'))
+    response = _handle_admin_actions('analytics')
+    if response:
+        return response
     return render_template(
         'admin_analytics.html',
         active_module='analytics',
