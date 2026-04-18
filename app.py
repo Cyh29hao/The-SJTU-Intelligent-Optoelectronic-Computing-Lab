@@ -197,7 +197,7 @@ DEFAULT_PERSON_TAGS = [
     'Systems',
     'Resources'
 ]
-DEFAULT_SITE_VERSION = '1.3.1'
+DEFAULT_SITE_VERSION = '1.3.2'
 DEFAULT_FRIEND_LINKS = [
     {
         'title': 'SJTU',
@@ -705,6 +705,32 @@ def _publish_site_content(commit_message):
             'details': add_result['stderr'] or add_result['stdout']
         }
 
+    configured_identity = []
+    git_name = (_run_git_command(['config', '--local', '--get', 'user.name']).get('stdout') or '').strip()
+    git_email = (_run_git_command(['config', '--local', '--get', 'user.email']).get('stdout') or '').strip()
+    desired_name = (ADMIN_CREDENTIALS.get('name') or 'Admin').strip()
+    desired_email = (ADMIN_CREDENTIALS.get('email') or 'admin@example.com').strip()
+
+    if not git_name:
+        set_name = _run_git_command(['config', '--local', 'user.name', desired_name])
+        if not set_name['ok']:
+            return {
+                'kind': 'error',
+                'message': 'Git author name could not be configured automatically.',
+                'details': set_name['stderr'] or set_name['stdout']
+            }
+        configured_identity.append(f"user.name={desired_name}")
+
+    if not git_email:
+        set_email = _run_git_command(['config', '--local', 'user.email', desired_email])
+        if not set_email['ok']:
+            return {
+                'kind': 'error',
+                'message': 'Git author email could not be configured automatically.',
+                'details': set_email['stderr'] or set_email['stdout']
+            }
+        configured_identity.append(f"user.email={desired_email}")
+
     message = (commit_message or '').strip() or f'Update site content {datetime.now().strftime("%Y-%m-%d %H:%M")}'
     commit_result = _run_git_command(['commit', '-m', message, '--', content_rel])
     if not commit_result['ok']:
@@ -737,7 +763,11 @@ def _publish_site_content(commit_message):
     return {
         'kind': 'success',
         'message': 'site_content has been committed and pushed to GitHub.',
-        'details': '\n'.join(part for part in [commit_result['stdout'], push_result['stdout']] if part)
+        'details': '\n'.join(part for part in [
+            ('Auto-configured git identity: ' + ', '.join(configured_identity)) if configured_identity else '',
+            commit_result['stdout'],
+            push_result['stdout']
+        ] if part)
     }
 
 def _normalize_selected_tags(items):
