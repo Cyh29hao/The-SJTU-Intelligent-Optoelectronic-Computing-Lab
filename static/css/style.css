@@ -215,6 +215,7 @@ button {
   padding: 12px 32px;
   background: var(--secondary);
   color: white;
+  text-align: center;
   text-decoration: none;
   border: none;
   border-radius: 999px;
@@ -223,6 +224,16 @@ button {
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 4px 12px rgba(26, 115, 232, 0.28);
+}
+
+.btn-emphasis {
+  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+  box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);
+}
+
+.btn-emphasis:hover {
+  background: linear-gradient(135deg, #219150 0%, #27ae60 100%);
+  box-shadow: 0 6px 16px rgba(46, 204, 113, 0.45);
 }
 
 .btn:hover,

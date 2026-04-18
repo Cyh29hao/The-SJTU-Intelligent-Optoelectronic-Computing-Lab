@@ -8,6 +8,7 @@
 </div>
 
 <form method="POST" action="{{ url_for('submit_register') }}" style="max-width: 500px; margin-top: 20px;">
+  <input type="hidden" name="next" value="{{ next }}">
   <div style="margin-bottom: 15px;">
     <label for="name" style="display: block; margin-bottom: 5px; font-weight: bold;">{{ t('label_name') }}</label>
     <input type="text" id="name" name="name" required 

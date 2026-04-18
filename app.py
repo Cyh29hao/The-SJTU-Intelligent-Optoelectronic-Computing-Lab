@@ -1506,8 +1506,9 @@ def register():
     """User Login/Register page"""
     session.pop('user_info', None)
     session.pop('registered_at', None)
+    next_url = request.args.get('next', '')
     log_page_view('register', title='Register')
-    return render_template('register.html')
+    return render_template('register.html', next=next_url)
 
 @app.route('/submit_register', methods=['POST'])
 def submit_register():
@@ -1516,6 +1517,7 @@ def submit_register():
     affiliation = request.form.get('affiliation', '').strip()
     email = request.form.get('email', '').strip()
     consent = request.form.get('consent')
+    next_url = request.form.get('next', '')
 
     if not name or not affiliation or not email:
         return "❌ Please fill in all required fields.", 400
@@ -1539,6 +1541,9 @@ def submit_register():
     }
     session['registered_at'] = datetime.now().isoformat()
     print(f"✅ User registered: {name} | {affiliation} | {email}")
+    
+    if next_url and next_url.startswith('/') and not next_url.startswith('//'):
+        return redirect(next_url)
     return redirect(url_for('index'))
 
 @app.route('/logout')

@@ -106,7 +106,7 @@
       <div class="portal-side-label">{{ t('resources') }}</div>
       {% if not session.user_info %}
         <p class="portal-side-text">{{ lang_value(site_cfg, 'home_note') }}</p>
-        <a href="{{ url_for('register') }}" class="portal-inline-link">{{ t('login_page') }}</a>
+        <a href="{{ url_for('register', next=request.path) }}" class="portal-inline-link">{{ t('login_page') }}</a>
       {% else %}
         <p class="portal-side-text">
           {{ t('logged_in_open_note') }}
