@@ -197,7 +197,7 @@ DEFAULT_PERSON_TAGS = [
     'Systems',
     'Resources'
 ]
-DEFAULT_SITE_VERSION = '1.3.2'
+DEFAULT_SITE_VERSION = '1.3.4'
 DEFAULT_FRIEND_LINKS = [
     {
         'title': 'SJTU',
@@ -645,6 +645,20 @@ def _run_git_command(args):
             'stderr': str(exc)
         }
 
+def _parse_git_status_lines(raw_status_output):
+    changed_files = []
+    if not raw_status_output:
+        return changed_files
+    for raw_line in raw_status_output.splitlines():
+        line = raw_line.rstrip()
+        if not line:
+            continue
+        changed_files.append({
+            'status': (line[:2] or '').strip() or '??',
+            'path': line[2:].strip()
+        })
+    return changed_files
+
 def _get_local_cms_status():
     """Collect a lightweight snapshot of the local CMS + git workspace status."""
     content_rel = os.path.relpath(CONTENT_ROOT, PROJECT_ROOT)
@@ -653,16 +667,7 @@ def _get_local_cms_status():
     last_commit_result = _run_git_command(['log', '-1', '--pretty=format:%h | %ad | %s', '--date=format-local:%Y-%m-%d %H:%M'])
     remote_result = _run_git_command(['remote', 'get-url', 'origin'])
 
-    changed_files = []
-    if status_result['ok'] and status_result['stdout']:
-        for raw_line in status_result['stdout'].splitlines():
-            line = raw_line.rstrip()
-            if not line:
-                continue
-            changed_files.append({
-                'status': (line[:2] or '').strip() or '??',
-                'path': line[3:] if len(line) > 3 else line
-            })
+    changed_files = _parse_git_status_lines(status_result['stdout'] if status_result['ok'] else '')
 
     return {
         'local_mode': bool(IS_LOCAL),
@@ -768,6 +773,163 @@ def _publish_site_content(commit_message):
             commit_result['stdout'],
             push_result['stdout']
         ] if part)
+    }
+
+def _get_sync_from_github_status(fetch_remote=False):
+    content_rel = os.path.relpath(CONTENT_ROOT, PROJECT_ROOT).replace('\\', '/')
+    branch_result = _run_git_command(['rev-parse', '--abbrev-ref', 'HEAD'])
+    remote_result = _run_git_command(['remote', 'get-url', 'origin'])
+    local_status_result = _run_git_command(['status', '--short', '--', content_rel])
+
+    if not branch_result['ok'] or not remote_result['ok']:
+        return {
+            'available': False,
+            'can_sync': False,
+            'kind': 'error',
+            'message': 'Git branch or remote could not be detected on this server.',
+            'details': '\n'.join(part for part in [branch_result.get('stderr', ''), remote_result.get('stderr', '')] if part),
+            'incoming_content_files': [],
+            'incoming_code_files': [],
+            'local_changes': [],
+            'branch': branch_result['stdout'] if branch_result['ok'] else 'unknown'
+        }
+
+    branch_name = (branch_result['stdout'] or 'main').strip()
+    fetch_result = {'ok': True, 'stdout': '', 'stderr': ''}
+    if fetch_remote:
+        fetch_result = _run_git_command(['fetch', 'origin', branch_name, '--prune'])
+        if not fetch_result['ok']:
+            return {
+                'available': False,
+                'can_sync': False,
+                'kind': 'error',
+                'message': 'Git fetch failed before checking remote content updates.',
+                'details': fetch_result['stderr'] or fetch_result['stdout'],
+                'incoming_content_files': [],
+                'incoming_code_files': [],
+                'local_changes': [],
+                'branch': branch_name
+            }
+
+    local_changes = _parse_git_status_lines(local_status_result['stdout'] if local_status_result['ok'] else '')
+
+    ahead_behind_result = _run_git_command(['rev-list', '--left-right', '--count', f'HEAD...origin/{branch_name}'])
+    ahead_count = 0
+    behind_count = 0
+    if ahead_behind_result['ok']:
+        parts = (ahead_behind_result['stdout'] or '').split()
+        if len(parts) >= 2:
+            try:
+                ahead_count = int(parts[0])
+                behind_count = int(parts[1])
+            except Exception:
+                ahead_count = 0
+                behind_count = 0
+
+    diff_result = _run_git_command(['diff', '--name-only', f'HEAD..origin/{branch_name}'])
+    remote_changed_files = []
+    if diff_result['ok'] and diff_result['stdout']:
+        remote_changed_files = [line.strip().replace('\\', '/') for line in diff_result['stdout'].splitlines() if line.strip()]
+
+    incoming_content_files = [path for path in remote_changed_files if path == content_rel or path.startswith(content_rel + '/')]
+    incoming_code_files = [path for path in remote_changed_files if path not in incoming_content_files]
+
+    if local_changes:
+        return {
+            'available': True,
+            'can_sync': False,
+            'kind': 'info',
+            'message': 'Local site_content changes detected. Publish or discard them before syncing from GitHub.',
+            'details': '',
+            'incoming_content_files': incoming_content_files,
+            'incoming_code_files': incoming_code_files,
+            'local_changes': local_changes,
+            'branch': branch_name,
+            'ahead_count': ahead_count,
+            'behind_count': behind_count
+        }
+
+    if ahead_count > 0:
+        return {
+            'available': True,
+            'can_sync': False,
+            'kind': 'info',
+            'message': 'This server has local commits ahead of GitHub. Push or reconcile them before syncing down.',
+            'details': '',
+            'incoming_content_files': incoming_content_files,
+            'incoming_code_files': incoming_code_files,
+            'local_changes': local_changes,
+            'branch': branch_name,
+            'ahead_count': ahead_count,
+            'behind_count': behind_count
+        }
+
+    if not remote_changed_files or behind_count == 0:
+        return {
+            'available': True,
+            'can_sync': False,
+            'kind': 'info',
+            'message': 'GitHub is already in sync with this server.',
+            'details': '',
+            'incoming_content_files': incoming_content_files,
+            'incoming_code_files': incoming_code_files,
+            'local_changes': local_changes,
+            'branch': branch_name,
+            'ahead_count': ahead_count,
+            'behind_count': behind_count
+        }
+
+    if incoming_code_files:
+        return {
+            'available': True,
+            'can_sync': False,
+            'kind': 'warning',
+            'message': 'Incoming GitHub updates include code or template files. Use the normal deploy flow instead of a content-only sync.',
+            'details': '\n'.join(incoming_code_files),
+            'incoming_content_files': incoming_content_files,
+            'incoming_code_files': incoming_code_files,
+            'local_changes': local_changes,
+            'branch': branch_name,
+            'ahead_count': ahead_count,
+            'behind_count': behind_count
+        }
+
+    return {
+        'available': True,
+        'can_sync': True,
+        'kind': 'success',
+        'message': 'GitHub has newer content-only changes that can be fast-forwarded into this server.',
+        'details': '',
+        'incoming_content_files': incoming_content_files,
+        'incoming_code_files': incoming_code_files,
+        'local_changes': local_changes,
+        'branch': branch_name,
+        'ahead_count': ahead_count,
+        'behind_count': behind_count
+    }
+
+def _sync_site_content_from_github():
+    sync_status = _get_sync_from_github_status(fetch_remote=True)
+    if not sync_status['can_sync']:
+        return {
+            'kind': 'error' if sync_status['kind'] == 'error' else 'info',
+            'message': sync_status['message'],
+            'details': sync_status.get('details', '')
+        }
+
+    branch_name = sync_status.get('branch') or 'main'
+    pull_result = _run_git_command(['pull', '--ff-only', 'origin', branch_name])
+    if not pull_result['ok']:
+        return {
+            'kind': 'error',
+            'message': 'Git sync from GitHub failed during fast-forward pull.',
+            'details': '\n'.join(part for part in [pull_result['stdout'], pull_result['stderr']] if part)
+        }
+
+    return {
+        'kind': 'success',
+        'message': 'site_content has been synced from GitHub.',
+        'details': pull_result['stdout']
     }
 
 def _normalize_selected_tags(items):
@@ -1906,6 +2068,8 @@ def _build_admin_analytics_context():
         'publication_conversion_rate': publication_conversion_rate
     }
 
+    sync_down_status = _get_sync_from_github_status(fetch_remote=True)
+
     return {
         'total_downloads': total_downloads,
         'download_counts': download_counts,
@@ -1916,6 +2080,7 @@ def _build_admin_analytics_context():
         'top_articles_by_views': top_articles_by_views,
         'article_view_counts': article_view_counts,
         'article_metrics': article_metrics,
+        'sync_down_status': sync_down_status,
     }
 
 def _build_people_photo_context(people):
@@ -1991,6 +2156,11 @@ def _handle_admin_actions(default_module):
         publish_result = _publish_site_content(request.form.get('commit_message', ''))
         session['admin_notice'] = publish_result
         return redirect(_admin_module_url(default_module, '#git-sync'))
+
+    if action == 'sync_content_from_github':
+        sync_result = _sync_site_content_from_github()
+        session['admin_notice'] = sync_result
+        return redirect(_admin_module_url(default_module, '#git-sync-down'))
 
     if action == 'add':
         if item_type == 'person':

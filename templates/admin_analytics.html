@@ -108,7 +108,7 @@
         </div>
 
         <div id="git-sync" style="margin-top:26px; padding-top:20px; border-top:1px solid #e3eaf2;">
-            <h3 style="margin-top:0;">Git Sync</h3>
+            <h3 style="margin-top:0;">Git Sync Up</h3>
             <p class="helper-note">Commit and push the current <code>site_content/</code> changes from this server to GitHub. This keeps online edits and the repository in sync.</p>
 
             <div class="helper-note" style="margin-bottom:12px;">
@@ -141,6 +141,58 @@
             {% else %}
             <p class="helper-note">Git sync is unavailable because the repository branch or remote could not be detected on this server.</p>
             {% endif %}
+        </div>
+
+        <div id="git-sync-down" style="margin-top:26px; padding-top:20px; border-top:1px solid #e3eaf2;">
+            <h3 style="margin-top:0;">Git Sync Down</h3>
+            <p class="helper-note">Fetch GitHub first, then only allow a fast-forward sync when the incoming changes are limited to <code>site_content/</code>.</p>
+
+            <div class="helper-note" style="margin-bottom:12px;">
+                <strong>Branch:</strong> {{ sync_down_status.branch }}<br>
+                <strong>Status:</strong> {{ sync_down_status.message }}
+            </div>
+
+            {% if sync_down_status.incoming_content_files %}
+            <p class="helper-note" style="margin-bottom:8px;"><strong>Incoming content files</strong></p>
+            <ul style="margin:0 0 16px 18px; color:#5e7389; line-height:1.8;">
+                {% for file in sync_down_status.incoming_content_files[:12] %}
+                <li><span class="mono">{{ file }}</span></li>
+                {% endfor %}
+                {% if sync_down_status.incoming_content_files|length > 12 %}
+                <li>...and {{ sync_down_status.incoming_content_files|length - 12 }} more files.</li>
+                {% endif %}
+            </ul>
+            {% endif %}
+
+            {% if sync_down_status.incoming_code_files %}
+            <p class="helper-note" style="margin-bottom:8px;"><strong>Incoming non-content files</strong></p>
+            <ul style="margin:0 0 16px 18px; color:#b04b4b; line-height:1.8;">
+                {% for file in sync_down_status.incoming_code_files[:12] %}
+                <li><span class="mono">{{ file }}</span></li>
+                {% endfor %}
+                {% if sync_down_status.incoming_code_files|length > 12 %}
+                <li>...and {{ sync_down_status.incoming_code_files|length - 12 }} more files.</li>
+                {% endif %}
+            </ul>
+            {% endif %}
+
+            {% if sync_down_status.local_changes %}
+            <p class="helper-note" style="margin-bottom:8px;"><strong>Local content changes</strong></p>
+            <ul style="margin:0 0 16px 18px; color:#b07c3a; line-height:1.8;">
+                {% for file in sync_down_status.local_changes[:12] %}
+                <li><strong>{{ file.status }}</strong> <span class="mono">{{ file.path }}</span></li>
+                {% endfor %}
+                {% if sync_down_status.local_changes|length > 12 %}
+                <li>...and {{ sync_down_status.local_changes|length - 12 }} more files.</li>
+                {% endif %}
+            </ul>
+            {% endif %}
+
+            <form method="POST" action="{{ url_for('admin_analytics') }}">
+                <input type="hidden" name="action" value="sync_content_from_github">
+                <input type="hidden" name="item_type" value="site">
+                <button type="submit" {% if not sync_down_status.can_sync %}disabled style="opacity:0.55; cursor:not-allowed;"{% endif %}>Sync site_content from GitHub</button>
+            </form>
         </div>
     </div>
 </div>
