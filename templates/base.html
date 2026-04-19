@@ -23,12 +23,26 @@
           <span class="site-brand-subtitle">{{ lang_value(site_cfg_global, 'lab_name_full') }}</span>
         </span>
       </a>
-      <nav class="main-nav">
+      <div class="site-mobile-controls">
+        <button type="button" class="theme-toggle mobile-theme-toggle" data-theme-toggle aria-label="Toggle dark mode">&#9790;</button>
+        <button
+          type="button"
+          class="mobile-nav-toggle"
+          aria-label="Open navigation"
+          aria-expanded="false"
+          aria-controls="site-menu"
+        >
+          <span class="mobile-nav-toggle-bar"></span>
+          <span class="mobile-nav-toggle-bar"></span>
+          <span class="mobile-nav-toggle-bar"></span>
+        </button>
+      </div>
+      <nav class="main-nav" id="site-menu">
           <a href="/" class="{% if request.path == '/' %}is-active{% endif %}">{{ t('nav_home') }}</a>
           <a href="/articles" class="{% if request.path.startswith('/articles') or request.path.startswith('/article/') %}is-active{% endif %}">{{ t('nav_publications') }}</a>
           <a href="/news" class="{% if request.path.startswith('/news') %}is-active{% endif %}">{{ t('nav_news') }}</a>
           <a href="/team" class="{% if request.path.startswith('/team') or request.path.startswith('/person/') %}is-active{% endif %}">{{ t('nav_people') }}</a>
-          <button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode">🌙</button>
+          <button type="button" class="theme-toggle desktop-theme-toggle" data-theme-toggle aria-label="Toggle dark mode">&#9790;</button>
           <span class="lang-switch">
             <a href="{{ switch_language_url('en') }}" class="{% if current_lang == 'en' %}is-active{% endif %}">{{ t('language_en') }}</a>
             <span class="lang-divider">/</span>
@@ -78,18 +92,78 @@
   <script>
     (function() {
       // Dark Mode Logic
-      const toggleBtn = document.getElementById('theme-toggle');
+      const toggleButtons = Array.from(document.querySelectorAll('[data-theme-toggle]'));
       const savedTheme = localStorage.getItem('theme') || 'light';
-      document.documentElement.setAttribute('data-theme', savedTheme);
-      toggleBtn.innerText = savedTheme === 'dark' ? '☀️' : '🌙';
+      const mobileNavToggle = document.querySelector('.mobile-nav-toggle');
+      const mainNav = document.querySelector('.main-nav');
+      const desktopMediaQuery = window.matchMedia('(min-width: 821px)');
 
-      toggleBtn.addEventListener('click', () => {
-        const currentTheme = document.documentElement.getAttribute('data-theme');
-        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-        document.documentElement.setAttribute('data-theme', newTheme);
-        localStorage.setItem('theme', newTheme);
-        toggleBtn.innerText = newTheme === 'dark' ? '☀️' : '🌙';
+      function setThemeIcon(button, theme) {
+        button.innerHTML = theme === 'dark' ? '&#9788;' : '&#9790;';
+      }
+
+      function applyTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+        toggleButtons.forEach((button) => {
+          setThemeIcon(button, theme);
+          button.setAttribute('aria-pressed', theme === 'dark' ? 'true' : 'false');
+        });
+      }
+
+      function closeMobileNav() {
+        if (!mobileNavToggle || !mainNav) return;
+        document.body.classList.remove('mobile-nav-open');
+        mainNav.classList.remove('is-open');
+        mobileNavToggle.classList.remove('is-open');
+        mobileNavToggle.setAttribute('aria-expanded', 'false');
+        mobileNavToggle.setAttribute('aria-label', 'Open navigation');
+      }
+
+      function toggleMobileNav() {
+        if (!mobileNavToggle || !mainNav) return;
+        const isOpen = mainNav.classList.toggle('is-open');
+        document.body.classList.toggle('mobile-nav-open', isOpen);
+        mobileNavToggle.classList.toggle('is-open', isOpen);
+        mobileNavToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        mobileNavToggle.setAttribute('aria-label', isOpen ? 'Close navigation' : 'Open navigation');
+      }
+
+      applyTheme(savedTheme);
+
+      toggleButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+          const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+          const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+          applyTheme(newTheme);
+        });
       });
+
+      if (mobileNavToggle && mainNav) {
+        mobileNavToggle.addEventListener('click', toggleMobileNav);
+
+        mainNav.querySelectorAll('a').forEach((link) => {
+          link.addEventListener('click', () => {
+            if (!desktopMediaQuery.matches) closeMobileNav();
+          });
+        });
+
+        document.addEventListener('click', (event) => {
+          if (desktopMediaQuery.matches || !mainNav.classList.contains('is-open')) return;
+          if (mainNav.contains(event.target) || mobileNavToggle.contains(event.target)) return;
+          closeMobileNav();
+        });
+
+        const handleViewportChange = (event) => {
+          if (event.matches) closeMobileNav();
+        };
+
+        if (typeof desktopMediaQuery.addEventListener === 'function') {
+          desktopMediaQuery.addEventListener('change', handleViewportChange);
+        } else if (typeof desktopMediaQuery.addListener === 'function') {
+          desktopMediaQuery.addListener(handleViewportChange);
+        }
+      }
 
       // Photon effects and other existing logic...
       var supportsHoverMotion = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
