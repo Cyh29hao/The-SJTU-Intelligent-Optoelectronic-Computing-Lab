@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ item.title }} - {{ lang_value(site_cfg_global, 'lab_name_short') }}{% endblock %}
 {% block content %}
-<div class="paper-detail-page" style="text-align: left; max-width: 750px; margin: 0 auto;">
+<div class="paper-detail-page" style="text-align: left; max-width: 750px; margin: 0 auto; background: var(--card-bg); padding: 24px; border-radius: 18px; border: 1px solid var(--border);">
   <div class="paper-detail-header">
     <h2 class="paper-detail-title">&#128196; {{ item.title }}</h2>
     <span class="paper-download-inline">{{ t('opened_times', count=open_count) }}</span>
@@ -12,8 +12,14 @@
   <p style="margin: 2px 0; color: #999; font-size: 0.9em;">{{ t('last_edited') }}: {{ item.last_edited }}</p>
   {% endif %}
 
-  <div style="margin-top: 20px; padding: 16px; background: #f8fafc; border-radius: 8px; text-align: left;">
-    <p style="margin: 0; white-space: pre-wrap; text-align: left;">{{ item.abstract }}</p>
+  {% if item.thumbnail_filename %}
+  <div style="margin: 20px 0; text-align: center;">
+    <img src="{{ url_for('asset_article_thumb', filename=item.thumbnail_filename) }}" alt="{{ item.title }}" style="max-height: 300px; border-radius: 12px; border: 1px solid var(--border);">
+  </div>
+  {% endif %}
+
+  <div style="margin-top: 20px; padding: 16px; background: var(--bg-gradient); border-radius: 8px; text-align: left; border: 1px solid var(--border);">
+    <p style="margin: 0; white-space: pre-wrap; text-align: left; color: var(--text);">{{ item.abstract }}</p>
   </div>
 
   <div class="paper-action-row" style="margin-top: 24px; display: flex; gap: 12px; justify-content: center; flex-direction: column; align-items: center;">

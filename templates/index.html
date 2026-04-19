@@ -93,17 +93,21 @@
 
 <section class="portal-lower">
   <div class="portal-about">
-    <div class="portal-section-head">
+    <div class="portal-section-head portal-section-head-compact">
       <h3>{{ t('about_lab') }}</h3>
     </div>
-    <div class="portal-about-body">
-      {{ lang_value(site_cfg, 'home_welcome') }}
+    <div class="portal-about-card">
+      <div class="portal-about-body">
+        {{ lang_value(site_cfg, 'home_welcome') }}
+      </div>
     </div>
   </div>
 
   <aside class="portal-side-note">
-    <div class="portal-side-card">
-      <div class="portal-side-label">{{ t('resources') }}</div>
+    <div class="portal-section-head portal-section-head-compact">
+      <h3>{{ t('resources') }}</h3>
+    </div>
+    <div class="portal-side-card portal-side-card-tight">
       {% if not session.user_info %}
         <p class="portal-side-text">{{ lang_value(site_cfg, 'home_note') }}</p>
         <a href="{{ url_for('register', next=request.path) }}" class="portal-inline-link">{{ t('login_page') }}</a>
@@ -115,24 +119,13 @@
           {{ t('current_user') }}: {{ session.user_info.name }} ({{ session.user_info.affiliation }}) {{ session.user_info.email }}
         </p>
       {% endif %}
-      <div class="portal-side-stats portal-side-stats-wide">
-        <div class="portal-side-stat">
-          <div class="portal-side-value">{{ article_count }}</div>
-          <div class="portal-side-metric">{{ t('publications_count') }}</div>
-        </div>
-        <div class="portal-side-stat">
-          <div class="portal-side-value">{{ people_count }}</div>
-          <div class="portal-side-metric">{{ t('people_count') }}</div>
-        </div>
-        <div class="portal-side-stat">
-          <div class="portal-side-value">{{ total_page_views }}</div>
-          <div class="portal-side-metric">{{ t('page_views') }}</div>
-        </div>
-      </div>
+    </div>
 
-      {% if latest_news %}
-      <div class="portal-latest-news">
-        <div class="portal-side-label">{{ t('latest_news') }}</div>
+    {% if latest_news %}
+    <div class="portal-section-head portal-section-head-compact portal-section-head-tightest">
+        <h3>{{ t('latest_news') }}</h3>
+    </div>
+    <div class="portal-latest-news-card">
         <ul class="portal-latest-news-list">
           {% for news_item in latest_news[:3] %}
           <li class="portal-latest-news-item">
@@ -142,9 +135,8 @@
           {% endfor %}
         </ul>
         <a href="{{ url_for('news') }}" class="portal-inline-link">{{ t('view_all_news') }}</a>
-      </div>
-      {% endif %}
     </div>
+    {% endif %}
   </aside>
 </section>
 

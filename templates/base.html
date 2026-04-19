@@ -28,6 +28,7 @@
           <a href="/articles" class="{% if request.path.startswith('/articles') or request.path.startswith('/article/') %}is-active{% endif %}">{{ t('nav_publications') }}</a>
           <a href="/news" class="{% if request.path.startswith('/news') %}is-active{% endif %}">{{ t('nav_news') }}</a>
           <a href="/team" class="{% if request.path.startswith('/team') or request.path.startswith('/person/') %}is-active{% endif %}">{{ t('nav_people') }}</a>
+          <button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode">🌙</button>
           <span class="lang-switch">
             <a href="{{ switch_language_url('en') }}" class="{% if current_lang == 'en' %}is-active{% endif %}">{{ t('language_en') }}</a>
             <span class="lang-divider">/</span>
@@ -60,7 +61,7 @@
           {% endfor %}
         </div>
         <div class="footer-meta">
-          <div>&copy; {{ lang_value(site_cfg_global, 'footer_copyright') }}</div>
+          <div>&copy; {{ lang_value(site_cfg_global, 'footer_copyright') }} | 沪交ICP备2026xxxx</div>
           <div class="footer-credit">{{ t('developed_by') }} <a href="https://github.com/Cyh29hao" target="_blank" rel="noopener">cyh29hao</a>{% if site_cfg_global.site_version %} <span class="footer-version">v{{ site_cfg_global.site_version }}</span>{% endif %}</div>
         </div>
       </div>
@@ -71,15 +72,26 @@
           {{ t('footer_school_3') }}<br>
           {{ t('footer_school_4') }}
         </div>
-        <!-- <div class="footer-logos">
-          <img src="{{ url_for('static', filename='images/sjtu_logo.png') }}" alt="SJTU Logo" class="footer-logo">
-          <img src="{{ url_for('static', filename='images/ic_logo.png') }}" alt="School of Integrated Circuits Logo" class="footer-logo">
-        </div> -->
       </div>
     </footer>
   </div>
   <script>
     (function() {
+      // Dark Mode Logic
+      const toggleBtn = document.getElementById('theme-toggle');
+      const savedTheme = localStorage.getItem('theme') || 'light';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+      toggleBtn.innerText = savedTheme === 'dark' ? '☀️' : '🌙';
+
+      toggleBtn.addEventListener('click', () => {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+        toggleBtn.innerText = newTheme === 'dark' ? '☀️' : '🌙';
+      });
+
+      // Photon effects and other existing logic...
       var supportsHoverMotion = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
       function spawnPhoton(x, y) {
         var d = document.createElement('div');
@@ -131,6 +143,16 @@
         }, { passive: true });
       }
     })();
+  </script>
+  <script>
+    // Handle form submission loading state
+    document.addEventListener('submit', function(e) {
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerText = 'Processing...';
+      }
+    });
   </script>
 </body>
 </html>
