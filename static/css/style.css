@@ -772,7 +772,8 @@ input[type="email"]:focus {
 
 .portal-carousel-track {
   position: relative;
-  min-height: 368px;
+  height: 760px;
+  min-height: 760px;
 }
 
 .portal-slide {
@@ -780,6 +781,7 @@ input[type="email"]:focus {
   inset: 0;
   display: grid;
   grid-template-columns: minmax(300px, 1fr) minmax(0, 1fr);
+  height: 100%;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.45s ease;
@@ -793,7 +795,8 @@ input[type="email"]:focus {
 
 .portal-slide-media {
   background: #e9f0f7;
-  min-height: 368px;
+  height: 100%;
+  min-height: 0;
 }
 
 .portal-slide-image {
@@ -807,7 +810,9 @@ input[type="email"]:focus {
   padding: 24px 26px 22px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .portal-slide-index {
@@ -856,10 +861,13 @@ input[type="email"]:focus {
   color: var(--text);
   font-size: 0.95rem;
   line-height: 1.7;
+  max-height: calc(1.7em * 6);
+  overflow: hidden;
 }
 
 .portal-slide-actions {
-  margin-top: 14px;
+  margin-top: 16px;
+  margin-top: auto;
 }
 
 .portal-slide-link {
@@ -1566,6 +1574,15 @@ footer a:not(.footer-link-card):hover {
 
   .portal-slide-content {
     padding: 20px 18px 18px;
+  }
+
+  .portal-carousel-track {
+    height: auto;
+    min-height: 0;
+  }
+
+  .portal-slide {
+    height: auto;
   }
 
   .portal-side-stats {
