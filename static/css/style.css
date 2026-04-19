@@ -772,8 +772,8 @@ input[type="email"]:focus {
 
 .portal-carousel-track {
   position: relative;
-  height: 760px;
-  min-height: 760px;
+  height: 420px;
+  min-height: 420px;
 }
 
 .portal-slide {
