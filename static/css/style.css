@@ -369,8 +369,8 @@ input[type="email"]:focus {
 .portal-hero {
   position: relative;
   overflow: hidden;
-  height: 420px;
-  min-height: 420px;
+  height: 462px;
+  min-height: 462px;
   border-radius: 20px;
   margin-bottom: 20px;
   background:
@@ -758,7 +758,7 @@ input[type="email"]:focus {
   font-size: 1rem;
   color: rgba(245, 249, 255, 0.92);
   min-height: 0;
-  max-height: calc(1.56em * 7.4);
+  max-height: calc(1.56em * 8.6);
   overflow: hidden;
 }
 
