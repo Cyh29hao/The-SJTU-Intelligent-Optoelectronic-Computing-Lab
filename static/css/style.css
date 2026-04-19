@@ -913,8 +913,8 @@ input[type="email"]:focus {
 .portal-about-card,
 .portal-side-card,
 .portal-latest-news-card {
-  background: #ffffff;
-  border: 1px solid #e4ebf3;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
   border-radius: 18px;
   box-shadow: 0 12px 26px rgba(44, 62, 80, 0.08);
 }
