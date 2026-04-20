@@ -151,13 +151,14 @@ print(f"🗄️ Supabase Logs: {'enabled' if SUPABASE_LOGS_ENABLED and SUPABASE_
 
 # Runtime & Lab info
 START_TIME = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-LAB_NAME = "Intelligent Optoelectronic Computing Lab"
+LAB_NAME = "OPTICom Lab"
 SITE_CONFIG_PATH = os.path.join(CONTENT_ROOT, 'site.json')
 VIEW_LOG_COOLDOWN_SECONDS = 30
 PAGE_TYPE_LABELS = {
     'home': 'Home',
     'team': 'People',
     'news': 'News',
+    'sources': 'Sources',
     'articles': 'Publications',
     'article_detail': 'Publication Detail',
     'news_detail': 'News Detail',
@@ -240,13 +241,13 @@ DEFAULT_FRIEND_LINKS = [
     {
         'title': 'GitHub',
         'caption': 'Lab project repository',
-        'url': 'https://github.com/Cyh29hao/0129_YitongChen_lightchip_lab_website_draft',
+        'url': 'https://github.com/Cyh29hao/The-SJTU-Intelligent-Optoelectronic-Computing-Lab',
         'image_filename': 'friend_link_github.svg'
     }
 ]
 DEFAULT_SITE_CONFIG = {
-    'home_note': 'To open our paper and resource pages, please first fill in your information on the Login page.',
-    'home_note_zh': '如需访问论文和资源页面，请先在登录页填写信息。',
+    'home_note': 'Record your information once, then paper and source links open immediately.',
+    'home_note_zh': '只需记录一次信息，即可立即打开论文和资源链接。',
     'home_welcome': "Our lab focuses on research in all-optical neural networks, diffractive deep learning, and intelligent photonic chips.\n\nThis website provides publicly available publications, code repositories, and dataset links from our group.",
     'home_welcome_zh': "本课题组主要围绕全光神经网络、衍射深度学习与智能光子芯片开展研究。\n\n本网站汇集了课题组公开发表的论文、代码仓库与数据集链接。",
     'admissions_title': 'Join Us',
@@ -262,14 +263,14 @@ DEFAULT_SITE_CONFIG = {
     'hero_summary': 'Research in photonic neural networks, intelligent photonic integrated circuits, and open academic resources for optical computing.',
     'hero_summary_zh': '聚焦光子神经网络、智能光子集成电路与面向光计算的开放学术资源。',
     'lab_name': LAB_NAME,
-    'lab_name_short': 'SJTU IOC Lab',
-    'lab_name_short_zh': '上海交大智能光电计算实验室',
-    'lab_name_full': 'the SJTU Intelligent Optoelectronic Computing Lab',
-    'lab_name_full_zh': '上海交通大学智能光电计算实验室',
+    'lab_name_short': 'OPTICom Lab',
+    'lab_name_short_zh': 'OPTICom Lab',
+    'lab_name_full': 'Optoelectronic and Photonic Technologies for Intelligent Computing',
+    'lab_name_full_zh': 'Optoelectronic and Photonic Technologies for Intelligent Computing',
     'site_version': DEFAULT_SITE_VERSION,
     'show_external_access_note': False,
-    'footer_copyright': '2026 AI Intelligent Optoelectronic Computing Lab',
-    'footer_copyright_zh': '2026 上海交通大学智能光电计算实验室',
+    'footer_copyright': '2026 OPTICom Lab',
+    'footer_copyright_zh': '2026 OPTICom Lab',
     'logo_filename': 'site_logo.svg',
     'friend_links': DEFAULT_FRIEND_LINKS,
     'research_highlights': DEFAULT_RESEARCH_HIGHLIGHTS,
@@ -288,6 +289,7 @@ CATEGORY_TRANSLATIONS = {
 }
 I18N = {
     'nav_home': {'en': 'Home', 'zh': '首页'},
+    'nav_sources': {'en': 'Sources', 'zh': '资源'},
     'nav_publications': {'en': 'Publications', 'zh': '论文'},
     'nav_news': {'en': 'News', 'zh': '新闻'},
     'nav_people': {'en': 'People', 'zh': '成员'},
@@ -307,7 +309,7 @@ I18N = {
     'page_views': {'en': 'Page Views', 'zh': '浏览量'},
     'login_page': {'en': 'Go to LOGIN page', 'zh': '前往登录页'},
     'current_user': {'en': 'Current user', 'zh': '当前用户'},
-    'logged_in_open_note': {'en': 'You are currently logged in and can open paper and resource pages directly from each publication detail page.', 'zh': '您当前已登录，可直接从每篇论文详情页访问论文与资源页面。'},
+    'logged_in_open_note': {'en': 'Information recorded. You can now open paper and source links directly.', 'zh': '信息已记录，现在可以直接打开论文和资源链接。'},
     'authors': {'en': 'Authors', 'zh': '作者'},
     'published_in': {'en': 'Published in', 'zh': '发表于'},
     'last_edited': {'en': 'Last edited', 'zh': '最近更新'},
@@ -318,14 +320,17 @@ I18N = {
     'external_access_note': {'en': 'External links are unlocked after login so the lab can keep lightweight access records without hosting the files locally.', 'zh': '登录后可访问外部链接，这样课题组可以在不托管文件的情况下保留轻量级访问记录。'},
     'back_to_news': {'en': 'Back to News', 'zh': '返回新闻列表'},
     'news_intro': {'en': 'Announcements, milestones, and lab updates.', 'zh': '实验室公告、进展与阶段性动态。'},
-    'user_registration': {'en': 'User Registration', 'zh': '用户登记'},
-    'register_intro': {'en': 'Please provide your information to access downloadable resources.', 'zh': '请填写基本信息以访问论文与资源页面。'},
-    'register_notice': {'en': 'Please fill in your details carefully. After login, personal information cannot be modified.', 'zh': '请认真填写信息。登录后个人信息将无法直接修改。'},
+    'user_registration': {'en': 'Record Information', 'zh': '信息记录'},
+    'register_intro': {'en': 'Please record your information once to access downloadable resources immediately.', 'zh': '请记录一次基本信息，即可立即访问和下载论文与资源。'},
+    'register_notice': {'en': 'This is only a lightweight access record, not an account review or approval process. After submitting, the requested link opens immediately.', 'zh': '这里只是用于访问记录（record），不是注册审核流程。提交后会立即打开您要访问的论文或资源链接。'},
     'label_name': {'en': 'Name *', 'zh': '姓名 *'},
     'label_affiliation': {'en': 'Affiliation *', 'zh': '单位 / 身份 *'},
     'label_email': {'en': 'Email *', 'zh': '邮箱 *'},
     'register_consent': {'en': 'I confirm the information provided is accurate and all downloads are for academic use only.', 'zh': '我确认所填信息准确无误，且所有访问与下载仅用于学术用途。'},
     'submit_and_access': {'en': 'Submit and Access Resources', 'zh': '提交并访问资源'},
+    'sources_intro': {'en': 'Direct links to code, datasets, supplementary materials, and other downloadable resources shared by the lab.', 'zh': '这里集中列出课题组公开共享的代码、数据集、补充材料等可下载资源。'},
+    'source_open_resource': {'en': 'Open Resource', 'zh': '打开资源'},
+    'source_record_hint': {'en': 'A one-time information record is required before opening external resource links.', 'zh': '打开外部资源前需要先进行一次信息记录。'},
     'privacy_notice_title': {'en': 'Privacy Notice:', 'zh': '隐私说明：'},
     'privacy_notice_body': {'en': 'Your information is used solely for research collaboration tracking and will not be shared or used commercially.', 'zh': '您提供的信息仅用于科研协作与访问记录统计，不会被共享或用于商业用途。'},
     'no_entries_yet': {'en': 'No entries yet.', 'zh': '暂无内容。'},
@@ -1027,8 +1032,8 @@ def _default_news_items():
     today = datetime.now().strftime("%Y-%m-%d")
     return [{
         'id': 'news_001',
-        'title': 'SJTU IOC Lab website is now online',
-        'title_zh': 'SJTU IOC Lab 网站现已上线',
+        'title': 'OPTICom Lab website is now online',
+        'title_zh': 'OPTICom Lab 网站现已上线',
         'date': today,
         'summary': f'Version {DEFAULT_SITE_VERSION} is now available with publications, people profiles, external resource access, and admin analytics.',
         'summary_zh': f'当前版本 {DEFAULT_SITE_VERSION} 已上线，支持论文页面、成员页面、外部资源访问与后台数据统计。',
@@ -1661,6 +1666,17 @@ def news():
     log_page_view('news', title='News')
     return render_template('news.html', news_items=news_items)
 
+@app.route('/sources')
+def sources():
+    site_cfg = load_site_config()
+    articles = load_articles_data()
+    source_items = [
+        item for item in sorted(articles, key=_article_sort_key)
+        if (item.get('resource_url') or '').strip()
+    ]
+    log_page_view('sources', title='Sources')
+    return render_template('sources.html', source_items=source_items, site_cfg=site_cfg)
+
 @app.route('/articles')
 def articles():
     site_cfg = load_site_config()
@@ -1878,7 +1894,7 @@ def open_link(link_type, resource_id):
     user_info = session.get('user_info')
     if not user_info:
         print(f"Unregistered user attempted to open {resource_id}:{link_type}, redirecting to login")
-        return redirect(url_for('register'))
+        return redirect(url_for('register', next=request.path))
 
     if link_type not in ['paper', 'resource', 'official_free_access']:
         return "Invalid link type", 400
@@ -2415,7 +2431,7 @@ def admin_view_as_user():
     session['is_admin'] = False
     session['user_info'] = {
         'name': ADMIN_CREDENTIALS.get('name','Admin'),
-        'affiliation': ADMIN_CREDENTIALS.get('affiliation','Intelligent Optoelectronic Computing Lab'),
+        'affiliation': ADMIN_CREDENTIALS.get('affiliation','OPTICom Lab'),
         'email': ADMIN_CREDENTIALS.get('email','admin@example.com')
     }
     return redirect(url_for('index'))
@@ -2817,7 +2833,7 @@ def _upload_runtime_bundle_retired():
 def _open_link_supabase_only(link_type, resource_id):
     user_info = session.get('user_info')
     if not user_info:
-        return redirect(url_for('register'))
+        return redirect(url_for('register', next=request.path))
     if link_type not in ['paper', 'resource', 'official_free_access']:
         return "Invalid link type", 400
 

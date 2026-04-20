@@ -1,14 +1,14 @@
 {
-  "home_note": "To open our paper and resource pages, please first fill in your information on the Login page.",
-  "home_note_zh": "如需访问论文和资源页面，请您先在登录页填写信息。",
-  "home_welcome": "The SJTU Intelligent Optoelectronic Computing Lab works at the intersection of photonic computing, AI algorithms, chip design, and intelligent visual systems. We focus on high-speed, low-power optoelectronic AI chips, AI-assisted chip design, and software-hardware co-design for practical intelligent systems.\r\n\r\nThe group combines interdisciplinary expertise, advanced optical experimental platforms, and active domestic and international collaborations to support innovation from algorithms and devices to chip-level applications.",
-  "home_welcome_zh": "上海交通大学智能光电计算实验室面向光计算、AI 算法、芯片设计与智能视觉系统的交叉前沿，聚焦高速、低功耗光电 AI 芯片及其应用、AI 辅助芯片设计，以及面向实际智能系统的软硬件协同研究。\r\n\r\n课题组具备跨学科背景、扎实科研积累、国际前沿光学实验平台和先进实验仪器，并通过充足科研支持与丰富国内外合作，支撑从算法、器件到芯片级应用的创新研究。",
+  "home_note": "Record your information once, then paper and source links open immediately.",
+  "home_note_zh": "只需记录一次信息，即可立即打开论文和资源链接。",
+  "home_welcome": "OPTICom Lab at Shanghai Jiao Tong University explores optoelectronic and photonic technologies for intelligent computing.\r\n\r\nWe focus on photonic AI acceleration, AI-assisted chip design, and chip-level intelligent applications supported by advanced optical platforms and interdisciplinary collaboration.",
+  "home_welcome_zh": "OPTICom Lab 立足上海交通大学，面向智能计算中的光电子与光子技术开展交叉研究。\r\n\r\n课题组聚焦光芯片加速 AI、AI 辅助芯片设计与芯片级智能应用，并依托先进光学实验平台和跨学科合作推进创新研究。",
   "admissions_title": "Join Us",
   "admissions_title_zh": "招聘信息",
-  "admissions_intro": "We are recruiting motivated PhD and master's students, postdoctoral researchers, and interns for photonic AI acceleration, photonic chip design, and chip applications.",
-  "admissions_intro_zh": "课题组长期招收博士及硕士研究生、博士后、实习生，方向覆盖光芯片加速 AI、光芯片设计与芯片应用。",
-  "admissions_lab_profile": "Candidates interested in high-speed, low-power optoelectronic AI chips, AI-assisted chip design, and interdisciplinary software-hardware research are welcome to contact us.",
-  "admissions_lab_profile_zh": "欢迎对高速、低功耗光电 AI 芯片及其应用、AI 辅助芯片设计和软硬件协同研究具有浓厚兴趣与强烈自驱力的同学联系。",
+  "admissions_intro": "We welcome motivated students, postdocs, and interns interested in photonic AI acceleration, chip design, and intelligent chip applications.",
+  "admissions_intro_zh": "长期招收研究生、博士后和实习生，方向覆盖光芯片加速 AI、光芯片设计与智能芯片应用。",
+  "admissions_lab_profile": "Strong self-motivation and interdisciplinary curiosity are valued.",
+  "admissions_lab_profile_zh": "欢迎具有浓厚兴趣、强烈自驱力和交叉学科好奇心的同学联系。",
   "admissions_directions": [
     {
       "title": "AI acceleration with photonic chips",
@@ -34,15 +34,15 @@
   "admissions_news_id": "news_003",
   "hero_summary": "Research in high-speed, low-power optoelectronic AI chips, photonic AI acceleration, AI-assisted chip design, and intelligent chip applications.",
   "hero_summary_zh": "聚焦高速、低功耗光电 AI 芯片、光芯片加速 AI、AI 辅助芯片设计与智能芯片应用。",
-  "lab_name": "the SJTU Intelligent Optoelectronic Computing Lab",
-  "lab_name_short": "SJTU IOC Lab",
-  "lab_name_short_zh": "上海交大智能光电计算实验室",
-  "lab_name_full": "the SJTU Intelligent Optoelectronic Computing Lab",
-  "lab_name_full_zh": "上海交通大学智能光电计算实验室",
+  "lab_name": "OPTICom Lab",
+  "lab_name_short": "OPTICom Lab",
+  "lab_name_short_zh": "OPTICom Lab",
+  "lab_name_full": "Optoelectronic and Photonic Technologies for Intelligent Computing",
+  "lab_name_full_zh": "Optoelectronic and Photonic Technologies for Intelligent Computing",
   "site_version": "1.3.5",
   "show_external_access_note": false,
-  "footer_copyright": "2026 AI Intelligent Optoelectronic Computing Lab",
-  "footer_copyright_zh": "2026 上海交通大学智能光电计算实验室",
+  "footer_copyright": "2026 OPTICom Lab",
+  "footer_copyright_zh": "2026 OPTICom Lab",
   "logo_filename": "site_logo.svg",
   "friend_links": [
     {
@@ -66,7 +66,7 @@
     {
       "title": "GitHub",
       "caption": "Lab project repository",
-      "url": "https://github.com/Cyh29hao/0129_YitongChen_lightchip_lab_website_draft",
+      "url": "https://github.com/Cyh29hao/The-SJTU-Intelligent-Optoelectronic-Computing-Lab",
       "image_filename": "friend_link_github.svg"
     }
   ],

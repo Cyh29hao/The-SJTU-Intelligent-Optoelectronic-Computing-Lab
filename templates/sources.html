@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}{{ t('nav_sources') }} - {{ lang_value(site_cfg_global, 'lab_name_short') }}{% endblock %}
+{% block content %}
+
+<div class="sources-page">
+  <div class="portal-section-head sources-head">
+    <h3>{{ t('nav_sources') }}</h3>
+    <p class="portal-section-note">{{ t('sources_intro') }}</p>
+  </div>
+
+  <section class="sources-access-note">
+    {% if not session.user_info %}
+      <p>{{ t('source_record_hint') }}</p>
+      <a href="{{ url_for('register', next=request.path) }}" class="portal-inline-link">{{ t('login_page') }}</a>
+    {% else %}
+      <p>{{ t('logged_in_open_note') }}</p>
+    {% endif %}
+  </section>
+
+  <div class="sources-list">
+    {% for item in source_items %}
+    <article class="source-card">
+      <div class="source-card-main">
+        <div class="source-card-meta">{{ item.venue }}, {{ item.year }}</div>
+        <h3 class="source-card-title">{{ item.title }}</h3>
+        {% set adc = item.authors_display_count or 3 %}
+        {% set total = item.authors|length %}
+        {% set shown = item.authors[:adc] %}
+        {% set remaining = total - adc %}
+        <p class="source-card-authors">{{ shown|join(', ') }}{% if remaining > 0 %} et al.{% endif %}</p>
+        {% if item.resource_kinds %}
+        <div class="source-kind-row">
+          {% for kind in item.resource_kinds %}
+          <span class="source-kind-pill">{{ kind }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+      <div class="source-card-actions">
+        <a href="{{ url_for('open_link', link_type='resource', resource_id=item.id) }}" class="btn source-open-btn" target="_blank" rel="noopener">{{ t('source_open_resource') }}</a>
+        <a href="{{ url_for('article_detail', id=item.id) }}" class="portal-slide-link">{{ t('read_article') }} &rarr;</a>
+      </div>
+    </article>
+    {% else %}
+    <p class="publication-empty">{{ t('no_entries_yet') }}</p>
+    {% endfor %}
+  </div>
+</div>
+
+{% endblock %}

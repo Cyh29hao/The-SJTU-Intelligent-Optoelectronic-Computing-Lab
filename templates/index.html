@@ -6,7 +6,8 @@
     <div class="portal-hero-main">
       <div class="portal-hero-copy">
         <div class="portal-hero-kicker">{{ t('sjtu_full_name') }}</div>
-        <h2 class="portal-hero-title"><a href="{{ url_for('index') }}" class="portal-hero-title-link">{{ lang_value(site_cfg, 'lab_name_full') }}</a></h2>
+        <h2 class="portal-hero-title"><a href="{{ url_for('index') }}" class="portal-hero-title-link">{{ lang_value(site_cfg, 'lab_name_short') }}</a></h2>
+        <p class="portal-hero-full-name">{{ lang_value(site_cfg, 'lab_name_full') }}</p>
         <p class="portal-hero-subtitle"><a href="{{ url_for('person_detail', id='person_001') }}" class="portal-hero-subtitle-link">{{ t('prof_yitong_chen') }}</a></p>
         <p class="portal-hero-summary">
           {{ lang_value(site_cfg, 'hero_summary') }}
@@ -98,7 +99,7 @@
     </div>
     <div class="portal-about-card">
       <div class="portal-about-body">
-        {{ lang_value(site_cfg, 'home_welcome') }}
+        {{ lang_value(site_cfg, 'home_welcome')|trim }}
       </div>
     </div>
   </div>
@@ -115,10 +116,8 @@
         <p class="portal-side-text">
           {{ t('logged_in_open_note') }}
         </p>
-        <p class="portal-user-line">
-          {{ t('current_user') }}: {{ session.user_info.name }} ({{ session.user_info.affiliation }}) {{ session.user_info.email }}
-        </p>
       {% endif %}
+      <a href="{{ url_for('sources') }}" class="portal-inline-link">{{ t('nav_sources') }} &rarr;</a>
     </div>
   </div>
 
@@ -129,8 +128,8 @@
     </div>
     <div class="portal-join-card">
       <div class="portal-join-copy">
-        <p>{{ lang_value(site_cfg, 'admissions_intro') }}</p>
-        <p>{{ lang_value(site_cfg, 'admissions_lab_profile') }}</p>
+        <p>{{ lang_value(site_cfg, 'admissions_intro')|trim }}</p>
+        <p>{{ lang_value(site_cfg, 'admissions_lab_profile')|trim }}</p>
       </div>
       {% if site_cfg.admissions_apply %}
       <div class="portal-join-apply">
@@ -166,13 +165,13 @@
   console.log("%cWelcome to our research world.", "color: #9b59b6; font-size: 18px; font-weight: bold;");
   console.log("Developer: An undergraduate student passionate about coding");
   console.log("Note: This site is under construction. Suggestions are welcome!");
-  console.log("GitHub Repository: https://github.com/Cyh29hao/0129_YitongChen_lightchip_lab_website_draft");
+  console.log("GitHub Repository: https://github.com/Cyh29hao/The-SJTU-Intelligent-Optoelectronic-Computing-Lab");
 
   function team() {
     console.clear();
-    console.log("Prof. Yitong Chen - Intelligent Optoelectronic Computing Lab");
+    console.log("Prof. Yitong Chen - OPTICom Lab");
     console.log("Research Areas: D2NN | MZI | Metasurface | Photonic AI");
-    console.log("Contact: contact@lightchip-lab.org");
+    console.log("Contact: yitongchen@sjtu.edu.cn");
   }
 
   (function() {

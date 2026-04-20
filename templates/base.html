@@ -39,6 +39,7 @@
       </div>
       <nav class="main-nav" id="site-menu">
           <a href="/" class="{% if request.path == '/' %}is-active{% endif %}">{{ t('nav_home') }}</a>
+          <a href="/sources" class="{% if request.path.startswith('/sources') %}is-active{% endif %}">{{ t('nav_sources') }}</a>
           <a href="/articles" class="{% if request.path.startswith('/articles') or request.path.startswith('/article/') %}is-active{% endif %}">{{ t('nav_publications') }}</a>
           <a href="/news" class="{% if request.path.startswith('/news') %}is-active{% endif %}">{{ t('nav_news') }}</a>
           <a href="/team" class="{% if request.path.startswith('/team') or request.path.startswith('/person/') %}is-active{% endif %}">{{ t('nav_people') }}</a>
