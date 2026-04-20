@@ -120,6 +120,7 @@ img {
   padding: 6px;
 }
 
+
 .site-brand-text {
   display: flex;
   flex-direction: column;
@@ -136,7 +137,10 @@ img {
 .site-brand-subtitle {
   font-size: 0.9rem;
   color: var(--text-light);
-  white-space: nowrap;
+  /* white-space: nowrap; */
+  max-width: 270px;
+  white-space: normal;
+  line-height: 1.35;
 }
 
 .main-nav {
