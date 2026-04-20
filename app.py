@@ -197,6 +197,26 @@ DEFAULT_PERSON_TAGS = [
     'Systems',
     'Resources'
 ]
+DEFAULT_ADMISSIONS_DIRECTIONS = [
+    {
+        'title': 'AI acceleration with photonic chips',
+        'title_zh': '光芯片加速 AI',
+        'summary': 'Algorithm-oriented research for optical and optoelectronic intelligent computing.',
+        'summary_zh': '偏 AI 算法，面向光学与光电智能计算。'
+    },
+    {
+        'title': 'Photonic chip design',
+        'title_zh': '光芯片设计',
+        'summary': 'Physics- and chip-oriented research on optical computing hardware and AI-assisted chip design.',
+        'summary_zh': '偏物理/芯片，面向光计算硬件实现与 AI 辅助芯片设计。'
+    },
+    {
+        'title': 'Chip applications',
+        'title_zh': '芯片应用',
+        'summary': 'Software-hardware co-design for practical intelligent optoelectronic systems.',
+        'summary_zh': '软硬件兼顾，面向智能光电系统应用。'
+    }
+]
 DEFAULT_SITE_VERSION = '1.3.4'
 DEFAULT_FRIEND_LINKS = [
     {
@@ -229,6 +249,16 @@ DEFAULT_SITE_CONFIG = {
     'home_note_zh': '如需访问论文和资源页面，请先在登录页填写信息。',
     'home_welcome': "Our lab focuses on research in all-optical neural networks, diffractive deep learning, and intelligent photonic chips.\n\nThis website provides publicly available publications, code repositories, and dataset links from our group.",
     'home_welcome_zh': "本课题组主要围绕全光神经网络、衍射深度学习与智能光子芯片开展研究。\n\n本网站汇集了课题组公开发表的论文、代码仓库与数据集链接。",
+    'admissions_title': 'Join Us',
+    'admissions_title_zh': '招生信息',
+    'admissions_intro': "We are recruiting motivated PhD and master's students, postdoctoral researchers, and interns for high-speed, low-power optoelectronic AI chips, AI-assisted chip design, and software-hardware co-design applications.",
+    'admissions_intro_zh': '课题组长期招收博士及硕士研究生、博士后、实习生，方向覆盖高速、低功耗光电 AI 芯片及其应用、AI 辅助芯片设计和软硬件协同系统。',
+    'admissions_lab_profile': 'The group offers advanced optical experimental platforms, sufficient research support, flexible time arrangements, and active domestic and international collaborations.',
+    'admissions_lab_profile_zh': '课题组具备先进光学实验平台、充足科研支持、相对自由的时间安排以及丰富的国内外合作。',
+    'admissions_apply': 'Read the full recruitment notice for research directions, candidate expectations, and application materials.',
+    'admissions_apply_zh': '查看完整招募新闻，了解研究方向、申请要求和材料清单。',
+    'admissions_news_id': 'news_003',
+    'admissions_directions': DEFAULT_ADMISSIONS_DIRECTIONS,
     'hero_summary': 'Research in photonic neural networks, intelligent photonic integrated circuits, and open academic resources for optical computing.',
     'hero_summary_zh': '聚焦光子神经网络、智能光子集成电路与面向光计算的开放学术资源。',
     'lab_name': LAB_NAME,
@@ -591,6 +621,19 @@ def _normalize_research_highlights(items):
             'title_zh': title_zh,
             'summary': summary,
             'summary_zh': summary_zh
+        })
+    return normalized
+
+def _normalize_admissions_directions(items):
+    normalized = []
+    source_items = items if isinstance(items, list) else []
+    for index, default_item in enumerate(DEFAULT_ADMISSIONS_DIRECTIONS):
+        current = source_items[index] if index < len(source_items) and isinstance(source_items[index], dict) else {}
+        normalized.append({
+            'title': (current.get('title') or '').strip() or default_item['title'],
+            'title_zh': (current.get('title_zh') or '').strip() or default_item.get('title_zh', ''),
+            'summary': (current.get('summary') or '').strip() or default_item['summary'],
+            'summary_zh': (current.get('summary_zh') or '').strip() or default_item.get('summary_zh', '')
         })
     return normalized
 
@@ -1017,11 +1060,13 @@ def _normalize_news_record(item):
         'content': (item.get('content') or '').strip(),
         'content_zh': (item.get('content_zh') or '').strip(),
         'image_filename': (item.get('image_filename') or '').strip(),
+        'pinned': bool(item.get('pinned')),
+        'hide_from_home': bool(item.get('hide_from_home')),
         'last_edited': (item.get('last_edited') or '').strip()
     }
 
 def _news_sort_key(item):
-    return ((item.get('date') or ''), (item.get('last_edited') or ''), item.get('id', ''))
+    return (1 if item.get('pinned') else 0, (item.get('date') or ''), (item.get('last_edited') or ''), item.get('id', ''))
 
 def load_news_data():
     path = os.path.join(CONTENT_ROOT, 'news.json')
@@ -1100,6 +1145,11 @@ def load_site_config():
         for key in (
             'home_note', 'home_note_zh',
             'home_welcome', 'home_welcome_zh',
+            'admissions_title', 'admissions_title_zh',
+            'admissions_intro', 'admissions_intro_zh',
+            'admissions_lab_profile', 'admissions_lab_profile_zh',
+            'admissions_apply', 'admissions_apply_zh',
+            'admissions_news_id',
             'hero_summary', 'hero_summary_zh',
             'lab_name',
             'lab_name_short', 'lab_name_short_zh',
@@ -1118,6 +1168,10 @@ def load_site_config():
         if cfg.get('research_highlights') != normalized_highlights:
             cfg['research_highlights'] = normalized_highlights
             changed = True
+        normalized_admissions_directions = _normalize_admissions_directions(cfg.get('admissions_directions'))
+        if cfg.get('admissions_directions') != normalized_admissions_directions:
+            cfg['admissions_directions'] = normalized_admissions_directions
+            changed = True
         normalized_friend_links = _normalize_friend_links(cfg.get('friend_links'))
         if cfg.get('friend_links') != normalized_friend_links:
             cfg['friend_links'] = normalized_friend_links
@@ -1133,6 +1187,7 @@ def load_site_config():
         print(f"⚠️ Failed to load site config: {e}")
         fallback = dict(DEFAULT_SITE_CONFIG)
         fallback['research_highlights'] = _normalize_research_highlights(DEFAULT_SITE_CONFIG.get('research_highlights'))
+        fallback['admissions_directions'] = _normalize_admissions_directions(DEFAULT_SITE_CONFIG.get('admissions_directions'))
         fallback['friend_links'] = _normalize_friend_links(DEFAULT_SITE_CONFIG.get('friend_links'))
         fallback['person_tags'] = _normalize_person_tags(DEFAULT_SITE_CONFIG.get('person_tags'))
         return fallback
@@ -1509,6 +1564,8 @@ def _add_news(form_data, image_file=None):
         'content': (form_data.get('content') or '').strip(),
         'content_zh': (form_data.get('content_zh') or '').strip(),
         'image_filename': image_filename,
+        'pinned': form_data.get('pinned') == 'on',
+        'hide_from_home': form_data.get('hide_from_home') == 'on',
         'last_edited': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
     data.append(item)
@@ -1529,6 +1586,8 @@ def _update_news(news_id, form_data, image_file=None):
         item['summary_zh'] = (form_data.get('summary_zh') or item.get('summary_zh') or '').strip()
         item['content'] = (form_data.get('content') or item.get('content') or '').strip()
         item['content_zh'] = (form_data.get('content_zh') or item.get('content_zh') or '').strip()
+        item['pinned'] = form_data.get('pinned') == 'on'
+        item['hide_from_home'] = form_data.get('hide_from_home') == 'on'
         if image_file and image_file.filename:
             for ext in ['.png', '.jpg', '.jpeg', '.gif', '.webp']:
                 path = os.path.join(NEWS_IMAGES_DIR, f"{news_id}{ext}")
@@ -1572,6 +1631,7 @@ def index():
     articles = load_articles_data()
     people = load_people_data()
     news_items = load_news_data()
+    latest_news = [item for item in news_items if not item.get('hide_from_home')][:3]
     featured_articles = sorted(
         [item for item in articles if item.get('featured_on_home')],
         key=_article_sort_key
@@ -1585,7 +1645,7 @@ def index():
         people_count=len(people),
         featured_articles=featured_articles,
         total_page_views=page_view_summary['total_views'],
-        latest_news=news_items[:3]
+        latest_news=latest_news
     )
 
 @app.route('/team')
@@ -2194,9 +2254,9 @@ def _handle_admin_actions(default_module):
         _delete_item(item_type, item_id)
         return redirect(_admin_module_url('content', '#publications-section', 'publications'))
 
-    if action in ('edit_site_welcome', 'edit_site_content', 'edit_site_branding', 'edit_friend_links', 'edit_research_highlights', 'edit_person_tags'):
+    if action in ('edit_site_welcome', 'edit_site_content', 'edit_site_branding', 'edit_friend_links', 'edit_research_highlights', 'edit_person_tags', 'edit_join_us'):
         cfg = load_site_config()
-        if action in ('edit_site_welcome', 'edit_site_content', 'edit_site_branding'):
+        if action in ('edit_site_welcome', 'edit_site_content', 'edit_site_branding', 'edit_join_us'):
             cfg['home_welcome'] = _admin_text_value(request.form, 'home_welcome', cfg.get('home_welcome', ''), DEFAULT_SITE_CONFIG['home_welcome'])
             cfg['home_welcome_zh'] = _admin_text_value(request.form, 'home_welcome_zh', cfg.get('home_welcome_zh', ''), DEFAULT_SITE_CONFIG['home_welcome_zh'])
             cfg['home_note'] = _admin_text_value(request.form, 'home_note', cfg.get('home_note', ''), DEFAULT_SITE_CONFIG['home_note'])
@@ -2213,6 +2273,27 @@ def _handle_admin_actions(default_module):
             cfg['footer_copyright'] = _admin_text_value(request.form, 'footer_copyright', cfg.get('footer_copyright', ''), DEFAULT_SITE_CONFIG['footer_copyright'])
             cfg['footer_copyright_zh'] = _admin_text_value(request.form, 'footer_copyright_zh', cfg.get('footer_copyright_zh', ''), DEFAULT_SITE_CONFIG['footer_copyright_zh'])
             cfg['lab_name'] = cfg['lab_name_full']
+        if action in ('edit_site_content', 'edit_join_us'):
+            cfg['admissions_title'] = _admin_text_value(request.form, 'admissions_title', cfg.get('admissions_title', ''), DEFAULT_SITE_CONFIG['admissions_title'])
+            cfg['admissions_title_zh'] = _admin_text_value(request.form, 'admissions_title_zh', cfg.get('admissions_title_zh', ''), DEFAULT_SITE_CONFIG['admissions_title_zh'])
+            cfg['admissions_intro'] = _admin_text_value(request.form, 'admissions_intro', cfg.get('admissions_intro', ''), DEFAULT_SITE_CONFIG['admissions_intro'])
+            cfg['admissions_intro_zh'] = _admin_text_value(request.form, 'admissions_intro_zh', cfg.get('admissions_intro_zh', ''), DEFAULT_SITE_CONFIG['admissions_intro_zh'])
+            cfg['admissions_lab_profile'] = _admin_text_value(request.form, 'admissions_lab_profile', cfg.get('admissions_lab_profile', ''), DEFAULT_SITE_CONFIG['admissions_lab_profile'])
+            cfg['admissions_lab_profile_zh'] = _admin_text_value(request.form, 'admissions_lab_profile_zh', cfg.get('admissions_lab_profile_zh', ''), DEFAULT_SITE_CONFIG['admissions_lab_profile_zh'])
+            cfg['admissions_apply'] = _admin_text_value(request.form, 'admissions_apply', cfg.get('admissions_apply', ''), DEFAULT_SITE_CONFIG['admissions_apply'])
+            cfg['admissions_apply_zh'] = _admin_text_value(request.form, 'admissions_apply_zh', cfg.get('admissions_apply_zh', ''), DEFAULT_SITE_CONFIG['admissions_apply_zh'])
+            cfg['admissions_news_id'] = _admin_text_value(request.form, 'admissions_news_id', cfg.get('admissions_news_id', ''), DEFAULT_SITE_CONFIG['admissions_news_id'])
+            directions = []
+            current_directions = cfg.get('admissions_directions') or []
+            for index, default_item in enumerate(DEFAULT_ADMISSIONS_DIRECTIONS, start=1):
+                current = current_directions[index - 1] if index - 1 < len(current_directions) and isinstance(current_directions[index - 1], dict) else {}
+                directions.append({
+                    'title': _admin_text_value(request.form, f'admission_direction_title_{index}', current.get('title', ''), default_item['title']),
+                    'title_zh': _admin_text_value(request.form, f'admission_direction_title_zh_{index}', current.get('title_zh', ''), default_item.get('title_zh', '')),
+                    'summary': _admin_text_value(request.form, f'admission_direction_summary_{index}', current.get('summary', ''), default_item['summary']),
+                    'summary_zh': _admin_text_value(request.form, f'admission_direction_summary_zh_{index}', current.get('summary_zh', ''), default_item.get('summary_zh', ''))
+                })
+            cfg['admissions_directions'] = _normalize_admissions_directions(directions)
         if action in ('edit_site_content', 'edit_friend_links'):
             friend_links = []
             for index, default_item in enumerate(DEFAULT_FRIEND_LINKS, start=1):
@@ -2252,6 +2333,8 @@ def _handle_admin_actions(default_module):
             return redirect(_admin_module_url('settings', '#research-focus-section', 'research-focus'))
         if action == 'edit_person_tags':
             return redirect(_admin_module_url('settings', '#person-tags-section', 'person-tags'))
+        if action == 'edit_join_us':
+            return redirect(_admin_module_url('content', '#join-us-section', 'join-us'))
         return redirect(_admin_module_url(default_module))
 
     return None

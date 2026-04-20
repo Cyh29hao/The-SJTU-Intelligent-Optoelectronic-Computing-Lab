@@ -3,7 +3,12 @@
 {% block content %}
 
 <article class="news-detail-page" style="max-width: 860px; margin: 0 auto; text-align: left;">
-  <div class="news-detail-meta">{{ item.date }}</div>
+  <div class="news-detail-meta">
+    {{ item.date }}
+    {% if item.pinned %}
+    <span class="news-pin-badge">{{ '置顶' if current_lang == 'zh' else 'Pinned' }}</span>
+    {% endif %}
+  </div>
   <h2 class="news-detail-title" style="text-align:left; margin-bottom: 14px;">{{ lang_value(item, 'title') }}</h2>
   <img
     src="{{ url_for('asset_news_image', filename=item.image_filename) if item.image_filename else url_for('static', filename='images/placeholder-news.svg') }}"

@@ -10,7 +10,7 @@
 
   <div class="news-list">
     {% for item in news_items %}
-    <article class="news-card">
+    <article class="news-card{% if item.pinned %} news-card-pinned{% endif %}">
       <a href="{{ url_for('news_detail', id=item.id) }}" class="news-card-image-link">
         <img
           src="{{ url_for('asset_news_image', filename=item.image_filename) if item.image_filename else url_for('static', filename='images/placeholder-news.svg') }}"
@@ -19,7 +19,12 @@
         >
       </a>
       <div class="news-card-body">
-        <div class="news-card-date">{{ item.date }}</div>
+        <div class="news-card-date">
+          {{ item.date }}
+          {% if item.pinned %}
+          <span class="news-pin-badge">{{ '置顶' if current_lang == 'zh' else 'Pinned' }}</span>
+          {% endif %}
+        </div>
         <a href="{{ url_for('news_detail', id=item.id) }}" class="news-card-title">{{ lang_value(item, 'title') }}</a>
         <p class="news-card-summary">{{ lang_value(item, 'summary') or lang_value(item, 'content')[:180] }}</p>
         <a href="{{ url_for('news_detail', id=item.id) }}" class="portal-slide-link">{{ t('read_more') }} &rarr;</a>

@@ -1,5 +1,19 @@
 [
   {
+    "id": "news_003",
+    "title": "Open positions for students, postdocs, and interns",
+    "title_zh": "课题组长期招收研究生、博士后与实习生",
+    "date": "2026-04-20",
+    "summary": "We welcome motivated students, postdoctoral researchers, and interns interested in high-speed, low-power optoelectronic AI chips, AI-assisted chip design, and software-hardware co-design applications.",
+    "summary_zh": "课题组长期招收博士及硕士研究生、博士后、实习生，欢迎对高速、低功耗光电 AI 芯片、AI 辅助芯片设计和软硬件协同应用感兴趣的同学联系。",
+    "content": "The SJTU Intelligent Optoelectronic Computing Lab is recruiting PhD and master's students, postdoctoral researchers, and interns on a long-term basis.\r\n\r\nThe group focuses on internationally leading directions including high-speed and low-power optoelectronic AI chips and applications, AI-assisted chip design, and interdisciplinary software-hardware co-design. We welcome candidates who are strongly self-motivated and interested in photonic AI acceleration, photonic chip design, and practical chip applications.\r\n\r\nResearch directions include:\r\n1. AI acceleration with photonic chips: algorithm-oriented research for optical and optoelectronic intelligent computing.\r\n2. Photonic chip design: physics- and chip-oriented research on optical computing hardware and AI-assisted chip design.\r\n3. Chip applications: software-hardware co-design for practical intelligent optoelectronic systems.\r\n\r\nThe group offers interdisciplinary research opportunities, strong technical accumulation, advanced optical experimental platforms, sufficient research support, flexible time arrangements, and active domestic and international collaborations.\r\n\r\nTo apply, please send your CV, a brief research statement, transcripts, and related materials to yitongchen@sjtu.edu.cn.",
+    "content_zh": "上海交通大学智能光电计算实验室长期招收博士及硕士研究生、博士后、实习生。\r\n\r\n课题组聚焦高速、低功耗光电 AI 芯片及其应用、AI 辅助芯片设计、软硬件协同系统等国际前沿方向。欢迎对光芯片加速 AI、光芯片设计和芯片应用具有浓厚兴趣，并具备强烈自驱力的同学联系。\r\n\r\n主要研究方向包括：\r\n1. 光芯片加速 AI：偏 AI 算法，面向光学与光电智能计算。\r\n2. 光芯片设计：偏物理/芯片，面向光计算硬件实现与 AI 辅助芯片设计。\r\n3. 芯片应用：软硬件兼顾，面向智能光电系统应用。\r\n\r\n课题组具备丰富的跨学科背景、深厚的科研基础和相关技术积累，拥有国际前沿光学实验平台和先进实验仪器，可支撑多项创新研究；研究经费充裕，时间安排相对自由，国内外合作丰富。\r\n\r\n申请方式：请将个人简历、科研经历简述、成绩单等材料发送至 yitongchen@sjtu.edu.cn。",
+    "image_filename": "",
+    "pinned": true,
+    "hide_from_home": true,
+    "last_edited": "2026-04-20 11:45:00"
+  },
+  {
     "id": "news_001",
     "title": "SJTU IOC Lab website is now online",
     "title_zh": "SJTU IOC Lab 网站现已上线",
@@ -9,6 +23,8 @@
     "content": "Our lab website officially went online on 2026-04-18.\r\n\r\nThe current release is Version 1.3.2. It includes publication pages, people pages, external paper/resource access, simple analytics, and a lightweight local content-management workflow.\r\n\r\nWelcome to browse the site, read our publications, open available resources, and use the shared materials for academic purposes.",
     "content_zh": "本课题组网站已于 2026-04-18 正式上线。\r\n\r\n当前版本为 1.3.2，已支持论文页面、成员页面、外部论文与资源访问、基础统计功能，以及轻量级本地内容管理流程。\r\n\r\n欢迎浏览网站、阅读论文、访问公开资源，并在学术用途范围内使用共享材料。",
     "image_filename": "news_001.jpg",
+    "pinned": false,
+    "hide_from_home": false,
     "last_edited": "2026-04-18 16:50:47"
   },
   {
@@ -21,6 +37,8 @@
     "content": "The lab website now supports one-click switching between English and Chinese for the main user interface.\r\n\r\nThis update covers the homepage, People page, News page, Register page, and shared interface labels across the site. Publication content remains primarily in its original language, while interface labels are translated for clarity.\r\n\r\nWelcome to switch languages and continue browsing the site.",
     "content_zh": "课题组网站前台现已支持中英双语一键切换。\r\n\r\n本次更新覆盖了首页、成员页面、新闻页面、登记页面以及全站通用界面标签。论文内容仍以原始语言为主，但界面标签已经完成双语支持，以提升浏览体验。\r\n\r\n欢迎切换语言继续浏览网站。",
     "image_filename": "news_002.jpg",
+    "pinned": false,
+    "hide_from_home": false,
     "last_edited": "2026-04-18 16:46:54"
   }
 ]

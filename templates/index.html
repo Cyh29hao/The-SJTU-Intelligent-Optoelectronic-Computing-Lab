@@ -92,7 +92,7 @@
 </section>
 
 <section class="portal-lower">
-  <div class="portal-about">
+  <div class="portal-home-cell portal-about">
     <div class="portal-section-head portal-section-head-compact">
       <h3>{{ t('about_lab') }}</h3>
     </div>
@@ -103,7 +103,7 @@
     </div>
   </div>
 
-  <aside class="portal-side-note">
+  <div class="portal-home-cell portal-resources">
     <div class="portal-section-head portal-section-head-compact">
       <h3>{{ t('resources') }}</h3>
     </div>
@@ -120,7 +120,29 @@
         </p>
       {% endif %}
     </div>
+  </div>
 
+  {% if site_cfg.admissions_intro or site_cfg.admissions_lab_profile %}
+  <div class="portal-home-cell portal-join">
+    <div class="portal-section-head portal-section-head-compact">
+      <h3>{{ lang_value(site_cfg, 'admissions_title') }}</h3>
+    </div>
+    <div class="portal-join-card">
+      <div class="portal-join-copy">
+        <p>{{ lang_value(site_cfg, 'admissions_intro') }}</p>
+        <p>{{ lang_value(site_cfg, 'admissions_lab_profile') }}</p>
+      </div>
+      {% if site_cfg.admissions_apply %}
+      <div class="portal-join-apply">
+        <p>{{ lang_value(site_cfg, 'admissions_apply') }}</p>
+        <a href="{{ url_for('news_detail', id=site_cfg.admissions_news_id or 'news_003') }}" class="portal-inline-link">{{ t('read_more') }} &rarr;</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="portal-home-cell portal-side-note">
     {% if latest_news %}
     <div class="portal-section-head portal-section-head-compact portal-section-head-tightest">
         <h3>{{ t('latest_news') }}</h3>
@@ -137,7 +159,7 @@
         <a href="{{ url_for('news') }}" class="portal-inline-link">{{ t('view_all_news') }}</a>
     </div>
     {% endif %}
-  </aside>
+  </div>
 </section>
 
 <script>

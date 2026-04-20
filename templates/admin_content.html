@@ -26,6 +26,48 @@
     </div>
 </details>
 
+<details id="join-us-section" {% if active_section == 'join-us' %}open{% endif %}>
+    <summary>Join Us</summary>
+    <div class="details-body">
+        <form method="POST" action="{{ url_for(module_endpoint) }}">
+            <input type="hidden" name="action" value="edit_join_us">
+            <input type="hidden" name="item_type" value="site">
+            <label>Join Us Title</label>
+            <input name="admissions_title" value="{{ site_cfg.admissions_title }}">
+            <label>Join Us Title (ZH)</label>
+            <input name="admissions_title_zh" value="{{ site_cfg.admissions_title_zh }}">
+            <label>Homepage Join Us Intro</label>
+            <textarea name="admissions_intro" rows="4">{{ site_cfg.admissions_intro }}</textarea>
+            <label>Homepage Join Us Intro (ZH)</label>
+            <textarea name="admissions_intro_zh" rows="4">{{ site_cfg.admissions_intro_zh }}</textarea>
+            <label>Lab Profile / Support</label>
+            <textarea name="admissions_lab_profile" rows="4">{{ site_cfg.admissions_lab_profile }}</textarea>
+            <label>Lab Profile / Support (ZH)</label>
+            <textarea name="admissions_lab_profile_zh" rows="4">{{ site_cfg.admissions_lab_profile_zh }}</textarea>
+            <label>Read More Link Text</label>
+            <textarea name="admissions_apply" rows="2">{{ site_cfg.admissions_apply }}</textarea>
+            <label>Read More Link Text (ZH)</label>
+            <textarea name="admissions_apply_zh" rows="2">{{ site_cfg.admissions_apply_zh }}</textarea>
+            <label>Recruitment News ID</label>
+            <input name="admissions_news_id" value="{{ site_cfg.admissions_news_id or 'news_003' }}">
+            {% for direction in site_cfg.admissions_directions %}
+            <div class="settings-card" style="margin-top:14px;">
+                <h3>Recruitment Direction {{ loop.index }}</h3>
+                <label>Title</label>
+                <input name="admission_direction_title_{{ loop.index }}" value="{{ direction.title }}">
+                <label>Title (ZH)</label>
+                <input name="admission_direction_title_zh_{{ loop.index }}" value="{{ direction.title_zh }}">
+                <label>Summary</label>
+                <textarea name="admission_direction_summary_{{ loop.index }}" rows="2">{{ direction.summary }}</textarea>
+                <label>Summary (ZH)</label>
+                <textarea name="admission_direction_summary_zh_{{ loop.index }}" rows="2">{{ direction.summary_zh }}</textarea>
+            </div>
+            {% endfor %}
+            <button type="submit">Save Join Us</button>
+        </form>
+    </div>
+</details>
+
 <details id="publications-section" {% if active_section == 'publications' %}open{% endif %}>
     <summary>📚 Publications</summary>
     <div class="details-body">
@@ -230,6 +272,10 @@
                 <textarea name="content" rows="6" required></textarea>
                 <label>Content (ZH)</label>
                 <textarea name="content_zh" rows="6"></textarea>
+                <div class="checkbox-grid">
+                    <label><input type="checkbox" name="pinned"> Pin to top of News</label>
+                    <label><input type="checkbox" name="hide_from_home"> Hide from homepage Latest News</label>
+                </div>
                 <label>Image</label>
                 <input type="file" name="image" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp">
                 <button type="submit">Add News</button>
@@ -259,6 +305,10 @@
                 <textarea name="content" rows="6" required>{{ item.content }}</textarea>
                 <label>Content (ZH)</label>
                 <textarea name="content_zh" rows="6">{{ item.content_zh }}</textarea>
+                <div class="checkbox-grid">
+                    <label><input type="checkbox" name="pinned" {% if item.pinned %}checked{% endif %}> Pin to top of News</label>
+                    <label><input type="checkbox" name="hide_from_home" {% if item.hide_from_home %}checked{% endif %}> Hide from homepage Latest News</label>
+                </div>
                 <label>Replace Image</label>
                 <input type="file" name="image" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp">
                 {% if item.image_filename %}

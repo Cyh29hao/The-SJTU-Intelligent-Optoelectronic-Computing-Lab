@@ -1,10 +1,39 @@
 {
   "home_note": "To open our paper and resource pages, please first fill in your information on the Login page.",
   "home_note_zh": "如需访问论文和资源页面，请您先在登录页填写信息。",
-  "home_welcome": "Our lab focuses on research in all-optical neural networks, diffractive deep learning, and intelligent photonic chips.\r\n\r\nThis website provides publicly available publications, code repositories, and dataset links from our group.",
-  "home_welcome_zh": "本课题组主要围绕全光神经网络、衍射深度学习与智能光子芯片开展研究。\r\n\r\n本网站汇集了课题组公开发表的论文、代码仓库与数据集链接。",
-  "hero_summary": "Research in photonic neural networks, intelligent photonic integrated circuits, and open academic resources for optical computing.",
-  "hero_summary_zh": "聚焦光子神经网络、智能光子集成电路与面向光计算的开放学术资源。",
+  "home_welcome": "The SJTU Intelligent Optoelectronic Computing Lab works at the intersection of photonic computing, AI algorithms, chip design, and intelligent visual systems. We focus on high-speed, low-power optoelectronic AI chips, AI-assisted chip design, and software-hardware co-design for practical intelligent systems.\r\n\r\nThe group combines interdisciplinary expertise, advanced optical experimental platforms, and active domestic and international collaborations to support innovation from algorithms and devices to chip-level applications.",
+  "home_welcome_zh": "上海交通大学智能光电计算实验室面向光计算、AI 算法、芯片设计与智能视觉系统的交叉前沿，聚焦高速、低功耗光电 AI 芯片及其应用、AI 辅助芯片设计，以及面向实际智能系统的软硬件协同研究。\r\n\r\n课题组具备跨学科背景、扎实科研积累、国际前沿光学实验平台和先进实验仪器，并通过充足科研支持与丰富国内外合作，支撑从算法、器件到芯片级应用的创新研究。",
+  "admissions_title": "Join Us",
+  "admissions_title_zh": "招生信息",
+  "admissions_intro": "We are recruiting motivated PhD and master's students, postdoctoral researchers, and interns for photonic AI acceleration, photonic chip design, and chip applications.",
+  "admissions_intro_zh": "课题组长期招收博士及硕士研究生、博士后、实习生，方向覆盖光芯片加速 AI、光芯片设计与芯片应用。",
+  "admissions_lab_profile": "Candidates interested in high-speed, low-power optoelectronic AI chips, AI-assisted chip design, and interdisciplinary software-hardware research are welcome to contact us.",
+  "admissions_lab_profile_zh": "欢迎对高速、低功耗光电 AI 芯片及其应用、AI 辅助芯片设计和软硬件协同研究具有浓厚兴趣与强烈自驱力的同学联系。",
+  "admissions_directions": [
+    {
+      "title": "AI acceleration with photonic chips",
+      "title_zh": "光芯片加速 AI",
+      "summary": "Algorithm-oriented research for optical and optoelectronic intelligent computing.",
+      "summary_zh": "偏 AI 算法，面向光学与光电智能计算。"
+    },
+    {
+      "title": "Photonic chip design",
+      "title_zh": "光芯片设计",
+      "summary": "Physics- and chip-oriented research on optical computing hardware and AI-assisted chip design.",
+      "summary_zh": "偏物理/芯片，面向光计算硬件实现与 AI 辅助芯片设计。"
+    },
+    {
+      "title": "Chip applications",
+      "title_zh": "芯片应用",
+      "summary": "Software-hardware co-design for practical intelligent optoelectronic systems.",
+      "summary_zh": "软硬件兼顾，面向智能光电系统应用。"
+    }
+  ],
+  "admissions_apply": "Read the full recruitment notice for research directions, candidate expectations, and application materials.",
+  "admissions_apply_zh": "查看完整招募新闻，了解研究方向、申请要求和材料清单。",
+  "admissions_news_id": "news_003",
+  "hero_summary": "Research in high-speed, low-power optoelectronic AI chips, photonic AI acceleration, AI-assisted chip design, and intelligent chip applications.",
+  "hero_summary_zh": "聚焦高速、低功耗光电 AI 芯片、光芯片加速 AI、AI 辅助芯片设计与智能芯片应用。",
   "lab_name": "the SJTU Intelligent Optoelectronic Computing Lab",
   "lab_name_short": "SJTU IOC Lab",
   "lab_name_short_zh": "上海交大智能光电计算实验室",
@@ -43,28 +72,28 @@
   ],
   "research_highlights": [
     {
-      "title": "Photonic AI",
-      "title_zh": "光子智能",
-      "summary": "Exploring photonic hardware and system design for AI workloads, with a focus on efficient optical-domain inference.",
-      "summary_zh": "探索面向智能任务的光子硬件与系统设计，强调高效的光学域推理与计算能力。"
+      "title": "Optoelectronic AI Chips",
+      "title_zh": "光电 AI 芯片",
+      "summary": "Developing high-speed, low-power optoelectronic AI chips and chip-level systems for intelligent computing and visual tasks.",
+      "summary_zh": "面向智能计算与视觉任务，发展高速、低功耗光电 AI 芯片及芯片级系统。"
     },
     {
-      "title": "Optical Computing",
-      "title_zh": "光计算",
-      "summary": "Studying computation schemes that leverage the parallelism and propagation properties of light to process information.",
-      "summary_zh": "研究利用光的并行性与传播特性的计算方案，用于高效率的信息处理。"
+      "title": "Photonic AI Acceleration",
+      "title_zh": "光芯片加速 AI",
+      "summary": "Algorithm-oriented optical and optoelectronic computing methods that accelerate AI workloads with photonic hardware.",
+      "summary_zh": "偏 AI 算法，研究利用光学与光电计算硬件加速智能任务的方法。"
     },
     {
-      "title": "Diffractive Networks",
-      "title_zh": "衍射网络",
-      "summary": "Investigating diffractive deep neural networks and related free-space optical architectures for compact intelligent systems.",
-      "summary_zh": "探索衍射深度神经网络及相关自由空间光学架构，用于构建紧凑型智能系统。"
+      "title": "Photonic Chip Design",
+      "title_zh": "光芯片设计",
+      "summary": "Physics- and chip-oriented design of photonic computing devices, supported by AI-assisted chip design workflows.",
+      "summary_zh": "偏物理/芯片，围绕光计算器件、芯片实现与 AI 辅助芯片设计开展研究。"
     },
     {
-      "title": "Integrated Photonics",
-      "title_zh": "集成光子",
-      "summary": "Connecting algorithms, devices, and chip-level implementation to build practical intelligent optoelectronic platforms.",
-      "summary_zh": "打通算法、器件与芯片级实现，构建实用化的智能光电平台。"
+      "title": "Chip Applications",
+      "title_zh": "芯片应用",
+      "summary": "Building practical intelligent optoelectronic applications through software-hardware co-design and interdisciplinary collaboration.",
+      "summary_zh": "软硬件兼顾，通过协同设计与交叉合作推动智能光电芯片应用落地。"
     }
   ],
   "person_tags": [

@@ -83,5 +83,81 @@
     "authors_display_count": 3,
     "featured_on_home": true,
     "official_free_access_url": ""
+  },
+  {
+    "id": "art_004",
+    "title": "Photonic computing chips under the speed-complexity trade-off",
+    "authors": [
+      "Xinyue Sun",
+      "Guoqiang Yang",
+      "Yitong Chen",
+      "Guangtao Zhai"
+    ],
+    "venue": "Journal of Semiconductors",
+    "year": 2026,
+    "abstract": "Research highlight on photonic computing chip architectures and the balance between computing speed and task complexity. The article discusses photonic chips for high-speed visual tasks and general-purpose computing, including recent all-optical synthesis and optoelectronic computing systems.",
+    "last_edited": "2026-04-20 11:45:00",
+    "paper_url": "https://www.jos.ac.cn/en/article/doi/10.1088/1674-4926/26020065",
+    "resource_url": "",
+    "resource_kinds": [
+      "Paper"
+    ],
+    "thumbnail_filename": "",
+    "authors_display_count": 4,
+    "featured_on_home": false,
+    "official_free_access_url": "https://www.jos.ac.cn/en/article/doi/10.1088/1674-4926/26020065"
+  },
+  {
+    "id": "art_005",
+    "title": "Situation-adaptive Neural Network for Fast Pre-computing Image Enhancement",
+    "authors": [
+      "Xinyue Li",
+      "Huiyu Duan",
+      "Jia Wang",
+      "Xiaohong Liu",
+      "Yitong Chen",
+      "Guangtao Zhai"
+    ],
+    "venue": "Science China Information Sciences",
+    "year": 2025,
+    "abstract": "The paper proposes SAEnhancer, a situation-adaptive neural network for fast pre-computing image enhancement. It learns personalized and adaptive enhancement preferences from a small sample set without retraining, using semantic-aware embedding and lookup-table based color adjustment for intelligent vision and optical computing scenarios.",
+    "last_edited": "2026-04-20 11:45:00",
+    "paper_url": "https://jhc.sjtu.edu.cn/~xiaohongliu/papers/2024ScienceChina.pdf",
+    "resource_url": "",
+    "resource_kinds": [
+      "Paper"
+    ],
+    "thumbnail_filename": "",
+    "authors_display_count": 3,
+    "featured_on_home": false,
+    "official_free_access_url": "https://jhc.sjtu.edu.cn/~xiaohongliu/papers/2024ScienceChina.pdf"
+  },
+  {
+    "id": "art_006",
+    "title": "Neural mechanisms of visual quality perception and adaptability in the visual pathway",
+    "authors": [
+      "Yiming Zhang",
+      "Yitong Chen",
+      "Ying Hu",
+      "Xu Han",
+      "Zhenhui Xie",
+      "Xingrui Wang",
+      "Yan Zhou",
+      "Xiongkuo Min",
+      "Guangtao Zhai"
+    ],
+    "venue": "Patterns",
+    "year": 2025,
+    "abstract": "This study investigates how the brain processes image quality using fMRI. It reports that low-quality visual inputs strongly affect semantic encoding in lower-level visual regions, while higher-level regions compensate to preserve understanding. The findings connect visual quality perception, neural adaptability, and brain-inspired visual quality assessment.",
+    "last_edited": "2026-04-20 11:45:00",
+    "paper_url": "https://www.cell.com/patterns/fulltext/S2666-3899(25)00216-8",
+    "resource_url": "",
+    "resource_kinds": [
+      "Paper"
+    ],
+    "thumbnail_filename": "",
+    "authors_display_count": 3,
+    "featured_on_home": false,
+    "official_free_access_url": "https://www.cell.com/patterns/fulltext/S2666-3899(25)00216-8"
   }
 ]

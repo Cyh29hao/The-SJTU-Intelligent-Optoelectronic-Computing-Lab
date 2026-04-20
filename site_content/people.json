@@ -23,6 +23,38 @@
     "last_edited": "2026-02-06 17:20:25"
   },
   {
+    "id": "person_002",
+    "name": "Xinyue Li",
+    "name_zh": "李馨月",
+    "category": "Postdoc & PhD",
+    "email": "",
+    "photo_filename": "",
+    "bio": "PhD student.",
+    "bio_zh": "博士生。",
+    "links": [],
+    "tags": [
+      "Algorithms",
+      "Optics"
+    ],
+    "last_edited": "2026-04-20 11:45:00"
+  },
+  {
+    "id": "person_003",
+    "name": "Guoqiang Yang",
+    "name_zh": "杨国强",
+    "category": "Postdoc & PhD",
+    "email": "",
+    "photo_filename": "",
+    "bio": "PhD student.",
+    "bio_zh": "博士生。",
+    "links": [],
+    "tags": [
+      "Algorithms",
+      "Optics"
+    ],
+    "last_edited": "2026-04-20 11:45:00"
+  },
+  {
     "id": "person_004",
     "name": "Yunhai Chen",
     "name_zh": "陈云海",
@@ -45,18 +77,66 @@
     "last_edited": "2026-03-27 08:14:42"
   },
   {
+    "id": "person_006",
+    "name": "Xinyue Sun",
+    "name_zh": "孙心玥",
+    "category": "Postdoc & PhD",
+    "email": "",
+    "photo_filename": "",
+    "bio": "PhD student.",
+    "bio_zh": "博士生。",
+    "links": [],
+    "tags": [
+      "Algorithms",
+      "Optics"
+    ],
+    "last_edited": "2026-04-20 11:45:00"
+  },
+  {
+    "id": "person_007",
+    "name": "Puyi Chen",
+    "name_zh": "陈璞奕",
+    "category": "Postdoc & PhD",
+    "email": "",
+    "photo_filename": "",
+    "bio": "PhD student.",
+    "bio_zh": "博士生。",
+    "links": [],
+    "tags": [
+      "Optics",
+      "Electronics"
+    ],
+    "last_edited": "2026-04-20 11:45:00"
+  },
+  {
+    "id": "person_008",
+    "name": "Mohan He",
+    "name_zh": "何茉晗",
+    "category": "Master",
+    "email": "",
+    "photo_filename": "",
+    "bio": "Master's student.",
+    "bio_zh": "硕士生。",
+    "links": [],
+    "tags": [
+      "Algorithms",
+      "Systems"
+    ],
+    "last_edited": "2026-04-20 11:45:00"
+  },
+  {
     "id": "person_005",
     "name": "Siyu Guan",
     "name_zh": "管思羽",
     "category": "Master",
     "email": "",
     "photo_filename": "",
-    "bio": "",
-    "bio_zh": "",
+    "bio": "Master's student.",
+    "bio_zh": "硕士生。",
     "links": [],
     "tags": [
       "Resources"
     ],
-    "last_edited": "2026-04-18 15:57:26"
+    "last_edited": "2026-04-20 11:45:00"
   }
 ]
