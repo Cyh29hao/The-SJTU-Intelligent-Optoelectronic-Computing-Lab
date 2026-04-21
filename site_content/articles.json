@@ -81,7 +81,7 @@
     ],
     "thumbnail_filename": "art_003.jpg",
     "authors_display_count": 3,
-    "featured_on_home": true,
+    "featured_on_home": false,
     "official_free_access_url": ""
   },
   {
@@ -96,15 +96,15 @@
     "venue": "Journal of Semiconductors",
     "year": 2026,
     "abstract": "Research highlight on photonic computing chip architectures and the balance between computing speed and task complexity. The article discusses photonic chips for high-speed visual tasks and general-purpose computing, including recent all-optical synthesis and optoelectronic computing systems.",
-    "last_edited": "2026-04-21 16:02:13",
-    "paper_url": "https://www.jos.ac.cn/en/article/doi/10.1088/1674-4926/26020065",
+    "last_edited": "2026-04-21 16:28:01",
+    "paper_url": "",
     "resource_url": "",
     "resource_kinds": [
       "Paper"
     ],
     "thumbnail_filename": "art_004.jpg",
     "authors_display_count": 4,
-    "featured_on_home": false,
+    "featured_on_home": true,
     "official_free_access_url": "https://www.jos.ac.cn/en/article/doi/10.1088/1674-4926/26020065"
   },
   {
@@ -120,16 +120,16 @@
     ],
     "venue": "Science China Information Sciences",
     "year": 2025,
-    "abstract": "The paper proposes SAEnhancer, a situation-adaptive neural network for fast pre-computing image enhancement. It learns personalized and adaptive enhancement preferences from a small sample set without retraining, using semantic-aware embedding and lookup-table based color adjustment for intelligent vision and optical computing scenarios.",
-    "last_edited": "2026-04-21 16:01:09",
-    "paper_url": "https://jhc.sjtu.edu.cn/~xiaohongliu/papers/2024ScienceChina.pdf",
+    "abstract": "As intelligent vision tasks become more widespread, enhancing image quality before further computational analysis is crucial. Recently, deep learning has shown potential for automated pre-computing enhancement, but it typically requires substantial computational resources and is hard to adapt to in multiple situations without re-training. In practice, image enhancement often demands flexible adjustments based on different situations and subsequent computation devices, such as optical computing. Therefore, we propose SAEnhancer, a situation-adaptive neural network for fast pre-computing image enhancement. It learnsfrom a small sample set to achieve personalized and adaptive enhancements for various situations without re-training, using semantic-aware embedding for precise color adjustments, surpassing traditional 3D lookup tables (LUTs), and enhancing computational effectiveness in intelligent vision applications.",
+    "last_edited": "2026-04-21 16:24:16",
+    "paper_url": "",
     "resource_url": "",
     "resource_kinds": [
       "Paper"
     ],
     "thumbnail_filename": "art_005.jpg",
     "authors_display_count": 3,
-    "featured_on_home": false,
+    "featured_on_home": true,
     "official_free_access_url": "https://jhc.sjtu.edu.cn/~xiaohongliu/papers/2024ScienceChina.pdf"
   },
   {
@@ -148,8 +148,8 @@
     ],
     "venue": "Patterns",
     "year": 2025,
-    "abstract": "This study investigates how the brain processes image quality using fMRI. It reports that low-quality visual inputs strongly affect semantic encoding in lower-level visual regions, while higher-level regions compensate to preserve understanding. The findings connect visual quality perception, neural adaptability, and brain-inspired visual quality assessment.",
-    "last_edited": "2026-04-21 16:03:24",
+    "abstract": "Visual quality assessment (VQA) is indispensable in multimedia for evaluating algorithm effectiveness and optimizing systems, yet its neurobiological mechanisms remain poorly understood. Using functional magnetic resonance imaging (fMRI), we investigate how the brain processes varying image qualities, revealing specialized mechanisms for handling low-quality stimuli. Results show that low quality significantly impacts semantic encoding along the visual pathway: low-level regions exhibit only 35.20% of the semantic information seen in high-quality condition, while higher-level regions compensate adaptively to maintain understanding. Visual quality is not locally encoded but emerges from inter-regional information gaps, with perception arising from this hierarchical discrepancy. Leveraging this compensatory mechanism, we decode quality from fMRI and propose a neural network feature fusion strategy, boosting ResNet’s VQA performance by 14.29% on the BID dataset (586 instances). Our findings provide neurobiological evidence for degraded visual processing, addressing a gap in perception neuroscience and offering theoretical foundations for improving VQA models.",
+    "last_edited": "2026-04-21 16:17:02",
     "paper_url": "https://www.cell.com/patterns/fulltext/S2666-3899(25)00216-8",
     "resource_url": "",
     "resource_kinds": [
@@ -157,7 +157,7 @@
     ],
     "thumbnail_filename": "art_006.jpg",
     "authors_display_count": 3,
-    "featured_on_home": false,
-    "official_free_access_url": "https://www.cell.com/patterns/fulltext/S2666-3899(25)00216-8"
+    "featured_on_home": true,
+    "official_free_access_url": ""
   }
 ]
