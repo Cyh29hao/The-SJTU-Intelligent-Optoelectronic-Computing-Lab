@@ -16,8 +16,13 @@
             {% endif %}
           </a>
         </h2>
-        <p class="portal-hero-full-name">{{ lang_value(site_cfg, 'lab_name_full') }}</p>
-        <p class="portal-brand-explainer"><span class="brand-wordmark brand-wordmark-inline">OPTICom:</span> Optoelectronic and Photonic Technologies<br>for Intelligent Computing</p>
+        <p class="portal-hero-full-name">
+          <span class="portal-brand-accent">O</span>ptoelectronic and
+          <span class="portal-brand-accent">P</span>hotonic
+          <span class="portal-brand-accent">T</span>echnologies for
+          <span class="portal-brand-accent">I</span>ntelligent
+          <span class="portal-brand-accent">Com</span>puting
+        </p>
         <p class="portal-hero-subtitle"><a href="{{ url_for('person_detail', id='person_001') }}" class="portal-hero-subtitle-link">{{ t('prof_yitong_chen') }}</a></p>
         <p class="portal-hero-summary">
           {{ lang_value(site_cfg, 'hero_summary') }}

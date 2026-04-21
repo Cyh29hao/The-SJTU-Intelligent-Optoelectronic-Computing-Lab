@@ -582,20 +582,9 @@ input[type="email"]:focus {
   font-weight: 700;
 }
 
-.portal-brand-explainer {
-  margin: 0 0 16px;
-  max-width: 620px;
-  text-align: left;
-  color: rgba(245, 249, 255, 0.76);
-  font-size: 0.98rem;
-  line-height: 1.55;
-  font-weight: 600;
-}
-
-.brand-wordmark-inline {
-  display: inline-block;
-  margin-right: 8px;
-  font-size: 1.02em;
+.portal-brand-accent {
+  color: #5ce1ff;
+  text-shadow: 0 0 12px rgba(92, 225, 255, 0.48), 0 0 20px rgba(26, 115, 232, 0.3);
 }
 
 .portal-hero-subtitle {
@@ -2189,12 +2178,6 @@ footer a:not(.footer-link-card):hover {
     font-size: 0.96rem;
   }
 
-  .portal-brand-explainer {
-    margin-bottom: 14px;
-    font-size: 0.9rem;
-    line-height: 1.5;
-  }
-
   .portal-hero-summary {
     max-width: none;
     font-size: 0.95rem;
@@ -2381,12 +2364,6 @@ footer a:not(.footer-link-card):hover {
     margin-bottom: 10px;
     font-size: 0.9rem;
     line-height: 1.35;
-  }
-
-  .portal-brand-explainer {
-    margin-bottom: 12px;
-    font-size: 0.84rem;
-    line-height: 1.45;
   }
 
   .portal-highlight-trigger,
