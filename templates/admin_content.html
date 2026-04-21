@@ -3,7 +3,7 @@
 {% block admin_body %}
 {% set active_section = request.args.get('section', '') %}
 
-<details id="homepage-copy-section" {% if active_section in ('', 'homepage') %}open{% endif %}>
+<details id="homepage-copy-section" {% if active_section == 'homepage' %}open{% endif %}>
     <summary>🏠 Homepage Copy</summary>
     <div class="details-body">
         <form method="POST" action="{{ url_for(module_endpoint) }}">
@@ -71,7 +71,7 @@
 <details id="publications-section" {% if active_section == 'publications' %}open{% endif %}>
     <summary>📚 Publications</summary>
     <div class="details-body">
-    <details open>
+    <details>
         <summary>Add New Publication</summary>
         <div class="details-body">
             <form method="POST" action="{{ url_for(module_endpoint) }}">
@@ -155,7 +155,7 @@
 <details id="people-section" {% if active_section == 'people' %}open{% endif %}>
     <summary>👥 People</summary>
     <div class="details-body">
-    <details open>
+    <details>
         <summary>Add New Person</summary>
         <div class="details-body">
             <form method="POST" enctype="multipart/form-data" action="{{ url_for(module_endpoint) }}">
@@ -252,7 +252,7 @@
 <details id="news-section" {% if active_section == 'news' %}open{% endif %}>
     <summary>📰 News</summary>
     <div class="details-body">
-    <details open>
+    <details>
         <summary>Add News Item</summary>
         <div class="details-body">
             <form method="POST" enctype="multipart/form-data" action="{{ url_for(module_endpoint) }}">
@@ -276,8 +276,7 @@
                     <label><input type="checkbox" name="pinned"> Pin to top of News</label>
                     <label><input type="checkbox" name="hide_from_home"> Hide from homepage Latest News</label>
                 </div>
-                <label>Image</label>
-                <input type="file" name="image" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp">
+                <p class="helper-note">News images are managed in the Assets workspace after the news item is created.</p>
                 <button type="submit">Add News</button>
             </form>
         </div>
@@ -309,11 +308,10 @@
                     <label><input type="checkbox" name="pinned" {% if item.pinned %}checked{% endif %}> Pin to top of News</label>
                     <label><input type="checkbox" name="hide_from_home" {% if item.hide_from_home %}checked{% endif %}> Hide from homepage Latest News</label>
                 </div>
-                <label>Replace Image</label>
-                <input type="file" name="image" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp">
                 {% if item.image_filename %}
                 <p class="helper-note">Current image: <span class="mono">{{ item.image_filename }}</span></p>
                 {% endif %}
+                <p class="helper-note">Replace news images in <a href="{{ url_for('admin_assets', section='news-images') }}#news-image-{{ item.id }}">Manage Assets</a>.</p>
                 <div class="inline-actions">
                     <button type="submit">Save News</button>
                     <a href="{{ url_for(module_endpoint, action='delete', item_type='news', id=item.id) }}" class="btn-link btn-danger" onclick="return confirm('Delete this news item?')">Delete</a>

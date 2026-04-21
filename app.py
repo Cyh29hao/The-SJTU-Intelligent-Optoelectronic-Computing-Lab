@@ -307,7 +307,7 @@ I18N = {
     'publications_count': {'en': 'Publications', 'zh': '论文'},
     'people_count': {'en': 'People', 'zh': '成员'},
     'page_views': {'en': 'Page Views', 'zh': '浏览量'},
-    'login_page': {'en': 'Go to LOGIN page', 'zh': '前往登录页'},
+    'login_page': {'en': 'Record info to access', 'zh': '记录信息后访问'},
     'current_user': {'en': 'Current user', 'zh': '当前用户'},
     'logged_in_open_note': {'en': 'Information recorded. You can now open paper and source links directly.', 'zh': '信息已记录，现在可以直接打开论文和资源链接。'},
     'authors': {'en': 'Authors', 'zh': '作者'},
@@ -2211,9 +2211,11 @@ def _build_admin_content_context():
 def _build_admin_assets_context():
     articles = load_articles_data()
     people = load_people_data()
+    news_items = load_news_data()
     return {
         'articles': articles,
         'people': people,
+        'news_items': news_items,
         **_build_people_photo_context(people)
     }
 
@@ -2534,6 +2536,39 @@ def admin_upload_thumbnail(article_id):
     anchor = f'#thumb-{article_id}' if redirect_module == 'assets' else f'#article-{article_id}'
     section = 'thumbnails' if redirect_module == 'assets' else 'publications'
     return redirect(_admin_module_url(redirect_module, anchor, section))
+
+@app.route('/admin/upload-news-image/<news_id>', methods=['POST'])
+def admin_upload_news_image(news_id):
+    if not session.get('is_admin'):
+        return "Unauthorized", 403
+    news_items = load_news_data()
+    target = next((item for item in news_items if item['id'] == news_id), None)
+    if not target:
+        return "News item not found", 404
+    image = request.files.get('image')
+    if not image or not image.filename:
+        return "No file selected", 400
+    ext = os.path.splitext(secure_filename(image.filename))[1].lower()
+    if ext not in ['.png', '.jpg', '.jpeg', '.gif', '.webp']:
+        return "File type not allowed for news image", 400
+    os.makedirs(NEWS_IMAGES_DIR, exist_ok=True)
+    for old_ext in ['.png', '.jpg', '.jpeg', '.gif', '.webp']:
+        old_path = os.path.join(NEWS_IMAGES_DIR, f"{news_id}{old_ext}")
+        if os.path.exists(old_path):
+            try:
+                os.remove(old_path)
+            except Exception:
+                pass
+    filename = f"{news_id}{ext}"
+    image.save(os.path.join(NEWS_IMAGES_DIR, filename))
+    target['image_filename'] = filename
+    target['last_edited'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    for index, item in enumerate(news_items):
+        if item['id'] == news_id:
+            news_items[index] = target
+            break
+    save_json_data('news.json', news_items)
+    return redirect(_admin_module_url('assets', f'#news-image-{news_id}', 'news-images'))
 
 @app.route('/admin/upload-site-image/<slot>', methods=['POST'])
 def admin_upload_site_image(slot):

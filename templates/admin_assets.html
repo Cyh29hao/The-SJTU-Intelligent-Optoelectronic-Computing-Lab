@@ -6,7 +6,7 @@
 <details id="site-images" {% if active_section in ('', 'site-images') %}open{% endif %}>
     <summary>🧩 Site Images</summary>
     <div class="details-body">
-    <p class="helper-note">Header logo and footer-link icons live in git-tracked <code>site_content/images/</code>. People and news images stay editable inside the Content workspace.</p>
+    <p class="helper-note">Header logo and footer-link icons live in git-tracked <code>site_content/images/</code>.</p>
 
     <div class="asset-grid">
         <div class="asset-card">
@@ -42,6 +42,32 @@
         </div>
         {% endfor %}
     </div>
+    </div>
+</details>
+
+<details id="news-images" {% if active_section == 'news-images' %}open{% endif %}>
+    <summary>News Images</summary>
+    <div class="details-body">
+    <p class="helper-note">Upload and refresh news thumbnails here, keeping news text editing in the Content workspace.</p>
+    {% for item in news_items %}
+    <details id="news-image-{{ item.id }}">
+        <summary>{{ item.title }} <span class="mono" style="margin-left:8px;">{{ item.id }}</span></summary>
+        <div class="details-body">
+            <div class="inline-actions" style="margin-bottom:12px;">
+                {% if item.image_filename %}
+                <img src="{{ url_for('asset_news_image', filename=item.image_filename) }}" alt="{{ item.title }}" class="asset-thumb">
+                <div class="mono">{{ item.image_filename }}</div>
+                {% else %}
+                <div class="asset-thumb" style="display:flex; align-items:center; justify-content:center;">No image</div>
+                {% endif %}
+            </div>
+            <form method="POST" enctype="multipart/form-data" action="{{ url_for('admin_upload_news_image', news_id=item.id) }}">
+                <input type="file" name="image" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp" required>
+                <button type="submit">Upload News Image</button>
+            </form>
+        </div>
+    </details>
+    {% endfor %}
     </div>
 </details>
 
