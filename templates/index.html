@@ -10,19 +10,14 @@
         <h2 class="portal-hero-title">
           <a href="{{ url_for('index') }}" class="portal-hero-title-link">
             {% if 'OPTICom' in hero_lab_short %}
-              <span class="brand-opti">OPTI</span><span class="brand-com">Com</span>{{ hero_lab_short.replace('OPTICom', '') }}
+              <span class="brand-wordmark">OPTICom</span>{{ hero_lab_short.replace('OPTICom', '') }}
             {% else %}
               {{ hero_lab_short }}
             {% endif %}
           </a>
         </h2>
         <p class="portal-hero-full-name">{{ lang_value(site_cfg, 'lab_name_full') }}</p>
-        <div class="portal-brand-decode" aria-label="OPTICom brand meaning">
-          <span class="portal-brand-chip"><strong>O</strong><span>Optoelectronic</span></span>
-          <span class="portal-brand-chip"><strong>P</strong><span>Photonic</span></span>
-          <span class="portal-brand-chip"><strong>T</strong><span>Technologies</span></span>
-          <span class="portal-brand-chip portal-brand-chip-wide"><strong>ICom</strong><span>Intelligent Computing</span></span>
-        </div>
+        <p class="portal-brand-explainer"><span class="brand-wordmark brand-wordmark-inline">OPTICom:</span> Optoelectronic and Photonic Technologies<br>for Intelligent Computing</p>
         <p class="portal-hero-subtitle"><a href="{{ url_for('person_detail', id='person_001') }}" class="portal-hero-subtitle-link">{{ t('prof_yitong_chen') }}</a></p>
         <p class="portal-hero-summary">
           {{ lang_value(site_cfg, 'hero_summary') }}

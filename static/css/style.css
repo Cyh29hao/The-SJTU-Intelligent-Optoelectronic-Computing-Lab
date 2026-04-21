@@ -567,12 +567,7 @@ input[type="email"]:focus {
   text-decoration: none;
 }
 
-.brand-opti {
-  color: #ffffff;
-  text-shadow: 0 0 18px rgba(255, 255, 255, 0.28);
-}
-
-.brand-com {
+.brand-wordmark {
   color: #5ce1ff;
   text-shadow: 0 0 18px rgba(92, 225, 255, 0.72), 0 0 34px rgba(26, 115, 232, 0.42);
 }
@@ -587,42 +582,20 @@ input[type="email"]:focus {
   font-weight: 700;
 }
 
-.portal-brand-decode {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 0 0 14px;
-  max-width: 580px;
+.portal-brand-explainer {
+  margin: 0 0 16px;
+  max-width: 620px;
+  text-align: left;
+  color: rgba(245, 249, 255, 0.76);
+  font-size: 0.98rem;
+  line-height: 1.55;
+  font-weight: 600;
 }
 
-.portal-brand-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  min-height: 32px;
-  padding: 7px 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(214, 232, 255, 0.2);
-  background: rgba(255, 255, 255, 0.1);
-  color: rgba(245, 249, 255, 0.88);
-  font-size: 0.78rem;
-  line-height: 1;
-  font-weight: 700;
-  backdrop-filter: blur(8px);
-}
-
-.portal-brand-chip strong {
-  color: #ffffff;
-  font-size: 0.86rem;
-  letter-spacing: 0.03em;
-}
-
-.portal-brand-chip-wide strong {
-  color: #5ce1ff;
-}
-
-.portal-brand-chip span {
-  color: rgba(245, 249, 255, 0.74);
+.brand-wordmark-inline {
+  display: inline-block;
+  margin-right: 8px;
+  font-size: 1.02em;
 }
 
 .portal-hero-subtitle {
@@ -2216,19 +2189,10 @@ footer a:not(.footer-link-card):hover {
     font-size: 0.96rem;
   }
 
-  .portal-brand-decode {
-    gap: 7px;
+  .portal-brand-explainer {
     margin-bottom: 14px;
-  }
-
-  .portal-brand-chip {
-    min-height: 30px;
-    padding: 7px 9px;
-    font-size: 0.78rem;
-  }
-
-  .portal-brand-chip span {
-    display: none;
+    font-size: 0.9rem;
+    line-height: 1.5;
   }
 
   .portal-hero-summary {
@@ -2419,8 +2383,10 @@ footer a:not(.footer-link-card):hover {
     line-height: 1.35;
   }
 
-  .portal-brand-decode {
+  .portal-brand-explainer {
     margin-bottom: 12px;
+    font-size: 0.84rem;
+    line-height: 1.45;
   }
 
   .portal-highlight-trigger,
