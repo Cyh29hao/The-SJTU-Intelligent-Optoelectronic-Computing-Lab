@@ -436,8 +436,8 @@ input[type="email"]:focus {
 .portal-hero {
   position: relative;
   overflow: hidden;
-  height: 462px;
-  min-height: 462px;
+  height: 500px;
+  min-height: 500px;
   border-radius: 20px;
   margin-bottom: 20px;
   background:
@@ -517,7 +517,7 @@ input[type="email"]:focus {
 }
 
 .portal-hero-brand-visual {
-  margin: 0 0 12px;
+  margin: 0 0 10px;
   max-width: min(100%, 540px);
 }
 
@@ -610,7 +610,7 @@ input[type="email"]:focus {
 }
 
 .portal-hero-subtitle {
-  margin: 0 0 10px;
+  margin: 0 0 8px;
   text-align: left;
   color: rgba(255, 255, 255, 0.92);
   font-size: 1.08rem;
@@ -635,7 +635,7 @@ input[type="email"]:focus {
   text-align: left;
   color: rgba(245, 249, 255, 0.86);
   font-size: 0.95rem;
-  line-height: 1.52;
+  line-height: 1.48;
   white-space: pre-line;
 }
 
