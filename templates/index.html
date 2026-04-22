@@ -8,11 +8,13 @@
         {% set hero_lab_short = lang_value(site_cfg, 'lab_name_short') %}
         {% set hero_brand_filename = site_cfg.get('hero_brand_filename', 'hero_brand_strip.png') %}
         <div class="portal-hero-brand-visual" aria-label="OPTICom Lab brand visual">
-          <img
-            src="{{ url_for('asset_site_image', filename=hero_brand_filename) }}"
-            alt="OPTICom Lab brand visual"
-            class="portal-hero-brand-image"
-          >
+          <a href="{{ url_for('index') }}" class="portal-hero-brand-link">
+            <img
+              src="{{ url_for('asset_site_image', filename=hero_brand_filename) }}"
+              alt="OPTICom Lab brand visual"
+              class="portal-hero-brand-image"
+            >
+          </a>
         </div>
         <div class="portal-hero-brand-fallback">
           <h2 class="portal-hero-title">

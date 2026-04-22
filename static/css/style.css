@@ -517,15 +517,20 @@ input[type="email"]:focus {
 }
 
 .portal-hero-brand-visual {
-  margin: 0 0 14px;
-  max-width: 100%;
+  margin: 0 0 12px;
+  max-width: min(100%, 540px);
+}
+
+.portal-hero-brand-link {
+  display: block;
+  text-decoration: none;
 }
 
 .portal-hero-brand-image {
   display: block;
-  width: min(100%, 760px);
+  width: 100%;
   height: auto;
-  border-radius: 24px;
+  border-radius: 22px;
   box-shadow: 0 18px 38px rgba(16, 32, 54, 0.18);
 }
 
@@ -605,7 +610,7 @@ input[type="email"]:focus {
 }
 
 .portal-hero-subtitle {
-  margin: 0 0 14px;
+  margin: 0 0 10px;
   text-align: left;
   color: rgba(255, 255, 255, 0.92);
   font-size: 1.08rem;
@@ -629,8 +634,8 @@ input[type="email"]:focus {
   max-width: 520px;
   text-align: left;
   color: rgba(245, 249, 255, 0.86);
-  font-size: 0.98rem;
-  line-height: 1.65;
+  font-size: 0.95rem;
+  line-height: 1.52;
   white-space: pre-line;
 }
 
