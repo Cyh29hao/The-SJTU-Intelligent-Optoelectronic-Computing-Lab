@@ -7,22 +7,32 @@
       <div class="portal-hero-copy">
         <div class="portal-hero-kicker">{{ t('sjtu_full_name') }}</div>
         {% set hero_lab_short = lang_value(site_cfg, 'lab_name_short') %}
-        <h2 class="portal-hero-title">
-          <a href="{{ url_for('index') }}" class="portal-hero-title-link">
-            {% if 'OPTICom' in hero_lab_short %}
-              <span class="brand-wordmark">OPTICom</span>{{ hero_lab_short.replace('OPTICom', '') }}
-            {% else %}
-              {{ hero_lab_short }}
-            {% endif %}
-          </a>
-        </h2>
-        <p class="portal-hero-full-name">
-          <span class="portal-brand-accent">O</span>ptoelectronic and
-          <span class="portal-brand-accent">P</span>hotonic
-          <span class="portal-brand-accent">T</span>echnologies for
-          <span class="portal-brand-accent">I</span>ntelligent
-          <span class="portal-brand-accent">Com</span>puting
-        </p>
+        {% set hero_brand_filename = site_cfg.get('hero_brand_filename', 'hero_brand_strip.png') %}
+        <div class="portal-hero-brand-visual" aria-label="OPTICom Lab brand visual">
+          <img
+            src="{{ url_for('asset_site_image', filename=hero_brand_filename) }}"
+            alt="OPTICom Lab brand visual"
+            class="portal-hero-brand-image"
+          >
+        </div>
+        <div class="portal-hero-brand-fallback">
+          <h2 class="portal-hero-title">
+            <a href="{{ url_for('index') }}" class="portal-hero-title-link">
+              {% if 'OPTICom' in hero_lab_short %}
+                <span class="brand-wordmark">OPTICom</span>{{ hero_lab_short.replace('OPTICom', '') }}
+              {% else %}
+                {{ hero_lab_short }}
+              {% endif %}
+            </a>
+          </h2>
+          <p class="portal-hero-full-name">
+            <span class="portal-brand-accent">O</span>ptoelectronic and
+            <span class="portal-brand-accent">P</span>hotonic
+            <span class="portal-brand-accent">T</span>echnologies for
+            <span class="portal-brand-accent">I</span>ntelligent
+            <span class="portal-brand-accent">Com</span>puting
+          </p>
+        </div>
         <p class="portal-hero-subtitle"><a href="{{ url_for('person_detail', id='person_001') }}" class="portal-hero-subtitle-link">{{ t('prof_yitong_chen') }}</a></p>
         <p class="portal-hero-summary">
           {{ lang_value(site_cfg, 'hero_summary') }}

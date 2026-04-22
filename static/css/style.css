@@ -111,13 +111,13 @@ img {
 }
 
 .site-brand-logo {
-  width: 54px;
-  height: 54px;
+  width: 60px;
+  height: 60px;
   object-fit: contain;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 8px 22px rgba(35, 63, 92, 0.12);
-  padding: 6px;
+  border-radius: 16px;
+  background: transparent;
+  box-shadow: 0 10px 22px rgba(35, 63, 92, 0.16);
+  padding: 0;
 }
 
 
@@ -514,6 +514,23 @@ input[type="email"]:focus {
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
+}
+
+.portal-hero-brand-visual {
+  margin: 0 0 14px;
+  max-width: 100%;
+}
+
+.portal-hero-brand-image {
+  display: block;
+  width: min(100%, 690px);
+  height: auto;
+  border-radius: 30px;
+  box-shadow: 0 18px 38px rgba(16, 32, 54, 0.18);
+}
+
+.portal-hero-brand-fallback {
+  display: none;
 }
 
 .portal-hero-side {
@@ -2057,8 +2074,8 @@ footer a:not(.footer-link-card):hover {
   }
 
   .site-brand-logo {
-    width: 48px;
-    height: 48px;
+    width: 52px;
+    height: 52px;
   }
 
   .site-brand-name {
@@ -2159,6 +2176,14 @@ footer a:not(.footer-link-card):hover {
   .portal-hero-side {
     max-width: none;
     height: auto;
+  }
+
+  .portal-hero-brand-visual {
+    display: none;
+  }
+
+  .portal-hero-brand-fallback {
+    display: block;
   }
 
   .portal-hero-side {
@@ -2346,8 +2371,8 @@ footer a:not(.footer-link-card):hover {
   }
 
   .site-brand-logo {
-    width: 44px;
-    height: 44px;
+    width: 46px;
+    height: 46px;
   }
 
   .site-brand-name {
