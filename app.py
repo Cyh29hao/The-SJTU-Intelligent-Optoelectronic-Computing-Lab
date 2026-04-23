@@ -550,6 +550,46 @@ def _write_supabase_resource_open(now, resource_id, open_type, target_url, user_
     )
     return response is not None
 
+def _clear_supabase_table(table_name):
+    """Delete all rows from a Supabase analytics table using a broad created_at filter."""
+    response = _supabase_request(
+        'DELETE',
+        table_name,
+        params={'created_at': 'not.is.null'},
+        prefer='return=minimal',
+        timeout=20
+    )
+    return response is not None
+
+def _clear_supabase_analytics_tables():
+    if not _supabase_logs_ready():
+        return {
+            'kind': 'error',
+            'message': 'Supabase is not configured, so analytics data cannot be cleared.',
+            'details': 'Set SUPABASE_URL, SUPABASE_SECRET_KEY, and SUPABASE_LOGS_ENABLED=1.'
+        }
+
+    cleared = []
+    failed = []
+    for table_name in ('page_views', 'resource_opens'):
+        if _clear_supabase_table(table_name):
+            cleared.append(table_name)
+        else:
+            failed.append(table_name)
+
+    if failed:
+        return {
+            'kind': 'error',
+            'message': 'Some Supabase analytics tables could not be cleared.',
+            'details': f"Cleared: {', '.join(cleared) or 'none'}\nFailed: {', '.join(failed)}"
+        }
+
+    return {
+        'kind': 'success',
+        'message': 'Supabase analytics data has been cleared.',
+        'details': f"Cleared tables: {', '.join(cleared)}"
+    }
+
 # Phase 2.5: runtime analytics now live only in Supabase, so no local backfill marker is required.
 
 def get_lang():
@@ -1810,77 +1850,20 @@ def admin_logout():
 
 @app.route('/download_file/<file_type>/<resource_id>')
 def download_file(file_type, resource_id):
-    """Secure download endpoint with logging
-       file_type: 'paper' or 'resource'
-    """
+    """Legacy local-file download endpoint kept for URL compatibility."""
     user_info = session.get('user_info')
     if not user_info:
         print(f"⚠️ Unregistered user attempted to download {resource_id}, redirecting to login")
-        return redirect(url_for('register'))
+        return redirect(url_for('register', next=request.path))
     
-    # Validate file_type
     if file_type not in ['paper', 'resource']:
         return "Invalid file type", 400
 
-    # Locate file locally + throttle checks
     ext = _find_existing_ext(resource_id, file_type)
     if not ext:
         return "❌ Requested resource not found.", 404
 
-    # === Throttle & daily quota ===
-    csv_file = os.path.join(DATA_LOGS_DIR, 'downloads.csv')
-    os.makedirs(DATA_LOGS_DIR, exist_ok=True)
     now = datetime.now()
-    timestamp = now.strftime("%Y-%m-%d %H:%M:%S")
-    file_exists = os.path.isfile(csv_file)
-
-    last_same_download = None
-    today_total = 0
-    if file_exists:
-        try:
-            with open(csv_file, 'r', encoding='utf-8') as f:
-                reader = csv.DictReader(f)
-                for row in reader:
-                    try:
-                        t = datetime.strptime(row.get('time',''), "%Y-%m-%d %H:%M:%S")
-                    except Exception:
-                        continue
-                    same_user = (row.get('name') == user_info['name'] and
-                                 row.get('affiliation') == user_info['affiliation'] and
-                                 row.get('email') == user_info['email'])
-                    if same_user:
-                        if row.get('resource_id') == resource_id and row.get('type') == file_type:
-                            if (now - t).total_seconds() < 60:
-                                last_same_download = t
-                        if t.date() == now.date():
-                            today_total += 1
-        except Exception:
-            pass
-    if today_total >= 10:
-        return f"<script>alert('You have reached today\\'s limit of 10 downloads. Please try again tomorrow.'); history.back();</script>", 429
-    if last_same_download:
-        wait_sec = int(60 - (now - last_same_download).total_seconds())
-        if wait_sec < 0: wait_sec = 0
-        return f"<script>alert('You\\'ve downloaded this resource within the past minute. Please retry in {wait_sec} seconds.'); history.back();</script>", 429
-
-    # === Safe CSV Logging ===
-    try:
-        with open(csv_file, 'a', encoding='utf-8-sig', newline='') as f:
-            writer = csv.writer(f)
-            if not file_exists:
-                writer.writerow(['time', 'name', 'affiliation', 'email', 'resource_id', 'type'])
-            writer.writerow([
-                timestamp,
-                user_info['name'],
-                user_info['affiliation'],
-                user_info['email'],
-                resource_id,
-                file_type
-            ])
-        print(f"📥 Download logged: {user_info['name']} -> {resource_id} ({file_type})")
-    except Exception as e:
-        print(f"🔴 CSV write failed: {e}")
-
     key = _build_key(resource_id, file_type, ext)
     actual_path = os.path.join(PRIVATE_DOWNLOADS_DIR, key)
     filename = os.path.basename(actual_path)
@@ -1914,28 +1897,7 @@ def open_link(link_type, resource_id):
     if not target_url:
         return "Requested link is not available", 404
 
-    csv_file = os.path.join(DATA_LOGS_DIR, 'downloads.csv')
-    os.makedirs(DATA_LOGS_DIR, exist_ok=True)
     now = datetime.now()
-    timestamp = now.strftime("%Y-%m-%d %H:%M:%S")
-    file_exists = os.path.isfile(csv_file)
-    try:
-        with open(csv_file, 'a', encoding='utf-8-sig', newline='') as f:
-            writer = csv.writer(f)
-            if not file_exists:
-                writer.writerow(['time', 'name', 'affiliation', 'email', 'resource_id', 'type'])
-            writer.writerow([
-                timestamp,
-                user_info['name'],
-                user_info['affiliation'],
-                user_info['email'],
-                resource_id,
-                link_type
-            ])
-        print(f"Link open logged: {user_info['name']} -> {resource_id} ({link_type})")
-    except Exception as e:
-        print(f"Link-open CSV write failed: {e}")
-
     if _supabase_logs_ready():
         _write_supabase_resource_open(now, resource_id, link_type, target_url, user_info)
     return redirect(target_url)
@@ -2239,6 +2201,18 @@ def _handle_admin_actions(default_module):
         sync_result = _sync_site_content_from_github()
         session['admin_notice'] = sync_result
         return redirect(_admin_module_url(default_module, '#git-sync-down'))
+
+    if action == 'clear_supabase_analytics':
+        confirmation = (request.form.get('clear_confirmation') or '').strip()
+        if confirmation != 'CLEAR':
+            session['admin_notice'] = {
+                'kind': 'error',
+                'message': 'Analytics data was not cleared.',
+                'details': 'Type CLEAR exactly to confirm the destructive operation.'
+            }
+        else:
+            session['admin_notice'] = _clear_supabase_analytics_tables()
+        return redirect(_admin_module_url(default_module, '#analytics-danger-zone'))
 
     if action == 'add':
         if item_type == 'person':

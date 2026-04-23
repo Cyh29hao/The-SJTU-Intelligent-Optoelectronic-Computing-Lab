@@ -2,12 +2,18 @@
 __pycache__/
 *.pyc
 .env
-secret_key.bin 
+secret_key.bin
+.venv/
+.omx/
+logo_drafts/
 
 # Git-tracked editable content now lives in site_content/
 # Runtime data that should NOT be in Git
 render_data/data_logs/
 render_data/private_downloads/
+data_logs/
+render_data/data_logs/*.csv
+data_logs/*.csv
 
 # Logs or temp files
 *.log

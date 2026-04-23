@@ -107,6 +107,18 @@
             <a href="{{ url_for('download_render_data_zip') }}" class="btn-link btn-muted">Download analytics_export_bundle.zip</a>
         </div>
 
+        <div id="analytics-danger-zone" style="margin-top:26px; padding-top:20px; border-top:1px solid #f0c2c2;">
+            <h3 style="margin-top:0; color:#8b2f2f;">Danger Zone: Clear Analytics Data</h3>
+            <p class="helper-note">This clears the Supabase analytics tables <code>page_views</code> and <code>resource_opens</code>. Download a backup first if you need to preserve the current data.</p>
+            <form method="POST" action="{{ url_for('admin_analytics') }}">
+                <input type="hidden" name="action" value="clear_supabase_analytics">
+                <input type="hidden" name="item_type" value="site">
+                <label>Type CLEAR to confirm</label>
+                <input name="clear_confirmation" placeholder="CLEAR" autocomplete="off">
+                <button type="submit" class="btn-danger" onclick="return confirm('Clear all Supabase analytics data? This cannot be undone from the website.')">Clear Supabase Analytics Data</button>
+            </form>
+        </div>
+
         <div id="git-sync" style="margin-top:26px; padding-top:20px; border-top:1px solid #e3eaf2;">
             <h3 style="margin-top:0;">Git Sync Up</h3>
             <p class="helper-note">Commit and push the current <code>site_content/</code> changes from this server to GitHub. This keeps online edits and the repository in sync.</p>
