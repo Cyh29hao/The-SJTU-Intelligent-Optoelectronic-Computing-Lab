@@ -14,7 +14,7 @@
     "venue": "Science",
     "year": 2025,
     "abstract": "Deep learning has been transforming our ability to execute advanced inference tasks using computers. Here we introduce a physical mechanism to perform machine learning by demonstrating an all-optical diffractive deep neural network (D2NN) architecture that can implement various functions following the deep learning–based design of passive diffractive layers that work collectively. We created 3D-printed D2NNs that implement classification of images of handwritten digits and fashion products, as well as the function of an imaging lens at a terahertz spectrum. Our all-optical deep learning framework can perform, at the speed of light, various complex functions that computer-based neural networks can execute; will find applications in all-optical image analysis, feature detection, and object classification; and will also enable new camera designs and optical components that perform distinctive tasks using D2NNs.",
-    "last_edited": "2026-04-18 03:31:35",
+    "last_edited": "2026-04-23 10:01:15",
     "paper_url": "https://www.science.org/doi/10.1126/science.adv7434",
     "resource_url": "https://zenodo.org/records/17385609",
     "resource_kinds": [
@@ -24,7 +24,7 @@
     "thumbnail_filename": "art_001.jpg",
     "authors_display_count": 3,
     "featured_on_home": true,
-    "official_free_access_url": "https://www.science.org/doi/10.1126/science.adv7434"
+    "official_free_access_url": "https://www.science.org/eprint/IMWHVGNMN9CZ5MTAD7YU/full?activationRedirect=/doi/full/10.1126/science.adv7434"
   },
   {
     "id": "art_002",
