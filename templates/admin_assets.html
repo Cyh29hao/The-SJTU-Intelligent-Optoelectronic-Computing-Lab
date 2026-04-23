@@ -45,6 +45,35 @@
     </div>
 </details>
 
+<details id="people-photos" {% if active_section == 'people-photos' %}open{% endif %}>
+    <summary>👤 People Photos</summary>
+    <div class="details-body">
+    <p class="helper-note">Upload and replace member headshots here while keeping profile text editing in the Content workspace.</p>
+    {% for person in people %}
+    <details id="person-photo-{{ person.id }}">
+        <summary>{{ person.name }} <span class="mono" style="margin-left:8px;">{{ person.id }}</span></summary>
+        <div class="details-body">
+            <div class="inline-actions" style="margin-bottom:12px;">
+                {% if people_photo_info[person.id].exists %}
+                <img src="{{ url_for('asset_people', filename=people_photo_info[person.id].filename) }}" alt="{{ person.name }}" class="asset-thumb">
+                <div>
+                    <div class="mono">{{ people_photo_info[person.id].filename }}</div>
+                    <div class="helper-note" style="margin-top:4px;">Updated: {{ people_photo_info[person.id].mtime }}</div>
+                </div>
+                {% else %}
+                <div class="asset-thumb" style="display:flex; align-items:center; justify-content:center;">No photo</div>
+                {% endif %}
+            </div>
+            <form method="POST" enctype="multipart/form-data" action="{{ url_for('admin_upload_person_photo', person_id=person.id) }}">
+                <input type="file" name="photo" accept="image/png,image/jpeg,image/jpg,image/gif" required>
+                <button type="submit">Upload Person Photo</button>
+            </form>
+        </div>
+    </details>
+    {% endfor %}
+    </div>
+</details>
+
 <details id="news-images" {% if active_section == 'news-images' %}open{% endif %}>
     <summary>News Images</summary>
     <div class="details-body">

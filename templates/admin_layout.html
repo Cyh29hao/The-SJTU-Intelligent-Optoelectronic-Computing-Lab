@@ -70,6 +70,32 @@
             color: white;
             border-color: #e74c3c;
         }
+        .sync-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 12px;
+            border-radius: 999px;
+            font-weight: 800;
+            font-size: 0.92rem;
+            border: 1px solid transparent;
+            white-space: nowrap;
+        }
+        .sync-pill.success {
+            background: #ebfff4;
+            color: #1f6b3b;
+            border-color: #bce7cb;
+        }
+        .sync-pill.info {
+            background: #f2f8ff;
+            color: #2f5f87;
+            border-color: #cfe0f5;
+        }
+        .sync-pill.error {
+            background: #fff0f0;
+            color: #8b2f2f;
+            border-color: #f0c2c2;
+        }
         .page-card,
         .section-card,
         details {
@@ -310,9 +336,10 @@
         <h1>{% block admin_header %}Admin Dashboard{% endblock %}</h1>
     </div>
 
-    {% if active_module != 'home' %}
     <div class="quick-actions">
+        {% if active_module != 'home' %}
         <a href="{{ url_for('admin_dashboard') }}" class="home">Back to Admin Home</a>
+        {% endif %}
         <a href="{{ url_for('admin_view_as_user') }}" class="warning">View as User</a>
         <a href="{{ url_for('admin_logout') }}" class="danger">Logout</a>
     </div>
@@ -324,7 +351,6 @@
         <pre>{{ admin_notice.details }}</pre>
         {% endif %}
     </div>
-    {% endif %}
     {% endif %}
 
     {% block admin_body %}{% endblock %}

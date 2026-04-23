@@ -2,6 +2,17 @@
 
 {% block admin_body %}
 <div class="home-grid">
+    <div class="section-card" style="margin-bottom:20px;">
+        <div class="inline-actions" style="justify-content:space-between; align-items:flex-start;">
+            <div style="min-width:0;">
+                <h3 style="margin-bottom:8px;">GitHub Sync Status</h3>
+                <p class="helper-note" style="margin:0;">{{ git_sync_summary.description }}</p>
+                <p class="helper-note" style="margin:8px 0 0;">Branch: <span class="mono">{{ sync_down_status.branch }}</span></p>
+            </div>
+            <span class="sync-pill {{ git_sync_summary.kind }}">{{ git_sync_summary.label }}</span>
+        </div>
+    </div>
+
     <div class="card-grid two-by-two">
         <a href="{{ url_for('admin_content') }}" class="module-card large" style="background:linear-gradient(145deg,#4c7cff 0%,#275edb 100%);">
             <div class="module-card-title">✍️ Edit Content</div>
@@ -13,7 +24,7 @@
         </a>
         <a href="{{ url_for('admin_assets') }}" class="module-card large" style="background:linear-gradient(145deg,#7f66dd 0%,#654bc5 100%);">
             <div class="module-card-title">🖼️ Manage Assets</div>
-            <div class="module-card-text">Logo, article thumbnails, news images, and footer-link icons.</div>
+            <div class="module-card-text">Logo, people photos, article thumbnails, news images, and footer-link icons.</div>
         </a>
         <a href="{{ url_for('admin_settings') }}" class="module-card large" style="background:linear-gradient(145deg,#f39c4d 0%,#e67e22 100%);">
             <div class="module-card-title">⚙️ Site Settings</div>

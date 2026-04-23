@@ -1345,6 +1345,18 @@ input[type="email"]:focus {
   word-break: break-word;
 }
 
+.publication-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.publication-star {
+  color: #d4a017;
+  line-height: 1.1;
+  flex: 0 0 auto;
+}
+
 .person-detail-photo,
 .publication-thumb,
 .team-entry-photo {

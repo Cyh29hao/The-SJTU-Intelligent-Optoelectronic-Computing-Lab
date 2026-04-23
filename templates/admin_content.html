@@ -74,9 +74,11 @@
     <details>
         <summary>Add New Publication</summary>
         <div class="details-body">
-            <form method="POST" action="{{ url_for(module_endpoint) }}">
+            <form method="POST" action="{{ url_for(module_endpoint) }}" data-official-free-defaults="1">
                 <input type="hidden" name="action" value="add">
                 <input type="hidden" name="item_type" value="article">
+                <input type="hidden" name="featured_on_home_manual" value="0">
+                <input type="hidden" name="home_top_pinned_manual" value="0">
                 <label>Title</label>
                 <input name="title" required>
                 <label>Authors (comma-separated)</label>
@@ -100,6 +102,8 @@
                     <label><input type="checkbox" name="resource_kinds" value="Code" checked> Code</label>
                     <label><input type="checkbox" name="resource_kinds" value="Dataset"> Dataset</label>
                     <label><input type="checkbox" name="featured_on_home"> Homepage carousel</label>
+                    <label><input type="checkbox" name="home_top_pinned"> Pin to carousel slot 01</label>
+                    <label><input type="checkbox" name="is_starred"> Star on Publications</label>
                 </div>
                 <button type="submit">Add Publication</button>
             </form>
@@ -111,10 +115,12 @@
         <summary>{{ item.title }} <span class="mono" style="margin-left:8px;">{{ item.id }}</span></summary>
         <div class="details-body">
             <p class="helper-note">Tracked opens: {{ download_counts.get(item.id, 0) }} | Views: {{ article_view_counts.get(item.id, 0) }} | Unique users: {{ unique_counts.get(item.id, 0) }}</p>
-            <form method="POST" action="{{ url_for(module_endpoint) }}">
+            <form method="POST" action="{{ url_for(module_endpoint) }}" data-official-free-defaults="1">
                 <input type="hidden" name="action" value="edit">
                 <input type="hidden" name="item_type" value="article">
                 <input type="hidden" name="id" value="{{ item.id }}">
+                <input type="hidden" name="featured_on_home_manual" value="0">
+                <input type="hidden" name="home_top_pinned_manual" value="0">
                 <label>Title</label>
                 <input name="title" value="{{ item.title }}" required>
                 <label>Authors</label>
@@ -139,6 +145,8 @@
                     <label><input type="checkbox" name="resource_kinds" value="Code" {% if 'Code' in kinds %}checked{% endif %}> Code</label>
                     <label><input type="checkbox" name="resource_kinds" value="Dataset" {% if 'Dataset' in kinds %}checked{% endif %}> Dataset</label>
                     <label><input type="checkbox" name="featured_on_home" {% if item.featured_on_home %}checked{% endif %}> Homepage carousel</label>
+                    <label><input type="checkbox" name="home_top_pinned" {% if item.home_top_pinned %}checked{% endif %}> Pin to carousel slot 01</label>
+                    <label><input type="checkbox" name="is_starred" {% if item.is_starred %}checked{% endif %}> Star on Publications</label>
                 </div>
                 <div class="inline-actions">
                     <button type="submit">Save Publication</button>
@@ -322,4 +330,53 @@
     {% endfor %}
     </div>
 </details>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('form[data-official-free-defaults="1"]').forEach(function (form) {
+    const officialFreeInput = form.querySelector('input[name="official_free_access_url"]');
+    const featuredCheckbox = form.querySelector('input[name="featured_on_home"]');
+    const pinnedCheckbox = form.querySelector('input[name="home_top_pinned"]');
+    const featuredManual = form.querySelector('input[name="featured_on_home_manual"]');
+    const pinnedManual = form.querySelector('input[name="home_top_pinned_manual"]');
+
+    if (!officialFreeInput || !featuredCheckbox || !pinnedCheckbox || !featuredManual || !pinnedManual) {
+      return;
+    }
+
+    function applyOfficialFreeDefaults() {
+      if (!officialFreeInput.value.trim()) {
+        return;
+      }
+      if (featuredManual.value !== '1') {
+        featuredCheckbox.checked = true;
+      }
+      if (pinnedManual.value !== '1') {
+        pinnedCheckbox.checked = true;
+      }
+      if (pinnedCheckbox.checked && featuredManual.value !== '1') {
+        featuredCheckbox.checked = true;
+      }
+    }
+
+    featuredCheckbox.addEventListener('change', function () {
+      featuredManual.value = '1';
+      if (!featuredCheckbox.checked && pinnedCheckbox.checked) {
+        pinnedCheckbox.checked = false;
+        pinnedManual.value = '1';
+      }
+    });
+
+    pinnedCheckbox.addEventListener('change', function () {
+      pinnedManual.value = '1';
+      if (pinnedCheckbox.checked) {
+        featuredCheckbox.checked = true;
+      }
+    });
+
+    officialFreeInput.addEventListener('input', applyOfficialFreeDefaults);
+    applyOfficialFreeDefaults();
+  });
+});
+</script>
 {% endblock %}

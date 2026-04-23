@@ -8,11 +8,13 @@ import csv
 import io
 import json
 import logging
+import math
 import os
 import requests
 import shutil
 import subprocess
 import sys
+import threading
 from datetime import datetime, timedelta
 from urllib.parse import urlencode
 from flask import Flask, render_template, request, redirect, url_for, send_file, session
@@ -63,6 +65,10 @@ SUPABASE_URL = (os.environ.get('SUPABASE_URL') or '').strip()
 SUPABASE_SECRET_KEY = (os.environ.get('SUPABASE_SECRET_KEY') or '').strip()
 SUPABASE_LOGS_ENABLED = (os.environ.get('SUPABASE_LOGS_ENABLED') or '0').strip().lower() in ('1', 'true', 'yes', 'on')
 SUPABASE_REST_ROOT = f"{SUPABASE_URL.rstrip('/')}/rest/v1" if SUPABASE_URL else ''
+LINK_OPEN_WINDOW_SECONDS = 60
+LINK_OPEN_MAX_COUNT = 2
+_LINK_OPEN_HISTORY = {}
+_LINK_OPEN_HISTORY_LOCK = threading.Lock()
 
 # Ensure directories exist (Safety check on every launch)
 os.makedirs(CONTENT_ROOT, exist_ok=True)
@@ -316,6 +322,8 @@ I18N = {
     'opened_times': {'en': 'Opened {count} times', 'zh': '已打开 {count} 次'},
     'paper_link': {'en': 'Paper Link', 'zh': '论文链接'},
     'official_free_access': {'en': 'Official Free Access', 'zh': '官方免费访问'},
+    'starred_publication': {'en': 'Starred publication', 'zh': '标星论文'},
+    'too_many_link_opens': {'en': 'Too many link opens. Please wait {seconds} seconds and try again.', 'zh': '访问次数过多，请稍等 {seconds} 秒后重试。'},
     'resources_link': {'en': 'Resources Link', 'zh': '资源链接'},
     'external_access_note': {'en': 'External links are unlocked after login so the lab can keep lightweight access records without hosting the files locally.', 'zh': '登录后可访问外部链接，这样课题组可以在不托管文件的情况下保留轻量级访问记录。'},
     'back_to_news': {'en': 'Back to News', 'zh': '返回新闻列表'},
@@ -996,6 +1004,49 @@ def _get_sync_from_github_status(fetch_remote=False):
         'behind_count': behind_count
     }
 
+def _build_git_sync_summary(local_cms_status=None, sync_down_status=None):
+    local_cms_status = local_cms_status or _get_local_cms_status()
+    sync_down_status = sync_down_status or _get_sync_from_github_status(fetch_remote=True)
+
+    ahead_count = int(sync_down_status.get('ahead_count') or 0)
+    behind_count = int(sync_down_status.get('behind_count') or 0)
+    has_local_changes = bool(local_cms_status.get('has_changes'))
+    incoming_code_files = sync_down_status.get('incoming_code_files') or []
+    incoming_content_files = sync_down_status.get('incoming_content_files') or []
+
+    if (
+        not sync_down_status.get('available')
+        or sync_down_status.get('kind') in ('error', 'warning')
+        or bool(incoming_code_files)
+        or (ahead_count > 0 and behind_count > 0)
+        or (has_local_changes and behind_count > 0)
+    ):
+        return {
+            'label': 'Conflicts exist',
+            'kind': 'error',
+            'description': 'Sync needs manual attention before any fast-forward action.',
+        }
+
+    if has_local_changes or ahead_count > 0:
+        return {
+            'label': 'Need sync up',
+            'kind': 'info',
+            'description': 'Local site_content changes or local commits are ahead of GitHub.',
+        }
+
+    if sync_down_status.get('can_sync') or behind_count > 0 or bool(incoming_content_files):
+        return {
+            'label': 'Need sync down',
+            'kind': 'info',
+            'description': 'GitHub has newer content-only updates waiting on this server.',
+        }
+
+    return {
+        'label': 'Already synced',
+        'kind': 'success',
+        'description': 'Local site_content is aligned with GitHub.',
+    }
+
 def _sync_site_content_from_github():
     sync_status = _get_sync_from_github_status(fetch_remote=True)
     if not sync_status['can_sync']:
@@ -1281,12 +1332,54 @@ def _latest_content_modified_time():
     return datetime.fromtimestamp(latest_ts).strftime("%Y-%m-%d %H:%M:%S")
 
 def _article_sort_key(item):
-    last_edited = item.get('last_edited') or ''
+    last_edited = (item.get('last_edited') or '').strip()
+    try:
+        last_edited_key = datetime.strptime(last_edited, "%Y-%m-%d %H:%M:%S").timestamp()
+    except Exception:
+        last_edited_key = 0.0
     return (
         -(item.get('year') or 0),
-        last_edited,
+        -last_edited_key,
         item.get('id', '')
     )
+
+def _home_carousel_sort_key(item):
+    return (
+        0 if item.get('home_top_pinned') else 1,
+        *_article_sort_key(item)
+    )
+
+def _resolve_article_form_flags(form_data):
+    official_free_access_url = (form_data.get('official_free_access_url') or '').strip()
+    featured_on_home = (form_data.get('featured_on_home') == 'on')
+    home_top_pinned = (form_data.get('home_top_pinned') == 'on')
+    is_starred = (form_data.get('is_starred') == 'on')
+
+    featured_on_home_manual = (form_data.get('featured_on_home_manual') or '').strip() == '1'
+    home_top_pinned_manual = (form_data.get('home_top_pinned_manual') or '').strip() == '1'
+
+    if official_free_access_url:
+        if not featured_on_home_manual:
+            featured_on_home = True
+        if not home_top_pinned_manual:
+            home_top_pinned = True
+
+    if home_top_pinned:
+        featured_on_home = True
+
+    return featured_on_home, home_top_pinned, is_starred
+
+def _normalize_article_pin_and_star_flags(articles):
+    changed = False
+    for item in articles:
+        for flag_name in ('home_top_pinned', 'is_starred'):
+            if flag_name not in item or not isinstance(item.get(flag_name), bool):
+                item[flag_name] = bool(item.get(flag_name))
+                changed = True
+        if item.get('home_top_pinned') and not item.get('featured_on_home'):
+            item['featured_on_home'] = True
+            changed = True
+    return changed
 
 def _normalize_article_records(items):
     normalized = []
@@ -1305,6 +1398,10 @@ def _normalize_article_records(items):
         if 'authors_display_count' not in current:
             current['authors_display_count'] = 3
             changed = True
+        for flag_name in ('home_top_pinned', 'is_starred'):
+            if flag_name not in current or not isinstance(current.get(flag_name), bool):
+                current[flag_name] = bool(current.get(flag_name))
+                changed = True
         normalized.append(current)
         if current != item:
             changed = True
@@ -1313,7 +1410,7 @@ def _normalize_article_records(items):
 def _normalize_home_carousel_flags(articles):
     changed = False
     explicit_flag_count = sum(1 for item in articles if 'featured_on_home' in item)
-    ordered_articles = sorted(articles, key=_article_sort_key)
+    ordered_articles = sorted(articles, key=_home_carousel_sort_key)
 
     if explicit_flag_count == 0:
         selected_ids = {item['id'] for item in ordered_articles[:3]}
@@ -1328,6 +1425,9 @@ def _normalize_home_carousel_flags(articles):
                 item['featured_on_home'] = False
                 changed = True
 
+    if _normalize_article_pin_and_star_flags(articles):
+        changed = True
+
     selected = [item for item in ordered_articles if item.get('featured_on_home')]
     if len(selected) > 5:
         keep_ids = {item['id'] for item in selected[:5]}
@@ -1335,6 +1435,9 @@ def _normalize_home_carousel_flags(articles):
             if item.get('featured_on_home') and item['id'] not in keep_ids:
                 item['featured_on_home'] = False
                 changed = True
+                if item.get('home_top_pinned'):
+                    item['home_top_pinned'] = False
+                    changed = True
 
     return changed
 
@@ -1396,6 +1499,80 @@ def log_page_view(page_type, item_id='', title=''):
     session['last_view_key'] = page_key
     session['last_view_time'] = timestamp
 
+def _get_link_open_bucket_key(user_info):
+    if not isinstance(user_info, dict):
+        return ''
+    return (user_info.get('email') or '').strip().lower()
+
+def _consume_link_open_slot(user_info, now):
+    bucket_key = _get_link_open_bucket_key(user_info)
+    if not bucket_key:
+        return True, 0
+
+    with _LINK_OPEN_HISTORY_LOCK:
+        history = [
+            ts for ts in _LINK_OPEN_HISTORY.get(bucket_key, [])
+            if (now - ts).total_seconds() < LINK_OPEN_WINDOW_SECONDS
+        ]
+        if len(history) >= LINK_OPEN_MAX_COUNT:
+            retry_after = max(
+                1,
+                int(math.ceil(LINK_OPEN_WINDOW_SECONDS - (now - history[0]).total_seconds()))
+            )
+            _LINK_OPEN_HISTORY[bucket_key] = history
+            return False, retry_after
+        history.append(now)
+        _LINK_OPEN_HISTORY[bucket_key] = history
+    return True, 0
+
+def _too_many_link_opens_response(seconds):
+    message = t('too_many_link_opens', seconds=seconds)
+    alert_text = json.dumps(message, ensure_ascii=False)
+    fallback_url = json.dumps(request.referrer or url_for('index'))
+    return (
+        "<script>"
+        f"alert({alert_text});"
+        "if (window.history.length > 1) { window.history.back(); }"
+        f" else {{ window.location.href = {fallback_url}; }}"
+        "</script>",
+        429
+    )
+
+def _get_article_link_target(article, link_type):
+    if link_type == 'paper':
+        return (article.get('paper_url') or '').strip()
+    if link_type == 'resource':
+        return (article.get('resource_url') or '').strip()
+    if link_type == 'official_free_access':
+        return (article.get('official_free_access_url') or '').strip()
+    return ''
+
+def _handle_external_link_open(link_type, resource_id):
+    user_info = session.get('user_info')
+    if not user_info:
+        print(f"Unregistered user attempted to open {resource_id}:{link_type}, redirecting to login")
+        return redirect(url_for('register', next=request.path))
+
+    if link_type not in ['paper', 'resource', 'official_free_access']:
+        return "Invalid link type", 400
+
+    article = next((a for a in load_articles_data() if a.get('id') == resource_id), None)
+    if not article:
+        return "Article not found", 404
+
+    target_url = _get_article_link_target(article, link_type)
+    if not target_url:
+        return "Requested link is not available", 404
+
+    now = datetime.now()
+    allowed, retry_after = _consume_link_open_slot(user_info, now)
+    if not allowed:
+        return _too_many_link_opens_response(retry_after)
+
+    if _supabase_logs_ready():
+        _write_supabase_resource_open(now, resource_id, link_type, target_url, user_info)
+    return redirect(target_url)
+
 @app.route('/set-language/<lang>')
 def set_language(lang):
     lang = (lang or '').strip().lower()
@@ -1423,6 +1600,7 @@ def _add_item(item_type, form_data):
     # Parse authors
     authors_str = form_data.get('authors', '').strip()
     authors = [a.strip() for a in authors_str.split(',')] if authors_str else []
+    featured_on_home, home_top_pinned, is_starred = _resolve_article_form_flags(form_data)
 
     new_item = {
         'id': new_id,
@@ -1436,7 +1614,9 @@ def _add_item(item_type, form_data):
         'resource_url': form_data.get('resource_url', '').strip(),
         'authors_display_count': int(form_data.get('authors_display_count', 3)),
         'resource_kinds': form_data.getlist('resource_kinds') if hasattr(form_data, 'getlist') and form_data.getlist('resource_kinds') else ['Code'],
-        'featured_on_home': (form_data.get('featured_on_home') == 'on'),
+        'featured_on_home': featured_on_home,
+        'home_top_pinned': home_top_pinned,
+        'is_starred': is_starred,
         'last_edited': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
 
@@ -1449,6 +1629,7 @@ def _update_item(item_type, item_id, form_data):
     """Helper to update existing article"""
     filename = 'articles.json'
     data = load_articles_data()
+    featured_on_home, home_top_pinned, is_starred = _resolve_article_form_flags(form_data)
     for item in data:
         if item['id'] == item_id:
             item['title'] = form_data.get('title', item['title']).strip()
@@ -1478,7 +1659,9 @@ def _update_item(item_type, item_id, form_data):
                 kinds = form_data.getlist('resource_kinds')
                 if kinds:
                     item['resource_kinds'] = kinds
-            item['featured_on_home'] = (form_data.get('featured_on_home') == 'on')
+            item['featured_on_home'] = featured_on_home
+            item['home_top_pinned'] = home_top_pinned
+            item['is_starred'] = is_starred
             item['last_edited'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             break
     _normalize_home_carousel_flags(data)
@@ -1502,19 +1685,35 @@ os.makedirs(NEWS_IMAGES_DIR, exist_ok=True)
 SITE_IMAGES_DIR = os.path.join(CONTENT_ROOT, 'images')
 os.makedirs(SITE_IMAGES_DIR, exist_ok=True)
 
+def _save_person_photo(person_id, photo_file):
+    if not photo_file or not photo_file.filename:
+        return ''
+
+    ext = os.path.splitext(secure_filename(photo_file.filename))[1].lower()
+    if ext not in ['.png', '.jpg', '.jpeg', '.gif']:
+        return ''
+
+    os.makedirs(PEOPLE_IMAGES_DIR, exist_ok=True)
+    for old_ext in ['.png', '.jpg', '.jpeg', '.gif']:
+        old_path = os.path.join(PEOPLE_IMAGES_DIR, f"{person_id}{old_ext}")
+        if os.path.exists(old_path):
+            try:
+                os.remove(old_path)
+            except Exception:
+                pass
+
+    photo_filename = f"{person_id}{ext}"
+    save_path = os.path.join(PEOPLE_IMAGES_DIR, photo_filename)
+    photo_file.save(save_path)
+    return photo_filename
+
 def _add_person(form_data, photo_file=None):
     filename = 'people.json'
     data = load_people_data()
     ids = [int(item['id'].split('_')[-1]) for item in data if '_' in item['id']]
     new_id_num = max(ids) + 1 if ids else 1
     new_id = f"person_{new_id_num:03d}"
-    photo_filename = ''
-    if photo_file and photo_file.filename:
-        ext = os.path.splitext(secure_filename(photo_file.filename))[1].lower()
-        if ext in ['.png', '.jpg', '.jpeg', '.gif']:
-            photo_filename = f"{new_id}{ext}"
-            save_path = os.path.join(PEOPLE_IMAGES_DIR, photo_filename)
-            photo_file.save(save_path)
+    photo_filename = _save_person_photo(new_id, photo_file)
     # Extra links (up to 3)
     links = []
     for i in range(1, 4):
@@ -1549,19 +1748,8 @@ def _update_person(person_id, form_data, photo_file=None):
             item['category'] = form_data.get('category', item.get('category', '')).strip()
             item['email'] = form_data.get('email', item.get('email', '')).strip()
             if photo_file and photo_file.filename:
-                # remove previous files with any common image ext
-                for ext in ['.png', '.jpg', '.jpeg', '.gif']:
-                    p = os.path.join(PEOPLE_IMAGES_DIR, f"{person_id}{ext}")
-                    if os.path.exists(p):
-                        try:
-                            os.remove(p)
-                        except Exception:
-                            pass
-                ext = os.path.splitext(secure_filename(photo_file.filename))[1].lower()
-                if ext in ['.png', '.jpg', '.jpeg', '.gif']:
-                    photo_filename = f"{person_id}{ext}"
-                    save_path = os.path.join(PEOPLE_IMAGES_DIR, photo_filename)
-                    photo_file.save(save_path)
+                photo_filename = _save_person_photo(person_id, photo_file)
+                if photo_filename:
                     item['photo_filename'] = photo_filename
             item['bio'] = form_data.get('bio', item.get('bio', '')).strip()
             item['bio_zh'] = form_data.get('bio_zh', item.get('bio_zh', '')).strip()
@@ -1679,7 +1867,7 @@ def index():
     latest_news = [item for item in news_items if not item.get('hide_from_home')][:3]
     featured_articles = sorted(
         [item for item in articles if item.get('featured_on_home')],
-        key=_article_sort_key
+        key=_home_carousel_sort_key
     )[:5]
     log_page_view('home', title='Home')
     page_view_summary = _read_page_view_log_summary()
@@ -1874,33 +2062,7 @@ def download_file(file_type, resource_id):
 @app.route('/open_link/<link_type>/<resource_id>')
 def open_link(link_type, resource_id):
     """Gate external article/resource links behind login while preserving access analytics."""
-    user_info = session.get('user_info')
-    if not user_info:
-        print(f"Unregistered user attempted to open {resource_id}:{link_type}, redirecting to login")
-        return redirect(url_for('register', next=request.path))
-
-    if link_type not in ['paper', 'resource', 'official_free_access']:
-        return "Invalid link type", 400
-
-    article = next((a for a in load_articles_data() if a.get('id') == resource_id), None)
-    if not article:
-        return "Article not found", 404
-
-    target_url = ''
-    if link_type == 'paper':
-        target_url = (article.get('paper_url') or '').strip()
-    elif link_type == 'resource':
-        target_url = (article.get('resource_url') or '').strip()
-    elif link_type == 'official_free_access':
-        target_url = (article.get('official_free_access_url') or '').strip()
-
-    if not target_url:
-        return "Requested link is not available", 404
-
-    now = datetime.now()
-    if _supabase_logs_ready():
-        _write_supabase_resource_open(now, resource_id, link_type, target_url, user_info)
-    return redirect(target_url)
+    return _handle_external_link_open(link_type, resource_id)
 
 
 # ==============================================================================
@@ -1944,6 +2106,13 @@ def _build_admin_common_context(pop_notice=False):
         'local_cms_status': local_cms_status,
         'analytics_backend': 'Supabase only' if _supabase_logs_ready() else 'Supabase not configured',
         'admin_notice': session.pop('admin_notice', None) if pop_notice else session.get('admin_notice'),
+    }
+
+def _build_admin_home_context(local_cms_status=None):
+    sync_down_status = _get_sync_from_github_status(fetch_remote=True)
+    return {
+        'git_sync_summary': _build_git_sync_summary(local_cms_status, sync_down_status),
+        'sync_down_status': sync_down_status,
     }
 
 def _build_admin_analytics_context():
@@ -2338,10 +2507,12 @@ def admin_dashboard():
     response = _handle_admin_actions('home')
     if response:
         return response
+    common_context = _build_admin_common_context(pop_notice=True)
     return render_template(
         'admin_home.html',
         active_module='home',
-        **_build_admin_common_context(pop_notice=True)
+        **common_context,
+        **_build_admin_home_context(common_context['local_cms_status'])
     )
 
 @app.route('/admin/content', methods=['GET', 'POST'])
@@ -2510,6 +2681,33 @@ def admin_upload_thumbnail(article_id):
     anchor = f'#thumb-{article_id}' if redirect_module == 'assets' else f'#article-{article_id}'
     section = 'thumbnails' if redirect_module == 'assets' else 'publications'
     return redirect(_admin_module_url(redirect_module, anchor, section))
+
+@app.route('/admin/upload-person-photo/<person_id>', methods=['POST'])
+def admin_upload_person_photo(person_id):
+    if not session.get('is_admin'):
+        return "Unauthorized", 403
+
+    people = load_people_data()
+    target = next((p for p in people if p['id'] == person_id), None)
+    if not target:
+        return "Person not found", 404
+
+    photo = request.files.get('photo')
+    if not photo or not photo.filename:
+        return "No file selected", 400
+
+    photo_filename = _save_person_photo(person_id, photo)
+    if not photo_filename:
+        return "File type not allowed for person photo", 400
+
+    target['photo_filename'] = photo_filename
+    target['last_edited'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    for index, person in enumerate(people):
+        if person['id'] == person_id:
+            people[index] = target
+            break
+    save_json_data('people.json', people)
+    return redirect(_admin_module_url('assets', f'#person-photo-{person_id}', 'people-photos'))
 
 @app.route('/admin/upload-news-image/<news_id>', methods=['POST'])
 def admin_upload_news_image(news_id):
@@ -2840,29 +3038,7 @@ def _upload_runtime_bundle_retired():
     return redirect(url_for('admin_dashboard') + '#local-cms-panel')
 
 def _open_link_supabase_only(link_type, resource_id):
-    user_info = session.get('user_info')
-    if not user_info:
-        return redirect(url_for('register', next=request.path))
-    if link_type not in ['paper', 'resource', 'official_free_access']:
-        return "Invalid link type", 400
-
-    article = next((a for a in load_articles_data() if a.get('id') == resource_id), None)
-    if not article:
-        return "Article not found", 404
-
-    if link_type == 'paper':
-        target_url = (article.get('paper_url') or '').strip()
-    elif link_type == 'resource':
-        target_url = (article.get('resource_url') or '').strip()
-    else:
-        target_url = (article.get('official_free_access_url') or '').strip()
-
-    if not target_url:
-        return "Requested link is not available", 404
-
-    if _supabase_logs_ready():
-        _write_supabase_resource_open(datetime.now(), resource_id, link_type, target_url, user_info)
-    return redirect(target_url)
+    return _handle_external_link_open(link_type, resource_id)
 
 def _download_file_compat(file_type, resource_id):
     return redirect(url_for('open_link', link_type=file_type, resource_id=resource_id))
