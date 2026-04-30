@@ -2770,6 +2770,18 @@ def admin_upload_site_image(slot):
         filename = base_name + ext
         image.save(os.path.join(SITE_IMAGES_DIR, filename))
         cfg['logo_filename'] = filename
+    elif slot == 'hero-brand':
+        base_name = 'hero_brand_strip'
+        for old_ext in ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp']:
+            old_path = os.path.join(SITE_IMAGES_DIR, base_name + old_ext)
+            if os.path.exists(old_path):
+                try:
+                    os.remove(old_path)
+                except Exception:
+                    pass
+        filename = base_name + ext
+        image.save(os.path.join(SITE_IMAGES_DIR, filename))
+        cfg['hero_brand_filename'] = filename
     else:
         if not slot.startswith('friend-'):
             return "Invalid site image slot", 400

@@ -6,7 +6,7 @@
 <details id="site-images" {% if active_section in ('', 'site-images') %}open{% endif %}>
     <summary>🧩 Site Images</summary>
     <div class="details-body">
-    <p class="helper-note">Header logo and footer-link icons live in git-tracked <code>site_content/images/</code>.</p>
+    <p class="helper-note">Header logo, hero brand strip, and footer-link icons live in git-tracked <code>site_content/images/</code>.</p>
 
     <div class="asset-grid">
         <div class="asset-card">
@@ -18,6 +18,18 @@
             <form method="POST" enctype="multipart/form-data" action="{{ url_for('admin_upload_site_image', slot='logo', redirect_module='assets') }}">
                 <input type="file" name="image" accept="image/png,image/jpeg,image/jpg,image/gif,image/svg+xml,image/webp" required>
                 <button type="submit">Upload Logo</button>
+            </form>
+        </div>
+
+        <div class="asset-card">
+            <h3>Hero Brand Strip</h3>
+            <div class="inline-actions" style="margin-bottom:12px;">
+                <img src="{{ url_for('asset_site_image', filename=site_cfg.hero_brand_filename) if site_cfg.hero_brand_filename else url_for('static', filename='images/placeholder-site.svg') }}" alt="Hero brand strip" class="asset-thumb asset-thumb-wide">
+                <div class="mono">{{ site_cfg.hero_brand_filename or 'No hero brand strip uploaded yet' }}</div>
+            </div>
+            <form method="POST" enctype="multipart/form-data" action="{{ url_for('admin_upload_site_image', slot='hero-brand', redirect_module='assets') }}">
+                <input type="file" name="image" accept="image/png,image/jpeg,image/jpg,image/gif,image/svg+xml,image/webp" required>
+                <button type="submit">Upload Hero Brand Strip</button>
             </form>
         </div>
 

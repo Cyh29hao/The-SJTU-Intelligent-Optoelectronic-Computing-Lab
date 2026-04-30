@@ -1,4 +1,5 @@
 import importlib.util
+import io
 import os
 import pathlib
 import shutil
@@ -108,6 +109,28 @@ class CMSFeatureTests(unittest.TestCase):
         html = response.get_data(as_text=True)
         self.assertIn("People Photos", html)
         self.assertIn("/admin/upload-person-photo/person_001", html)
+
+    def test_hero_brand_strip_is_managed_from_assets(self):
+        with self.client.session_transaction() as session:
+            session["is_admin"] = True
+
+        response = self.client.get("/admin/assets")
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("Hero Brand Strip", html)
+        self.assertIn("/admin/upload-site-image/hero-brand", html)
+
+        upload = self.client.post(
+            "/admin/upload-site-image/hero-brand?redirect_module=assets",
+            data={"image": (io.BytesIO(b"fake png bytes"), "hero-update.png")},
+            content_type="multipart/form-data",
+            follow_redirects=False,
+        )
+        self.assertEqual(upload.status_code, 302)
+
+        cfg = self.module.load_site_config()
+        self.assertEqual(cfg["hero_brand_filename"], "hero_brand_strip.png")
+        self.assertTrue((self.content_root / "images" / "hero_brand_strip.png").exists())
 
     def test_link_rate_limit_blocks_third_open_and_uses_language(self):
         with self.client.session_transaction() as session:
