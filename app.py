@@ -157,7 +157,7 @@ print(f"🗄️ Supabase Logs: {'enabled' if SUPABASE_LOGS_ENABLED and SUPABASE_
 
 # Runtime & Lab info
 START_TIME = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-LAB_NAME = "OPTICom Lab"
+LAB_NAME = "OPTICompt Lab"
 SITE_CONFIG_PATH = os.path.join(CONTENT_ROOT, 'site.json')
 VIEW_LOG_COOLDOWN_SECONDS = 30
 PAGE_TYPE_LABELS = {
@@ -269,14 +269,14 @@ DEFAULT_SITE_CONFIG = {
     'hero_summary': 'Research in photonic neural networks, intelligent photonic integrated circuits, and open academic resources for optical computing.',
     'hero_summary_zh': '聚焦光子神经网络、智能光子集成电路与面向光计算的开放学术资源。',
     'lab_name': LAB_NAME,
-    'lab_name_short': 'OPTICom Lab',
-    'lab_name_short_zh': 'OPTICom Lab',
+    'lab_name_short': 'OPTICompt Lab',
+    'lab_name_short_zh': 'OPTICompt Lab',
     'lab_name_full': 'Optoelectronic and Photonic Technologies for Intelligent Computing',
     'lab_name_full_zh': 'Optoelectronic and Photonic Technologies for Intelligent Computing',
     'site_version': DEFAULT_SITE_VERSION,
     'show_external_access_note': False,
-    'footer_copyright': '2026 OPTICom Lab',
-    'footer_copyright_zh': '2026 OPTICom Lab',
+    'footer_copyright': '2026 OPTICompt Lab',
+    'footer_copyright_zh': '2026 OPTICompt Lab',
     'logo_filename': 'site_logo.svg',
     'friend_links': DEFAULT_FRIEND_LINKS,
     'research_highlights': DEFAULT_RESEARCH_HIGHLIGHTS,
@@ -1123,8 +1123,8 @@ def _default_news_items():
     today = datetime.now().strftime("%Y-%m-%d")
     return [{
         'id': 'news_001',
-        'title': 'OPTICom Lab website is now online',
-        'title_zh': 'OPTICom Lab 网站现已上线',
+        'title': 'OPTICompt Lab website is now online',
+        'title_zh': 'OPTICompt Lab 网站现已上线',
         'date': today,
         'summary': f'Version {DEFAULT_SITE_VERSION} is now available with publications, people profiles, external resource access, and admin analytics.',
         'summary_zh': f'当前版本 {DEFAULT_SITE_VERSION} 已上线，支持论文页面、成员页面、外部资源访问与后台数据统计。',
@@ -2578,7 +2578,7 @@ def admin_view_as_user():
     session['is_admin'] = False
     session['user_info'] = {
         'name': ADMIN_CREDENTIALS.get('name','Admin'),
-        'affiliation': ADMIN_CREDENTIALS.get('affiliation','OPTICom Lab'),
+        'affiliation': ADMIN_CREDENTIALS.get('affiliation','OPTICompt Lab'),
         'email': ADMIN_CREDENTIALS.get('email','admin@example.com')
     }
     return redirect(url_for('index'))

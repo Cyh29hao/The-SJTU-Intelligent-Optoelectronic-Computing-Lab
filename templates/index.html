@@ -7,11 +7,11 @@
       <div class="portal-hero-copy">
         {% set hero_lab_short = lang_value(site_cfg, 'lab_name_short') %}
         {% set hero_brand_filename = site_cfg.get('hero_brand_filename', 'hero_brand_strip.png') %}
-        <div class="portal-hero-brand-visual" aria-label="OPTICom Lab brand visual">
+        <div class="portal-hero-brand-visual" aria-label="OPTICompt Lab brand visual">
           <a href="{{ url_for('index') }}" class="portal-hero-brand-link">
             <img
               src="{{ url_for('asset_site_image', filename=hero_brand_filename) }}"
-              alt="OPTICom Lab brand visual"
+              alt="OPTICompt Lab brand visual"
               class="portal-hero-brand-image"
             >
           </a>
@@ -19,8 +19,8 @@
         <div class="portal-hero-brand-fallback">
           <h2 class="portal-hero-title">
             <a href="{{ url_for('index') }}" class="portal-hero-title-link">
-              {% if 'OPTICom' in hero_lab_short %}
-                <span class="brand-wordmark">OPTICom</span>{{ hero_lab_short.replace('OPTICom', '') }}
+              {% if 'OPTICompt' in hero_lab_short %}
+                <span class="brand-wordmark">OPTICompt</span>{{ hero_lab_short.replace('OPTICompt', '') }}
               {% else %}
                 {{ hero_lab_short }}
               {% endif %}
@@ -193,7 +193,7 @@
 
   function team() {
     console.clear();
-    console.log("Prof. Yitong Chen - OPTICom Lab");
+  console.log("Prof. Yitong Chen - OPTICompt Lab");
     console.log("Research Areas: D2NN | MZI | Metasurface | Photonic AI");
     console.log("Contact: yitongchen@sjtu.edu.cn");
   }
