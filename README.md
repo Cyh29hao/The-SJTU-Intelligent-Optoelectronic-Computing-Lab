@@ -4,7 +4,7 @@ Current address1( available since 2026.01.29, for test & display only ) : https:
 
 Current address2( available since 2026.04.18, now only available when using SJTU campus Internet ) : http://111.186.57.166/
 
-Later our website will be available on  "xxx".sjtu.edu.cn  
+Later our website will be available on  https://opticompt-lab.sjtu.edu.cn  
 
 I am responsible for the maintenance and development work, so I hope that day comes sooner.
 
