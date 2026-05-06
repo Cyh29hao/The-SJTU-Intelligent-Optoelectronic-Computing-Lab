@@ -326,6 +326,7 @@ I18N = {
     'starred_publication': {'en': 'Starred publication', 'zh': '标星论文'},
     'too_many_link_opens': {'en': 'Too many link opens. Please wait {seconds} seconds and try again.', 'zh': '访问次数过多，请稍等 {seconds} 秒后重试。'},
     'resources_link': {'en': 'Resources Link', 'zh': '资源链接'},
+    'resource_includes': {'en': 'Include', 'zh': '包含'},
     'external_access_note': {'en': 'External links are unlocked after login so the lab can keep lightweight access records without hosting the files locally.', 'zh': '登录后可访问外部链接，这样课题组可以在不托管文件的情况下保留轻量级访问记录。'},
     'back_to_news': {'en': 'Back to News', 'zh': '返回新闻列表'},
     'news_intro': {'en': 'Announcements, milestones, and lab updates.', 'zh': '实验室公告、进展与阶段性动态。'},
@@ -1916,10 +1917,12 @@ def articles():
     min_year = min((item.get('year', current_year) for item in ARTICLES), default=current_year)
     year_groups = []
     for year in range(current_year, min_year - 1, -1):
-        year_groups.append({
-            'year': year,
-            'articles': [item for item in sorted_articles if item.get('year') == year]
-        })
+        articles_for_year = [item for item in sorted_articles if item.get('year') == year]
+        if articles_for_year:
+            year_groups.append({
+                'year': year,
+                'articles': articles_for_year
+            })
     log_page_view('articles', title='Publications')
     return render_template('articles.html', articles=sorted_articles, year_groups=year_groups, site_cfg=site_cfg)
 

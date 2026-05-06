@@ -22,7 +22,12 @@
     <article class="source-card">
       <div class="source-card-main">
         <div class="source-card-meta">{{ item.venue }}, {{ item.year }}</div>
-        <h3 class="source-card-title">{{ item.title }}</h3>
+        <h3 class="source-card-title source-card-title-row">
+          {% if item.is_starred %}
+          <span class="publication-star source-card-star" title="{{ t('starred_publication') }}" aria-label="{{ t('starred_publication') }}">★</span>
+          {% endif %}
+          <span>{{ item.title }}</span>
+        </h3>
         {% set adc = item.authors_display_count or 3 %}
         {% set total = item.authors|length %}
         {% set shown = item.authors[:adc] %}

@@ -21,8 +21,7 @@
   {% for group in year_groups %}
   <section class="publication-year-group">
     <h3 class="publication-year-heading">{{ group.year }}</h3>
-    {% if group.articles %}
-      {% for article in group.articles %}
+    {% for article in group.articles %}
       <div class="publication-card" style="margin-bottom: 20px; padding: 12px; border: 1px solid #eee; border-radius:8px; display:flex; gap:16px; align-items: center;">
         <img src="{{ url_for('asset_article_thumb', filename=article.thumbnail_filename) if article.thumbnail_filename else url_for('static', filename='images/placeholder-article.svg') }}" alt="{{ article.title }}" class="publication-thumb" style="width: 120px; height: 90px; object-fit: cover; border-radius: 6px;">
         <div class="publication-card-body" style="flex:1;">
@@ -51,10 +50,7 @@
           </p>
         </div>
       </div>
-      {% endfor %}
-    {% else %}
-      <p class="publication-empty">{{ t('no_entries_yet') }}</p>
-    {% endif %}
+    {% endfor %}
   </section>
   {% endfor %}
 </div>

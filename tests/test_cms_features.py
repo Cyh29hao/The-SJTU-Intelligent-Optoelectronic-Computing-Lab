@@ -78,6 +78,39 @@ class CMSFeatureTests(unittest.TestCase):
         html = response.get_data(as_text=True)
         self.assertEqual(html.count('class="publication-star"'), 2)
 
+    def test_empty_publication_years_and_people_categories_are_hidden(self):
+        articles_response = self.client.get("/articles")
+        self.assertEqual(articles_response.status_code, 200)
+        articles_html = articles_response.get_data(as_text=True)
+        self.assertIn('class="publication-year-heading">2025', articles_html)
+        self.assertIn('class="publication-year-heading">2023', articles_html)
+        self.assertNotIn('class="publication-year-heading">2024', articles_html)
+        self.assertNotIn("No entries yet", articles_html)
+
+        people_response = self.client.get("/team")
+        self.assertEqual(people_response.status_code, 200)
+        people_html = people_response.get_data(as_text=True)
+        self.assertNotIn(">Alumni</h3>", people_html)
+        self.assertNotIn("No entries yet", people_html)
+
+    def test_home_omits_professor_link_from_hero(self):
+        response = self.client.get("/")
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertNotIn("portal-hero-subtitle-link", html)
+
+    def test_resource_include_note_and_source_starred_titles(self):
+        response = self.client.get("/article/art_002")
+        self.assertEqual(response.status_code, 200)
+        detail_html = response.get_data(as_text=True)
+        self.assertIn("Include:", detail_html)
+        self.assertIn("Code &amp; Dataset", detail_html)
+
+        sources_response = self.client.get("/sources")
+        self.assertEqual(sources_response.status_code, 200)
+        sources_html = sources_response.get_data(as_text=True)
+        self.assertEqual(sources_html.count('class="publication-star source-card-star"'), 2)
+
     def test_official_free_defaults_respect_manual_overrides(self):
         default_flags = self.module._resolve_article_form_flags(
             MultiDict(

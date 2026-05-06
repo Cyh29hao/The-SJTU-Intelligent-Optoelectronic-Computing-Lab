@@ -1399,6 +1399,13 @@ input[type="email"]:focus {
   margin-top: 18px !important;
 }
 
+.resource-include-note {
+  margin: -4px 0 0;
+  color: var(--text-light);
+  font-size: 0.86rem;
+  text-align: center;
+}
+
 .person-tag-row {
   display: flex;
   flex-wrap: wrap;
@@ -1553,6 +1560,16 @@ input[type="email"]:focus {
   color: var(--primary);
   font-size: 1.08rem;
   line-height: 1.35;
+}
+
+.source-card-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.source-card-star {
+  margin-top: 2px;
 }
 
 .source-card-authors {

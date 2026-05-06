@@ -33,6 +33,9 @@
   {% if item.resource_url %}
   <div class="paper-action-row" style="margin-top: 16px; display: flex; gap: 12px; justify-content: center; flex-direction: column; align-items: center;">
     <a href="{{ url_for('open_link', link_type='resource', resource_id=item.id) }}" class="btn" target="_blank" rel="noopener">{{ t('resources_link') }}</a>
+    {% if item.resource_kinds %}
+    <p class="resource-include-note">{{ t('resource_includes') }}: {{ item.resource_kinds|join(' & ') }}</p>
+    {% endif %}
   </div>
   {% endif %}
 
