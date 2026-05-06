@@ -10,12 +10,16 @@
     "bio_zh": "研究方向：光子神经网络、智能光子集成电路。",
     "links": [
       {
-        "name": "github",
-        "url": "https://github.com/ytchen17"
+        "name": "Google Scholar",
+        "url": "https://scholar.google.com/citations?user=BIg-cOMAAAAJ&hl=zh-CN&oi=ao"
       },
       {
         "name": "Profile",
         "url": "https://icisee.sjtu.edu.cn/jiaoshiml/chenyitong.html"
+      },
+      {
+        "name": "Github",
+        "url": "https://github.com/ytchen17"
       }
     ],
     "tags": [
@@ -25,7 +29,7 @@
       "Systems",
       "Resources"
     ],
-    "last_edited": "2026-05-06 07:02:29"
+    "last_edited": "2026-05-06 07:07:24"
   },
   {
     "id": "person_002",
@@ -66,20 +70,21 @@
     "category": "Undergraduate",
     "email": "cyh29hao@sjtu.edu.cn",
     "photo_filename": "person_004.jpg",
-    "bio": "A sophomore majoring in electronic science and technology.\r\nCurrent Work: web development",
-    "bio_zh": "电子科学与技术专业本科二年级。\r\n当前工作：网站开发",
+    "bio": "A sophomore majoring in electronic science and technology.\r\nCurrent Work: web development; photonic/optoelectronic AI algorithm design and optimization.",
+    "bio_zh": "电子科学与技术专业本科二年级。\r\n当前工作：网站开发；光子/光电AI算法设计与调优。",
     "links": [
       {
-        "name": "github",
+        "name": "Github",
         "url": "https://github.com/Cyh29hao"
       }
     ],
     "tags": [
       "Algorithms",
       "Optics",
+      "Electronics",
       "Resources"
     ],
-    "last_edited": "2026-03-27 08:14:42"
+    "last_edited": "2026-05-06 07:09:30"
   },
   {
     "id": "person_006",
