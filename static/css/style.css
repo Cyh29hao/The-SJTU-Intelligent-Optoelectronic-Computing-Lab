@@ -134,6 +134,11 @@ img {
   letter-spacing: 0.02em;
 }
 
+.site-brand-wordmark {
+  color: var(--secondary);
+  font-weight: 900;
+}
+
 .site-brand-subtitle {
   font-size: 0.9rem;
   color: var(--text-light);
@@ -519,6 +524,7 @@ input[type="email"]:focus {
 .portal-hero-brand-visual {
   margin: 0 0 10px;
   max-width: min(100%, 540px);
+  transform: translateX(-8px);
 }
 
 .portal-hero-brand-link {
@@ -1345,6 +1351,15 @@ input[type="email"]:focus {
   word-break: break-word;
 }
 
+.team-entry-body {
+  min-width: 0;
+}
+
+.team-entry-body a,
+.team-entry-body div {
+  overflow-wrap: anywhere;
+}
+
 .publication-title-row {
   display: flex;
   align-items: flex-start;
@@ -2036,6 +2051,22 @@ footer a:not(.footer-link-card):hover {
   .team-entry {
     flex: 1 1 100% !important;
     margin-bottom: 14px;
+    width: 100%;
+    max-width: 100%;
+    display: grid !important;
+    grid-template-columns: 82px minmax(0, 1fr);
+    align-items: start !important;
+    gap: 12px !important;
+  }
+
+  .team-entry-photo {
+    width: 82px !important;
+    height: 82px !important;
+  }
+
+  .team-entry-body {
+    min-width: 0;
+    width: 100%;
   }
 
   .person-detail-layout {
@@ -2412,6 +2443,16 @@ footer a:not(.footer-link-card):hover {
 
   .site-brand-name {
     font-size: 0.96rem;
+  }
+
+  .team-entry {
+    grid-template-columns: 70px minmax(0, 1fr);
+    padding: 10px !important;
+  }
+
+  .team-entry-photo {
+    width: 70px !important;
+    height: 70px !important;
   }
 
   .site-brand-subtitle {

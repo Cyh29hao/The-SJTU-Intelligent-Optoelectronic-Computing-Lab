@@ -5,10 +5,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>{% block title %}{{ lang_value(site_cfg_global, 'lab_name_short') }} - {{ lang_value(site_cfg_global, 'lab_name_full') }}{% endblock %}</title>
-  <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('asset_site_image', filename='favicon-32.png') }}">
-  <link rel="shortcut icon" href="{{ url_for('asset_site_image', filename='favicon-32.png') }}">
-  <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('asset_site_image', filename='favicon-180.png') }}">
-  <link rel="icon" type="image/png" href="{{ url_for('asset_site_image', filename=site_cfg_global.logo_filename) if site_cfg_global.logo_filename else url_for('static', filename='images/placeholder-site.svg') }}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('asset_site_image', filename='favicon-32.png', v=site_cfg_global.site_version) }}">
+  <link rel="shortcut icon" href="{{ url_for('asset_site_image', filename='favicon-32.png', v=site_cfg_global.site_version) }}">
+  <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('asset_site_image', filename='favicon-180.png', v=site_cfg_global.site_version) }}">
+  <link rel="icon" type="image/png" href="{{ url_for('asset_site_image', filename=site_cfg_global.logo_filename, v=site_cfg_global.site_version) if site_cfg_global.logo_filename else url_for('static', filename='images/placeholder-site.svg') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
@@ -23,7 +23,14 @@
       <a href="/" class="site-brand">
         <img src="{{ url_for('asset_site_image', filename=site_cfg_global.logo_filename) if site_cfg_global.logo_filename else url_for('static', filename='images/placeholder-site.svg') }}" alt="Lab Logo" class="site-brand-logo">
         <span class="site-brand-text">
-          <span class="site-brand-name">{{ lang_value(site_cfg_global, 'lab_name_short') }}</span>
+          {% set header_lab_short = lang_value(site_cfg_global, 'lab_name_short') %}
+          <span class="site-brand-name">
+            {% if 'OPTICompt' in header_lab_short %}
+              <span class="site-brand-wordmark">OPTICompt</span>{{ header_lab_short.replace('OPTICompt', '') }}
+            {% else %}
+              {{ header_lab_short }}
+            {% endif %}
+          </span>
           <span class="site-brand-subtitle">{{ lang_value(site_cfg_global, 'lab_name_full') }}</span>
         </span>
       </a>
