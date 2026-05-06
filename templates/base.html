@@ -23,14 +23,7 @@
       <a href="/" class="site-brand">
         <img src="{{ url_for('asset_site_image', filename=site_cfg_global.logo_filename) if site_cfg_global.logo_filename else url_for('static', filename='images/placeholder-site.svg') }}" alt="Lab Logo" class="site-brand-logo">
         <span class="site-brand-text">
-          {% set header_lab_short = lang_value(site_cfg_global, 'lab_name_short') %}
-          <span class="site-brand-name">
-            {% if 'OPTICompt' in header_lab_short %}
-              <span class="site-brand-wordmark">OPTICompt</span>{{ header_lab_short.replace('OPTICompt', '') }}
-            {% else %}
-              {{ header_lab_short }}
-            {% endif %}
-          </span>
+          <span class="site-brand-name">{{ lang_value(site_cfg_global, 'lab_name_short') }}</span>
           <span class="site-brand-subtitle">{{ lang_value(site_cfg_global, 'lab_name_full') }}</span>
         </span>
       </a>

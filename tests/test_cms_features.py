@@ -99,6 +99,20 @@ class CMSFeatureTests(unittest.TestCase):
         html = response.get_data(as_text=True)
         self.assertNotIn("portal-hero-subtitle-link", html)
 
+    def test_mobile_branding_targets_full_name_not_header_wordmark(self):
+        response = self.client.get("/")
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertNotIn("site-brand-wordmark", html)
+        self.assertIn('<span class="portal-brand-accent">Com</span><span class="portal-brand-accent">p</span>u<span class="portal-brand-accent">t</span>ing', html)
+
+    def test_person_detail_has_wrapping_hooks_for_long_contact_text(self):
+        response = self.client.get("/person/person_001")
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn('class="person-detail-body"', html)
+        self.assertIn('class="person-contact-line"', html)
+
     def test_resource_include_note_and_source_starred_titles(self):
         response = self.client.get("/article/art_002")
         self.assertEqual(response.status_code, 200)

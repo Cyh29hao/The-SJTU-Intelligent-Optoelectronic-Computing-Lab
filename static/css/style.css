@@ -134,11 +134,6 @@ img {
   letter-spacing: 0.02em;
 }
 
-.site-brand-wordmark {
-  color: var(--secondary);
-  font-weight: 900;
-}
-
 .site-brand-subtitle {
   font-size: 0.9rem;
   color: var(--text-light);
@@ -1376,6 +1371,26 @@ input[type="email"]:focus {
 .publication-thumb,
 .team-entry-photo {
   background: #eef3f8;
+}
+
+.person-detail-layout {
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.person-detail-body {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.person-contact-line,
+.person-detail-body p,
+.person-links,
+.person-links a,
+.person-detail-body a {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .paper-detail-page .btn {
