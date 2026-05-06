@@ -23,6 +23,8 @@
         <input name="footer_copyright" value="{{ site_cfg.footer_copyright }}">
         <label>Footer Copyright Text (ZH)</label>
         <input name="footer_copyright_zh" value="{{ site_cfg.footer_copyright_zh }}">
+        <label>Footer ICP / Filing Record</label>
+        <input name="footer_icp_record" value="{{ site_cfg.footer_icp_record }}" placeholder="Leave blank until the filing record is ready">
         <input type="hidden" name="_show_external_access_note_present" value="1">
         <label class="helper-note" style="display:flex; align-items:center; gap:8px; margin-top:10px;">
             <input type="checkbox" name="show_external_access_note" {% if site_cfg.show_external_access_note %}checked{% endif %}>

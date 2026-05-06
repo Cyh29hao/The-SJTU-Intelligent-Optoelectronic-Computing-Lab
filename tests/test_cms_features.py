@@ -132,6 +132,46 @@ class CMSFeatureTests(unittest.TestCase):
         self.assertEqual(cfg["hero_brand_filename"], "hero_brand_strip.png")
         self.assertTrue((self.content_root / "images" / "hero_brand_strip.png").exists())
 
+    def test_footer_icp_record_is_editable_and_hidden_when_empty(self):
+        cfg = self.module.load_site_config()
+        self.assertIn("footer_icp_record", cfg)
+        self.assertEqual(cfg["footer_icp_record"], "")
+
+        response = self.client.get("/")
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("&copy; 2026 OPTICompt Lab", html)
+        self.assertNotIn("2026xxxx", html)
+
+        with self.client.session_transaction() as session:
+            session["is_admin"] = True
+
+        settings = self.client.get("/admin/settings")
+        self.assertEqual(settings.status_code, 200)
+        self.assertIn("footer_icp_record", settings.get_data(as_text=True))
+
+        updated = dict(cfg)
+        updated["footer_icp_record"] = "ICP-TEST-2026"
+        post_data = {
+            "action": "edit_site_branding",
+            "item_type": "site",
+            "lab_name_short": updated["lab_name_short"],
+            "lab_name_short_zh": updated["lab_name_short_zh"],
+            "lab_name_full": updated["lab_name_full"],
+            "lab_name_full_zh": updated["lab_name_full_zh"],
+            "site_version": updated["site_version"],
+            "footer_copyright": updated["footer_copyright"],
+            "footer_copyright_zh": updated["footer_copyright_zh"],
+            "footer_icp_record": updated["footer_icp_record"],
+            "_show_external_access_note_present": "1",
+        }
+        save_response = self.client.post("/admin/settings", data=post_data, follow_redirects=False)
+        self.assertEqual(save_response.status_code, 302)
+        self.assertEqual(self.module.load_site_config()["footer_icp_record"], "ICP-TEST-2026")
+
+        response = self.client.get("/")
+        self.assertIn(" | ICP-TEST-2026", response.get_data(as_text=True))
+
     def test_link_rate_limit_blocks_third_open_and_uses_language(self):
         with self.client.session_transaction() as session:
             session["user_info"] = {

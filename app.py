@@ -277,6 +277,7 @@ DEFAULT_SITE_CONFIG = {
     'show_external_access_note': False,
     'footer_copyright': '2026 OPTICompt Lab',
     'footer_copyright_zh': '2026 OPTICompt Lab',
+    'footer_icp_record': '',
     'logo_filename': 'site_logo.svg',
     'friend_links': DEFAULT_FRIEND_LINKS,
     'research_highlights': DEFAULT_RESEARCH_HIGHLIGHTS,
@@ -1252,6 +1253,7 @@ def load_site_config():
             'lab_name_full', 'lab_name_full_zh',
             'logo_filename',
             'footer_copyright', 'footer_copyright_zh',
+            'footer_icp_record',
             'site_version'
         ):
             if key not in cfg or not isinstance(cfg.get(key), str):
@@ -2433,6 +2435,7 @@ def _handle_admin_actions(default_module):
                 cfg['show_external_access_note'] = (request.form.get('show_external_access_note') == 'on')
             cfg['footer_copyright'] = _admin_text_value(request.form, 'footer_copyright', cfg.get('footer_copyright', ''), DEFAULT_SITE_CONFIG['footer_copyright'])
             cfg['footer_copyright_zh'] = _admin_text_value(request.form, 'footer_copyright_zh', cfg.get('footer_copyright_zh', ''), DEFAULT_SITE_CONFIG['footer_copyright_zh'])
+            cfg['footer_icp_record'] = _admin_text_value(request.form, 'footer_icp_record', cfg.get('footer_icp_record', ''), DEFAULT_SITE_CONFIG['footer_icp_record'])
             cfg['lab_name'] = cfg['lab_name_full']
         if action in ('edit_site_content', 'edit_join_us'):
             cfg['admissions_title'] = _admin_text_value(request.form, 'admissions_title', cfg.get('admissions_title', ''), DEFAULT_SITE_CONFIG['admissions_title'])

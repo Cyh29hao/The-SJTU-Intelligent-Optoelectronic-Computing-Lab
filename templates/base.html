@@ -80,7 +80,8 @@
           {% endfor %}
         </div>
         <div class="footer-meta">
-          <div>&copy; {{ lang_value(site_cfg_global, 'footer_copyright') }} | 沪交ICP备2026xxxx</div>
+          {% set footer_icp_record = site_cfg_global.footer_icp_record|default('')|trim %}
+          <div>&copy; {{ lang_value(site_cfg_global, 'footer_copyright') }}{% if footer_icp_record %} | {{ footer_icp_record }}{% endif %}</div>
           <div class="footer-credit">{{ t('developed_by') }} <a href="https://github.com/Cyh29hao" target="_blank" rel="noopener">cyh29hao</a>{% if site_cfg_global.site_version %} <span class="footer-version">v{{ site_cfg_global.site_version }}</span>{% endif %}</div>
         </div>
       </div>
