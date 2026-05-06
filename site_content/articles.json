@@ -157,11 +157,11 @@
     "venue": "Patterns",
     "year": 2025,
     "abstract": "Visual quality assessment (VQA) is indispensable in multimedia for evaluating algorithm effectiveness and optimizing systems, yet its neurobiological mechanisms remain poorly understood. Using functional magnetic resonance imaging (fMRI), we investigate how the brain processes varying image qualities, revealing specialized mechanisms for handling low-quality stimuli. Results show that low quality significantly impacts semantic encoding along the visual pathway: low-level regions exhibit only 35.20% of the semantic information seen in high-quality condition, while higher-level regions compensate adaptively to maintain understanding. Visual quality is not locally encoded but emerges from inter-regional information gaps, with perception arising from this hierarchical discrepancy. Leveraging this compensatory mechanism, we decode quality from fMRI and propose a neural network feature fusion strategy, boosting ResNet’s VQA performance by 14.29% on the BID dataset (586 instances). Our findings provide neurobiological evidence for degraded visual processing, addressing a gap in perception neuroscience and offering theoretical foundations for improving VQA models.",
-    "last_edited": "2026-04-21 16:17:02",
+    "last_edited": "2026-05-06 07:04:06",
     "paper_url": "https://www.cell.com/patterns/fulltext/S2666-3899(25)00216-8",
-    "resource_url": "",
+    "resource_url": "https://openneuro.org/datasets/ds006483/versions/1.0.0",
     "resource_kinds": [
-      "Paper"
+      "Dataset"
     ],
     "thumbnail_filename": "art_006.jpg",
     "authors_display_count": 3,
