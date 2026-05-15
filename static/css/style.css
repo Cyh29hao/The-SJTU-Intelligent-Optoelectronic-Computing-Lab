@@ -73,7 +73,6 @@ body {
 
 img {
   max-width: 100%;
-  loading: lazy;
 }
 
 
@@ -1902,6 +1901,20 @@ footer a:not(.footer-link-card):hover {
   .footer-link-card.link-hover-cue.is-wiggling .footer-link-image,
   .footer-link-card.link-hover-cue.is-wiggling .footer-link-fallback {
     animation: linkNudge 220ms ease 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .photon,
+  .photon-trail {
+    display: none;
+    animation: none !important;
+  }
+
+  a.link-hover-cue.is-wiggling:not(.footer-link-card),
+  .footer-link-card.link-hover-cue.is-wiggling .footer-link-image,
+  .footer-link-card.link-hover-cue.is-wiggling .footer-link-fallback {
+    animation: none !important;
   }
 }
 

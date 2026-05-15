@@ -5,11 +5,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>{% block title %}{{ lang_value(site_cfg_global, 'lab_name_short') }} - {{ lang_value(site_cfg_global, 'lab_name_full') }}{% endblock %}</title>
-  <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('asset_site_image', filename='favicon-32.png', v=site_cfg_global.site_version) }}">
-  <link rel="shortcut icon" href="{{ url_for('asset_site_image', filename='favicon-32.png', v=site_cfg_global.site_version) }}">
-  <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('asset_site_image', filename='favicon-180.png', v=site_cfg_global.site_version) }}">
-  <link rel="icon" type="image/png" href="{{ url_for('asset_site_image', filename=site_cfg_global.logo_filename, v=site_cfg_global.site_version) if site_cfg_global.logo_filename else url_for('static', filename='images/placeholder-site.svg') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ asset_image_url('site', 'favicon-32.png') }}">
+  <link rel="shortcut icon" href="{{ asset_image_url('site', 'favicon-32.png') }}">
+  <link rel="apple-touch-icon" sizes="180x180" href="{{ asset_image_url('site', 'favicon-180.png') }}">
+  <link rel="stylesheet" href="{{ static_asset_url('css/style.css') }}">
 </head>
 <body>
   <div class="container">
@@ -17,11 +16,11 @@
       {% set sjtu_link = site_cfg_global.friend_links[0] if site_cfg_global.friend_links and site_cfg_global.friend_links|length > 0 else None %}
       {% if sjtu_link and sjtu_link.url %}
       <a href="{{ sjtu_link.url }}" class="site-topbar-badge" target="_blank" rel="noopener" title="{{ sjtu_link.caption or sjtu_link.title }}">
-        <img src="{{ url_for('asset_site_image', filename=sjtu_link.image_filename) if sjtu_link.image_filename else url_for('static', filename='images/placeholder-site.svg') }}" alt="{{ sjtu_link.title }}" class="site-topbar-badge-image">
+        <img src="{{ asset_image_url('site', sjtu_link.image_filename) }}" alt="{{ sjtu_link.title }}" class="site-topbar-badge-image" width="26" height="26" loading="lazy" decoding="async">
       </a>
       {% endif %}
       <a href="/" class="site-brand">
-        <img src="{{ url_for('asset_site_image', filename=site_cfg_global.logo_filename) if site_cfg_global.logo_filename else url_for('static', filename='images/placeholder-site.svg') }}" alt="Lab Logo" class="site-brand-logo">
+        <img src="{{ asset_image_url('site', site_cfg_global.logo_filename) }}" alt="Lab Logo" class="site-brand-logo" width="60" height="60" fetchpriority="high" decoding="async">
         <span class="site-brand-text">
           <span class="site-brand-name">{{ lang_value(site_cfg_global, 'lab_name_short') }}</span>
           <span class="site-brand-subtitle">{{ lang_value(site_cfg_global, 'lab_name_full') }}</span>
@@ -72,7 +71,7 @@
           {% set hover_text = item.caption if item.caption else item.title %}
           <a href="{{ item.url }}" class="footer-link-card" title="{{ hover_text }}" aria-label="{{ hover_text }}" target="{{ '_blank' if not item.url.startswith('mailto:') else '_self' }}" rel="{{ 'noopener' if not item.url.startswith('mailto:') else '' }}">
             {% if item.image_filename %}
-            <img src="{{ url_for('asset_site_image', filename=item.image_filename) }}" alt="{{ item.title }}" class="footer-link-image">
+            <img src="{{ asset_image_url('site', item.image_filename) }}" alt="{{ item.title }}" class="footer-link-image" width="26" height="26" loading="lazy" decoding="async">
             {% else %}
             <span class="footer-link-fallback">{{ item.title[:4] }}</span>
             {% endif %}
@@ -172,7 +171,8 @@
       }
 
       // Photon effects and other existing logic...
-      var supportsHoverMotion = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+      var reducedMotionMedia = window.matchMedia('(prefers-reduced-motion: reduce)');
+      var supportsHoverMotion = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches && !reducedMotionMedia.matches;
       function spawnPhoton(x, y) {
         var d = document.createElement('div');
         d.className = 'photon';
@@ -207,6 +207,7 @@
         });
       });
       document.addEventListener('click', function(e) {
+        if (reducedMotionMedia.matches) return;
         var a = e.target.closest('a');
         if (!a) return;
         if (!isLeftClick(e)) return;

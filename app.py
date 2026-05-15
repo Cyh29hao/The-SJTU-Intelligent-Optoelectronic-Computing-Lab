@@ -17,7 +17,7 @@ import sys
 import threading
 from datetime import datetime, timedelta
 from urllib.parse import urlencode
-from flask import Flask, render_template, request, redirect, url_for, send_file, session
+from flask import Flask, abort, render_template, request, redirect, url_for, send_file, session
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 
@@ -103,6 +103,15 @@ ADMIN_CREDENTIALS = {
 app = Flask(__name__)
 app.config['ENV'] = 'development' if IS_LOCAL else 'production'
 app.config['DEBUG'] = bool(IS_LOCAL)
+
+ASSET_CACHE_MAX_AGE = 31536000
+
+
+@app.after_request
+def apply_static_asset_cache_policy(response):
+    if request.endpoint == 'static' and request.args.get('v') and response.status_code < 400:
+        response.headers['Cache-Control'] = f'public, max-age={ASSET_CACHE_MAX_AGE}, immutable'
+    return response
 
 # --- Security Configuration ---
 # Generate/Load secret key for session management without requiring persistent disk
@@ -1334,6 +1343,20 @@ def _latest_content_modified_time():
         return 'N/A'
     return datetime.fromtimestamp(latest_ts).strftime("%Y-%m-%d %H:%M:%S")
 
+def _file_version_token(path):
+    try:
+        stat = os.stat(path)
+    except OSError:
+        return None
+    return f"{int(stat.st_mtime)}-{stat.st_size}"
+
+def static_asset_url(filename):
+    path = os.path.join(app.static_folder, filename.replace('/', os.sep))
+    version = _file_version_token(path)
+    if version:
+        return url_for('static', filename=filename, v=version)
+    return url_for('static', filename=filename)
+
 def _article_sort_key(item):
     last_edited = (item.get('last_edited') or '').strip()
     try:
@@ -1463,7 +1486,9 @@ def inject_site_globals():
         'person_name': person_name,
         'secondary_person_name': secondary_person_name,
         'category_label': category_label,
-        'switch_language_url': switch_language_url
+        'switch_language_url': switch_language_url,
+        'asset_image_url': asset_image_url,
+        'static_asset_url': static_asset_url
     }
 
 def _ensure_visitor_id():
@@ -1687,6 +1712,28 @@ NEWS_IMAGES_DIR = os.path.join(CONTENT_ROOT, 'images', 'news')
 os.makedirs(NEWS_IMAGES_DIR, exist_ok=True)
 SITE_IMAGES_DIR = os.path.join(CONTENT_ROOT, 'images')
 os.makedirs(SITE_IMAGES_DIR, exist_ok=True)
+
+ASSET_IMAGE_KINDS = {
+    'people': ('asset_people', PEOPLE_IMAGES_DIR, 'images/placeholder-person.svg'),
+    'articles': ('asset_article_thumb', ARTICLE_IMAGES_DIR, 'images/placeholder-article.svg'),
+    'news': ('asset_news_image', NEWS_IMAGES_DIR, 'images/placeholder-news.svg'),
+    'site': ('asset_site_image', SITE_IMAGES_DIR, 'images/placeholder-site.svg'),
+}
+
+def _versioned_asset_url(endpoint, filename, path):
+    version = _file_version_token(path)
+    if version:
+        return url_for(endpoint, filename=filename, v=version)
+    return url_for(endpoint, filename=filename)
+
+def asset_image_url(kind, filename):
+    endpoint, root, fallback = ASSET_IMAGE_KINDS.get(
+        kind,
+        ASSET_IMAGE_KINDS['site']
+    )
+    if not filename:
+        return static_asset_url(fallback)
+    return _versioned_asset_url(endpoint, filename, os.path.join(root, filename))
 
 def _save_person_photo(person_id, photo_file):
     if not photo_file or not photo_file.filename:
@@ -2819,21 +2866,28 @@ def admin_upload_site_image(slot):
 # ==============================================================================
 # 8. Asset Serving (from render_data)
 # ==============================================================================
-from flask import abort
+
+def _send_cached_asset(path, max_age=ASSET_CACHE_MAX_AGE, immutable=True):
+    response = send_file(path, conditional=True, etag=True, max_age=max_age)
+    cache_control = f'public, max-age={max_age}'
+    if immutable:
+        cache_control += ', immutable'
+    response.headers['Cache-Control'] = cache_control
+    return response
 
 @app.route('/assets/people/<filename>')
 def asset_people(filename):
     path = os.path.join(PEOPLE_IMAGES_DIR, filename)
     if not os.path.exists(path):
         return abort(404)
-    return send_file(path)
+    return _send_cached_asset(path)
 
 @app.route('/assets/articles/<filename>')
 def asset_article_thumb(filename):
     path = os.path.join(ARTICLE_IMAGES_DIR, filename)
     if not os.path.exists(path):
         return abort(404)
-    return send_file(path)
+    return _send_cached_asset(path)
 
 @app.route('/assets/news/<filename>')
 def asset_news_image(filename):
@@ -2841,9 +2895,9 @@ def asset_news_image(filename):
     if not os.path.exists(path):
         fallback = os.path.join(app.static_folder, 'images', 'placeholder-news.svg')
         if os.path.exists(fallback):
-            return send_file(fallback)
+            return _send_cached_asset(fallback, max_age=3600, immutable=False)
         return abort(404)
-    return send_file(path)
+    return _send_cached_asset(path)
 
 @app.route('/assets/site/<filename>')
 def asset_site_image(filename):
@@ -2851,9 +2905,9 @@ def asset_site_image(filename):
     if not os.path.exists(path):
         fallback = os.path.join(app.static_folder, 'images', 'placeholder-site.svg')
         if os.path.exists(fallback):
-            return send_file(fallback)
+            return _send_cached_asset(fallback, max_age=3600, immutable=False)
         return abort(404)
-    return send_file(path)
+    return _send_cached_asset(path)
 
 @app.route('/admin/download-site-content.zip')
 def download_site_content_zip():

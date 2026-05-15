@@ -10,9 +10,13 @@
         <div class="portal-hero-brand-visual" aria-label="OPTICompt Lab brand visual">
           <a href="{{ url_for('index') }}" class="portal-hero-brand-link">
             <img
-              src="{{ url_for('asset_site_image', filename=hero_brand_filename) }}"
+              src="{{ asset_image_url('site', hero_brand_filename) }}"
               alt="OPTICompt Lab brand visual"
               class="portal-hero-brand-image"
+              width="1717"
+              height="916"
+              fetchpriority="high"
+              decoding="async"
             >
           </a>
         </div>
@@ -83,9 +87,13 @@
       <article class="portal-slide{% if loop.first %} is-active{% endif %}">
         <div class="portal-slide-media">
           <img
-            src="{{ url_for('asset_article_thumb', filename=article.thumbnail_filename) if article.thumbnail_filename else url_for('static', filename='images/placeholder-article.svg') }}"
+            src="{{ asset_image_url('articles', article.thumbnail_filename) }}"
             alt="{{ article.title }}"
             class="portal-slide-image"
+            width="960"
+            height="540"
+            decoding="async"
+            {% if loop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %}
           >
         </div>
         <div class="portal-slide-content">

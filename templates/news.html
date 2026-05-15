@@ -13,9 +13,13 @@
     <article class="news-card{% if item.pinned %} news-card-pinned{% endif %}">
       <a href="{{ url_for('news_detail', id=item.id) }}" class="news-card-image-link">
         <img
-          src="{{ url_for('asset_news_image', filename=item.image_filename) if item.image_filename else url_for('static', filename='images/placeholder-news.svg') }}"
+          src="{{ asset_image_url('news', item.image_filename) }}"
           alt="{{ lang_value(item, 'title') }}"
           class="news-card-image"
+          width="640"
+          height="360"
+          loading="lazy"
+          decoding="async"
         >
       </a>
       <div class="news-card-body">

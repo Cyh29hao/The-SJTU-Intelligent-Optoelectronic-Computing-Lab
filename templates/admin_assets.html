@@ -12,7 +12,7 @@
         <div class="asset-card">
             <h3>Header Logo</h3>
             <div class="inline-actions" style="margin-bottom:12px;">
-                <img src="{{ url_for('asset_site_image', filename=site_cfg.logo_filename) if site_cfg.logo_filename else url_for('static', filename='images/placeholder-site.svg') }}" alt="Site logo" class="asset-thumb">
+                <img src="{{ asset_image_url('site', site_cfg.logo_filename) }}" alt="Site logo" class="asset-thumb" loading="lazy" decoding="async">
                 <div class="mono">{{ site_cfg.logo_filename or 'No logo uploaded yet' }}</div>
             </div>
             <form method="POST" enctype="multipart/form-data" action="{{ url_for('admin_upload_site_image', slot='logo', redirect_module='assets') }}">
@@ -24,7 +24,7 @@
         <div class="asset-card">
             <h3>Hero Brand Strip</h3>
             <div class="inline-actions" style="margin-bottom:12px;">
-                <img src="{{ url_for('asset_site_image', filename=site_cfg.hero_brand_filename) if site_cfg.hero_brand_filename else url_for('static', filename='images/placeholder-site.svg') }}" alt="Hero brand strip" class="asset-thumb asset-thumb-wide">
+                <img src="{{ asset_image_url('site', site_cfg.hero_brand_filename) }}" alt="Hero brand strip" class="asset-thumb asset-thumb-wide" loading="lazy" decoding="async">
                 <div class="mono">{{ site_cfg.hero_brand_filename or 'No hero brand strip uploaded yet' }}</div>
             </div>
             <form method="POST" enctype="multipart/form-data" action="{{ url_for('admin_upload_site_image', slot='hero-brand', redirect_module='assets') }}">
@@ -38,7 +38,7 @@
             <h3>Footer Link {{ loop.index }}</h3>
             <div class="inline-actions" style="margin-bottom:12px;">
                 {% if item.image_filename %}
-                <img src="{{ url_for('asset_site_image', filename=item.image_filename) }}" alt="{{ item.title }}" class="asset-thumb">
+                <img src="{{ asset_image_url('site', item.image_filename) }}" alt="{{ item.title }}" class="asset-thumb" loading="lazy" decoding="async">
                 {% else %}
                 <div class="asset-thumb" style="display:flex; align-items:center; justify-content:center; font-weight:700;">{{ item.title[:4] }}</div>
                 {% endif %}
@@ -67,7 +67,7 @@
         <div class="details-body">
             <div class="inline-actions" style="margin-bottom:12px;">
                 {% if people_photo_info[person.id].exists %}
-                <img src="{{ url_for('asset_people', filename=people_photo_info[person.id].filename) }}" alt="{{ person.name }}" class="asset-thumb">
+                <img src="{{ asset_image_url('people', people_photo_info[person.id].filename) }}" alt="{{ person.name }}" class="asset-thumb" loading="lazy" decoding="async">
                 <div>
                     <div class="mono">{{ people_photo_info[person.id].filename }}</div>
                     <div class="helper-note" style="margin-top:4px;">Updated: {{ people_photo_info[person.id].mtime }}</div>
@@ -96,7 +96,7 @@
         <div class="details-body">
             <div class="inline-actions" style="margin-bottom:12px;">
                 {% if item.image_filename %}
-                <img src="{{ url_for('asset_news_image', filename=item.image_filename) }}" alt="{{ item.title }}" class="asset-thumb">
+                <img src="{{ asset_image_url('news', item.image_filename) }}" alt="{{ item.title }}" class="asset-thumb" loading="lazy" decoding="async">
                 <div class="mono">{{ item.image_filename }}</div>
                 {% else %}
                 <div class="asset-thumb" style="display:flex; align-items:center; justify-content:center;">No image</div>
@@ -122,7 +122,7 @@
         <div class="details-body">
             <div class="inline-actions" style="margin-bottom:12px;">
                 {% if item.thumbnail_filename %}
-                <img src="{{ url_for('asset_article_thumb', filename=item.thumbnail_filename) }}" alt="{{ item.title }}" class="asset-thumb">
+                <img src="{{ asset_image_url('articles', item.thumbnail_filename) }}" alt="{{ item.title }}" class="asset-thumb" loading="lazy" decoding="async">
                 <div class="mono">{{ item.thumbnail_filename }}</div>
                 {% else %}
                 <div class="asset-thumb" style="display:flex; align-items:center; justify-content:center;">No thumbnail</div>

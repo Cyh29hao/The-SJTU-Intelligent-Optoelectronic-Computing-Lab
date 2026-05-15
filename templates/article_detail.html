@@ -14,7 +14,7 @@
 
   {% if item.thumbnail_filename %}
   <div style="margin: 20px 0; text-align: center;">
-    <img src="{{ url_for('asset_article_thumb', filename=item.thumbnail_filename) }}" alt="{{ item.title }}" style="max-height: 300px; border-radius: 12px; border: 1px solid var(--border);">
+    <img src="{{ asset_image_url('articles', item.thumbnail_filename) }}" alt="{{ item.title }}" fetchpriority="high" decoding="async" style="max-width: 100%; max-height: 300px; width: auto; height: auto; border-radius: 12px; border: 1px solid var(--border);">
   </div>
   {% endif %}
 

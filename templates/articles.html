@@ -23,7 +23,7 @@
     <h3 class="publication-year-heading">{{ group.year }}</h3>
     {% for article in group.articles %}
       <div class="publication-card" style="margin-bottom: 20px; padding: 12px; border: 1px solid #eee; border-radius:8px; display:flex; gap:16px; align-items: center;">
-        <img src="{{ url_for('asset_article_thumb', filename=article.thumbnail_filename) if article.thumbnail_filename else url_for('static', filename='images/placeholder-article.svg') }}" alt="{{ article.title }}" class="publication-thumb" style="width: 120px; height: 90px; object-fit: cover; border-radius: 6px;">
+        <img src="{{ asset_image_url('articles', article.thumbnail_filename) }}" alt="{{ article.title }}" class="publication-thumb" width="120" height="90" loading="lazy" decoding="async" style="width: 120px; height: 90px; object-fit: cover; border-radius: 6px;">
         <div class="publication-card-body" style="flex:1;">
           <h3 class="publication-title-row" style="margin: 0 0 6px; font-size: 1.2em;">
             {% if article.is_starred %}

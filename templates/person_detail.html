@@ -8,7 +8,7 @@
 
 <div class="person-detail-layout" style="max-width: 800px; margin: 0 auto; display: grid; grid-template-columns: 220px 1fr; gap: 24px; align-items: start;">
   <div class="person-detail-body">
-    <img src="{{ url_for('asset_people', filename=person.photo_filename) if person.photo_filename else url_for('static', filename='images/placeholder-person.svg') }}" alt="{{ person_name(person) }}" class="person-detail-photo" style="width: 200px; height: 200px; object-fit: cover; border-radius: 8px;">
+    <img src="{{ asset_image_url('people', person.photo_filename) }}" alt="{{ person_name(person) }}" class="person-detail-photo" width="200" height="200" fetchpriority="high" decoding="async" style="width: 200px; height: 200px; object-fit: cover; border-radius: 8px;">
   </div>
   <div>
     {% if person.tags %}

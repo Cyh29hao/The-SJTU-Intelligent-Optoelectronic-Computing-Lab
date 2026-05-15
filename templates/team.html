@@ -13,7 +13,7 @@
     <div class="team-grid" style="display: flex; flex-wrap: wrap; gap: 20px;">
       {% for p in category_people %}
       <div class="team-entry" style="flex: 0 0 calc(50% - 10px); display: flex; align-items: center; gap: 14px; padding: 12px; border: 1px solid #eee; border-radius: 8px; background: {% if cat == 'Professor' %}#f9fbff{% else %}#fff{% endif %}; box-shadow: {% if cat == 'Professor' %}0 0 0 2px #e8f0fe inset{% else %}none{% endif %};">
-        <img src="{{ url_for('asset_people', filename=p.photo_filename) if p.photo_filename else url_for('static', filename='images/placeholder-person.svg') }}" alt="{{ person_name(p) }}" class="team-entry-photo" style="width: 100px; height: 100px; object-fit: cover; border-radius: 6px;">
+        <img src="{{ asset_image_url('people', p.photo_filename) }}" alt="{{ person_name(p) }}" class="team-entry-photo" width="100" height="100" loading="lazy" decoding="async" style="width: 100px; height: 100px; object-fit: cover; border-radius: 6px;">
         <div class="team-entry-body">
           <a href="{{ url_for('person_detail', id=p.id) }}" style="font-weight: bold; color: #2c3e50; text-decoration: none; transition: color 0.15s, text-decoration-color 0.15s;" onmouseover="this.style.color='#1a73e8'; this.style.textDecoration='underline';" onmouseout="this.style.color='#2c3e50'; this.style.textDecoration='none';">{{ person_name(p) }}</a>
           {% if secondary_person_name(p) %}

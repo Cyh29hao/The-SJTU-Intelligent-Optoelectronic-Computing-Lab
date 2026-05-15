@@ -11,9 +11,13 @@
   </div>
   <h2 class="news-detail-title" style="text-align:left; margin-bottom: 14px;">{{ lang_value(item, 'title') }}</h2>
   <img
-    src="{{ url_for('asset_news_image', filename=item.image_filename) if item.image_filename else url_for('static', filename='images/placeholder-news.svg') }}"
+    src="{{ asset_image_url('news', item.image_filename) }}"
     alt="{{ lang_value(item, 'title') }}"
     class="news-detail-image"
+    width="860"
+    height="380"
+    fetchpriority="high"
+    decoding="async"
   >
   {% if lang_value(item, 'summary') %}
   <p class="news-detail-summary">{{ lang_value(item, 'summary') }}</p>

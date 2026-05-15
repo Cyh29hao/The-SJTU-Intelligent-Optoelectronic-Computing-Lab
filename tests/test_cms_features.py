@@ -179,6 +179,62 @@ class CMSFeatureTests(unittest.TestCase):
         self.assertEqual(cfg["hero_brand_filename"], "hero_brand_strip.png")
         self.assertTrue((self.content_root / "images" / "hero_brand_strip.png").exists())
 
+    def test_content_assets_use_long_cache_and_conditional_requests(self):
+        response = self.client.get("/assets/site/favicon-32.png")
+        self.assertEqual(response.status_code, 200)
+        cache_control = response.headers.get("Cache-Control", "")
+        self.assertIn("public", cache_control)
+        self.assertIn("max-age=31536000", cache_control)
+        self.assertIn("immutable", cache_control)
+        etag = response.headers.get("ETag")
+        self.assertTrue(etag)
+        response.close()
+
+        cached_response = self.client.get(
+            "/assets/site/favicon-32.png",
+            headers={"If-None-Match": etag},
+        )
+        self.assertEqual(cached_response.status_code, 304)
+        self.assertIn("immutable", cached_response.headers.get("Cache-Control", ""))
+        cached_response.close()
+
+    def test_asset_url_fingerprint_changes_with_file_stat(self):
+        image_path = self.content_root / "images" / "favicon-32.png"
+
+        with self.module.app.test_request_context("/"):
+            first_url = self.module.asset_image_url("site", "favicon-32.png")
+
+        image_path.write_bytes(image_path.read_bytes() + b"x")
+        os.utime(image_path, None)
+
+        with self.module.app.test_request_context("/"):
+            second_url = self.module.asset_image_url("site", "favicon-32.png")
+
+        self.assertIn("/assets/site/favicon-32.png?v=", first_url)
+        self.assertNotEqual(first_url, second_url)
+
+    def test_templates_emit_real_image_loading_attributes(self):
+        home_response = self.client.get("/")
+        self.assertEqual(home_response.status_code, 200)
+        home_html = home_response.get_data(as_text=True)
+        self.assertIn("/static/css/style.css?v=", home_html)
+        self.assertIn('class="portal-hero-brand-image"', home_html)
+        self.assertIn('fetchpriority="high"', home_html)
+        self.assertIn('decoding="async"', home_html)
+
+        articles_response = self.client.get("/articles")
+        self.assertEqual(articles_response.status_code, 200)
+        articles_html = articles_response.get_data(as_text=True)
+        self.assertIn('class="publication-thumb"', articles_html)
+        self.assertIn('loading="lazy"', articles_html)
+        self.assertIn('decoding="async"', articles_html)
+
+        detail_response = self.client.get("/article/art_001")
+        self.assertEqual(detail_response.status_code, 200)
+        detail_html = detail_response.get_data(as_text=True)
+        self.assertIn("max-height: 300px; width: auto; height: auto", detail_html)
+        self.assertNotIn('width="750" height="300"', detail_html)
+
     def test_footer_icp_record_is_editable_and_hidden_when_empty(self):
         cfg = self.module.load_site_config()
         self.assertIn("footer_icp_record", cfg)
