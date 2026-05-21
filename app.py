@@ -15,7 +15,7 @@ import shutil
 import subprocess
 import sys
 import threading
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from urllib.parse import urlencode
 from flask import Flask, abort, render_template, request, redirect, url_for, send_file, session
 from werkzeug.utils import secure_filename
@@ -65,6 +65,7 @@ SUPABASE_URL = (os.environ.get('SUPABASE_URL') or '').strip()
 SUPABASE_SECRET_KEY = (os.environ.get('SUPABASE_SECRET_KEY') or '').strip()
 SUPABASE_LOGS_ENABLED = (os.environ.get('SUPABASE_LOGS_ENABLED') or '0').strip().lower() in ('1', 'true', 'yes', 'on')
 SUPABASE_REST_ROOT = f"{SUPABASE_URL.rstrip('/')}/rest/v1" if SUPABASE_URL else ''
+BEIJING_TZ = timezone(timedelta(hours=8))
 LINK_OPEN_WINDOW_SECONDS = 60
 LINK_OPEN_MAX_COUNT = 2
 _LINK_OPEN_HISTORY = {}
@@ -449,7 +450,7 @@ def _parse_log_datetime(raw_value):
         cleaned = value.replace('Z', '+00:00')
         dt = datetime.fromisoformat(cleaned)
         if getattr(dt, 'tzinfo', None):
-            return dt.astimezone().replace(tzinfo=None)
+            return dt.astimezone(BEIJING_TZ).replace(tzinfo=None)
         return dt
     except Exception:
         return None

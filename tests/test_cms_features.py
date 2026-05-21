@@ -72,6 +72,32 @@ class CMSFeatureTests(unittest.TestCase):
         )
         self.assertEqual(featured_articles[0]["id"], "art_001")
 
+    def test_supabase_resource_export_formats_created_at_as_beijing_time(self):
+        with mock.patch.object(self.module, "_supabase_logs_ready", return_value=True):
+            with mock.patch.object(
+                self.module,
+                "_fetch_supabase_rows",
+                return_value=[
+                    {
+                        "created_at": "2026-05-20T15:05:36.61285+00:00",
+                        "resource_id": "art_004",
+                        "open_type": "paper",
+                        "target_url": "https://example.com/paper",
+                        "user_name": "1",
+                        "user_affiliation": "1",
+                        "user_email": "1@1",
+                    }
+                ],
+            ):
+                rows = self.module._load_resource_open_rows()
+
+        self.assertEqual(rows[0]["time"], "2026-05-20 23:05:36")
+        csv_text = self.module._csv_bytes(
+            ["time", "name", "affiliation", "email", "resource_id", "type", "target_url"],
+            rows,
+        ).getvalue().decode("utf-8-sig")
+        self.assertIn("2026-05-20 23:05:36,1,1,1@1,art_004,paper", csv_text)
+
     def test_publications_page_renders_starred_titles(self):
         response = self.client.get("/articles")
         self.assertEqual(response.status_code, 200)
