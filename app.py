@@ -355,6 +355,8 @@ I18N = {
     'label_email': {'en': 'Email *', 'zh': '邮箱 *'},
     'register_consent': {'en': 'I confirm the information provided is accurate and all downloads are for academic use only.', 'zh': '我确认所填信息准确无误，且所有访问与下载仅用于学术用途。'},
     'submit_and_access': {'en': 'Submit and Access Resources', 'zh': '提交并访问资源'},
+    'publications_intro': {'en': 'Browse lab publications by year, with direct links to papers and shared resources.', 'zh': '按年份浏览课题组论文，并可直接打开论文全文与共享资源链接。'},
+    'publication_record_hint': {'en': 'A one-time information record is required before opening external paper and resource links.', 'zh': '打开外部论文和资源链接前需要先进行一次信息记录。'},
     'sources_intro': {'en': 'Direct links to code, datasets, supplementary materials, and other downloadable resources shared by the lab.', 'zh': '这里集中列出课题组公开共享的代码、数据集、补充材料等可下载资源。'},
     'source_open_resource': {'en': 'Open Resource', 'zh': '打开资源'},
     'source_record_hint': {'en': 'A one-time information record is required before opening external resource links.', 'zh': '打开外部资源前需要先进行一次信息记录。'},
@@ -519,6 +521,17 @@ def _format_created_at_for_export(raw_value):
         return formatted
     return _normalize_log_datetime_text(raw_value)
 
+def _article_title_lookup():
+    try:
+        return {
+            item.get('id', ''): item.get('title', '') or item.get('id', '')
+            for item in load_articles_data()
+            if item.get('id')
+        }
+    except Exception as exc:
+        print(f"Failed to build article title lookup for analytics export: {exc}")
+        return {}
+
 def _load_resource_open_rows_from_csv():
     return []
 
@@ -559,6 +572,7 @@ def _fetch_supabase_rows(table_name, columns):
 
 def _load_resource_open_rows():
     if _supabase_logs_ready():
+        article_titles = _article_title_lookup()
         rows = _fetch_supabase_rows(
             'resource_opens',
             'created_at,resource_id,open_type,target_url,user_name,user_affiliation,user_email'
@@ -569,6 +583,7 @@ def _load_resource_open_rows():
             'affiliation': row.get('user_affiliation', '') or '',
             'email': row.get('user_email', '') or '',
             'resource_id': row.get('resource_id', '') or '',
+            'article_title': article_titles.get(row.get('resource_id', '') or '', ''),
             'type': row.get('open_type', '') or '',
             'target_url': row.get('target_url', '') or ''
         } for row in rows]
@@ -3108,7 +3123,7 @@ def _download_logs_csv_supabase_only():
     rows = _load_resource_open_rows()
     return send_file(
         _csv_bytes(
-            ['time', 'name', 'affiliation', 'email', 'resource_id', 'type', 'target_url'],
+            ['time', 'name', 'affiliation', 'email', 'resource_id', 'article_title', 'type', 'target_url'],
             rows
         ),
         as_attachment=True,
@@ -3140,7 +3155,7 @@ def _download_analytics_bundle_supabase_only():
         zf.writestr(
             'resource_opens.csv',
             _csv_bytes(
-                ['time', 'name', 'affiliation', 'email', 'resource_id', 'type', 'target_url'],
+                ['time', 'name', 'affiliation', 'email', 'resource_id', 'article_title', 'type', 'target_url'],
                 _load_resource_open_rows()
             ).getvalue()
         )

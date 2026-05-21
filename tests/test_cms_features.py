@@ -118,22 +118,31 @@ class CMSFeatureTests(unittest.TestCase):
             ):
                 rows = self.module._load_resource_open_rows()
 
+        article_titles = {item["id"]: item["title"] for item in self.module.load_articles_data()}
         self.assertEqual(rows[0]["time"], "2026-05-20 23:05:36")
         self.assertEqual(rows[1]["time"], "2026-04-30 12:09:46")
         self.assertEqual(rows[2]["time"], "2026-04-24 15:11:00")
         self.assertEqual(rows[3]["time"], "unparsed-created-at")
+        self.assertEqual(rows[0]["article_title"], article_titles["art_004"])
+        self.assertEqual(rows[1]["article_title"], article_titles["art_004"])
+        self.assertEqual(rows[2]["article_title"], "")
         csv_text = self.module._csv_bytes(
-            ["time", "name", "affiliation", "email", "resource_id", "type", "target_url"],
+            ["time", "name", "affiliation", "email", "resource_id", "article_title", "type", "target_url"],
             rows,
         ).getvalue().decode("utf-8-sig")
-        self.assertIn("2026-05-20 23:05:36,1,1,1@1,art_004,paper", csv_text)
-        self.assertIn("2026-04-30 12:09:46,陈一彤,上海交通大学,123@sjtu.edu.cn,art_004,official_free_access", csv_text)
+        self.assertIn("resource_id,article_title,type", csv_text.splitlines()[0])
+        self.assertIn("2026-05-20 23:05:36,1,1,1@1,art_004,Photonic computing chips under the speed-complexity trade-off,paper", csv_text)
+        self.assertIn("2026-04-30 12:09:46,陈一彤,上海交通大学,123@sjtu.edu.cn,art_004,Photonic computing chips under the speed-complexity trade-off,official_free_access", csv_text)
 
     def test_publications_page_renders_starred_titles(self):
         response = self.client.get("/articles")
         self.assertEqual(response.status_code, 200)
         html = response.get_data(as_text=True)
         self.assertEqual(html.count('class="publication-star"'), 2)
+        self.assertIn('class="portal-section-head publications-head"', html)
+        self.assertIn("Browse lab publications by year", html)
+        self.assertIn("A one-time information record is required before opening external paper and resource links.", html)
+        self.assertNotIn("<div class=\"portal-side-label\">Resources</div>", html)
 
     def test_empty_publication_years_and_people_categories_are_hidden(self):
         articles_response = self.client.get("/articles")

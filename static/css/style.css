@@ -299,6 +299,11 @@ img {
   border-color: var(--border) !important;
 }
 
+.content-card {
+  min-height: calc(100vh - 260px);
+  padding: 18px 0 64px;
+}
+
 .portal-side-stat {
   background: var(--bg-gradient);
   border: 1px solid var(--border);
@@ -1533,6 +1538,20 @@ input[type="email"]:focus {
   margin: 0 0 18px;
 }
 
+.publications-page {
+  max-width: 940px;
+  margin: 0 auto;
+  text-align: left;
+}
+
+.publications-head {
+  margin-bottom: 16px;
+}
+
+.publications-access-note {
+  margin-bottom: 26px;
+}
+
 .sources-page {
   max-width: 940px;
   margin: 0 auto;
@@ -1557,6 +1576,17 @@ input[type="email"]:focus {
   text-align: left;
   color: var(--text);
   font-size: 0.95rem;
+}
+
+.sources-access-note .portal-inline-link {
+  display: inline-block;
+  margin-top: 12px;
+}
+
+.sources-access-note .portal-user-line {
+  margin-top: 8px;
+  color: var(--text-light);
+  font-size: 0.9rem;
 }
 
 .sources-list {
@@ -1962,7 +1992,7 @@ footer a:not(.footer-link-card):hover {
   }
 
   .content-card {
-    padding: 22px 18px 24px;
+    padding: 22px 18px 44px;
   }
 
   .portal-hero {
@@ -2246,7 +2276,7 @@ footer a:not(.footer-link-card):hover {
   }
 
   .content-card {
-    padding: 22px 18px 24px;
+    padding: 22px 18px 44px;
   }
 
   .portal-hero {
@@ -2488,7 +2518,7 @@ footer a:not(.footer-link-card):hover {
   }
 
   .content-card {
-    padding: 18px 14px 22px;
+    padding: 18px 14px 40px;
   }
 
   .portal-hero-content {
