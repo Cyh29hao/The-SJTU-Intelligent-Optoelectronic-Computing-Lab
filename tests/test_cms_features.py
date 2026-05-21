@@ -86,17 +86,48 @@ class CMSFeatureTests(unittest.TestCase):
                         "user_name": "1",
                         "user_affiliation": "1",
                         "user_email": "1@1",
+                    },
+                    {
+                        "created_at": "2026-04-30 04:09:46.37916+00",
+                        "resource_id": "art_004",
+                        "open_type": "official_free_access",
+                        "target_url": "https://example.com/official",
+                        "user_name": "陈一彤",
+                        "user_affiliation": "上海交通大学",
+                        "user_email": "123@sjtu.edu.cn",
+                    },
+                    {
+                        "created_at": "2026/4/24 15:11",
+                        "resource_id": "legacy",
+                        "open_type": "paper",
+                        "target_url": "https://example.com/legacy",
+                        "user_name": "Legacy",
+                        "user_affiliation": "Local",
+                        "user_email": "legacy@example.com",
+                    },
+                    {
+                        "created_at": "unparsed-created-at",
+                        "resource_id": "diagnostic",
+                        "open_type": "paper",
+                        "target_url": "https://example.com/diagnostic",
+                        "user_name": "Diagnostic",
+                        "user_affiliation": "Local",
+                        "user_email": "diagnostic@example.com",
                     }
                 ],
             ):
                 rows = self.module._load_resource_open_rows()
 
         self.assertEqual(rows[0]["time"], "2026-05-20 23:05:36")
+        self.assertEqual(rows[1]["time"], "2026-04-30 12:09:46")
+        self.assertEqual(rows[2]["time"], "2026-04-24 15:11:00")
+        self.assertEqual(rows[3]["time"], "unparsed-created-at")
         csv_text = self.module._csv_bytes(
             ["time", "name", "affiliation", "email", "resource_id", "type", "target_url"],
             rows,
         ).getvalue().decode("utf-8-sig")
         self.assertIn("2026-05-20 23:05:36,1,1,1@1,art_004,paper", csv_text)
+        self.assertIn("2026-04-30 12:09:46,陈一彤,上海交通大学,123@sjtu.edu.cn,art_004,official_free_access", csv_text)
 
     def test_publications_page_renders_starred_titles(self):
         response = self.client.get("/articles")

@@ -10,6 +10,7 @@ import json
 import logging
 import math
 import os
+import re
 import requests
 import shutil
 import subprocess
@@ -70,6 +71,12 @@ LINK_OPEN_WINDOW_SECONDS = 60
 LINK_OPEN_MAX_COUNT = 2
 _LINK_OPEN_HISTORY = {}
 _LINK_OPEN_HISTORY_LOCK = threading.Lock()
+_DASH_TRANSLATION = str.maketrans({
+    '–': '-',
+    '—': '-',
+    '−': '-',
+    '－': '-',
+})
 
 # Ensure directories exist (Safety check on every launch)
 os.makedirs(CONTENT_ROOT, exist_ok=True)
@@ -437,15 +444,29 @@ def _supabase_request(method, table_name, params=None, payload=None, prefer=None
         print(f"Supabase request failed for {table_name}: {exc}")
         return None
 
+def _normalize_log_datetime_text(raw_value):
+    value = str(raw_value or '').strip().translate(_DASH_TRANSLATION)
+    value = ' '.join(value.split())
+    if not value:
+        return ''
+    if re.match(r'^\d{4}/\d{1,2}/\d{1,2}', value):
+        date_part, sep, rest = value.partition(' ')
+        value = date_part.replace('/', '-') + (sep + rest if sep else '')
+    if re.search(r'[+-]\d{2}$', value):
+        value += ':00'
+    elif re.search(r'[+-]\d{4}$', value):
+        value = value[:-2] + ':' + value[-2:]
+    return value
+
 def _parse_log_datetime(raw_value):
-    value = (raw_value or '').strip()
+    if isinstance(raw_value, datetime):
+        if getattr(raw_value, 'tzinfo', None):
+            return raw_value.astimezone(BEIJING_TZ).replace(tzinfo=None)
+        return raw_value
+
+    value = _normalize_log_datetime_text(raw_value)
     if not value:
         return None
-    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
-        try:
-            return datetime.strptime(value, fmt)
-        except Exception:
-            pass
     try:
         cleaned = value.replace('Z', '+00:00')
         dt = datetime.fromisoformat(cleaned)
@@ -453,12 +474,50 @@ def _parse_log_datetime(raw_value):
             return dt.astimezone(BEIJING_TZ).replace(tzinfo=None)
         return dt
     except Exception:
+        pass
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(value, fmt)
+        except Exception:
+            pass
+    match = re.search(
+        r'(\d{4})-(\d{1,2})-(\d{1,2})[ T]+(\d{1,2}):(\d{1,2})(?::(\d{1,2})(?:\.(\d{1,6}))?)?(?:\s*([+-]\d{2}:?\d{0,2}|Z))?',
+        value
+    )
+    if not match:
         return None
+    year, month, day, hour, minute, second, fraction, offset = match.groups()
+    microsecond = int((fraction or '').ljust(6, '0') or 0)
+    dt = datetime(
+        int(year),
+        int(month),
+        int(day),
+        int(hour),
+        int(minute),
+        int(second or 0),
+        microsecond
+    )
+    if offset:
+        if offset == 'Z':
+            return dt.replace(tzinfo=timezone.utc).astimezone(BEIJING_TZ).replace(tzinfo=None)
+        normalized_offset = offset.replace(':', '')
+        sign = 1 if normalized_offset.startswith('+') else -1
+        hours = int(normalized_offset[1:3] or 0)
+        minutes = int((normalized_offset[3:5] or '0'))
+        source_tz = timezone(sign * timedelta(hours=hours, minutes=minutes))
+        return dt.replace(tzinfo=source_tz).astimezone(BEIJING_TZ).replace(tzinfo=None)
+    return dt
 
 def _format_log_timestamp(dt):
     if not dt:
         return ''
     return dt.strftime("%Y-%m-%d %H:%M:%S")
+
+def _format_created_at_for_export(raw_value):
+    formatted = _format_log_timestamp(_parse_log_datetime(raw_value))
+    if formatted:
+        return formatted
+    return _normalize_log_datetime_text(raw_value)
 
 def _load_resource_open_rows_from_csv():
     return []
@@ -505,7 +564,7 @@ def _load_resource_open_rows():
             'created_at,resource_id,open_type,target_url,user_name,user_affiliation,user_email'
         )
         return [{
-            'time': _format_log_timestamp(_parse_log_datetime(row.get('created_at'))),
+            'time': _format_created_at_for_export(row.get('created_at')),
             'name': row.get('user_name', '') or '',
             'affiliation': row.get('user_affiliation', '') or '',
             'email': row.get('user_email', '') or '',
@@ -522,7 +581,7 @@ def _load_page_view_rows():
             'created_at,visitor_id,path,page_type,item_id,title,user_name,user_affiliation,user_email'
         )
         return [{
-            'time': _format_log_timestamp(_parse_log_datetime(row.get('created_at'))),
+            'time': _format_created_at_for_export(row.get('created_at')),
             'visitor_id': row.get('visitor_id', '') or '',
             'path': row.get('path', '') or '',
             'page_type': row.get('page_type', '') or '',
