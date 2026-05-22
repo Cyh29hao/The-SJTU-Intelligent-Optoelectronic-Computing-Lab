@@ -201,6 +201,7 @@ class CMSFeatureTests(unittest.TestCase):
         response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
         html = response.get_data(as_text=True)
+        self.assertIn('class="content-card content-card-home"', html)
         self.assertNotIn("portal-hero-subtitle-link", html)
 
     def test_mobile_branding_targets_full_name_not_header_wordmark(self):

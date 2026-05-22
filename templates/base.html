@@ -59,7 +59,7 @@
     </header>
 
     <!-- Page Content -->
-    <div class="content-card">
+    <div class="content-card{% if request.path == '/' %} content-card-home{% endif %}">
       {% block content %}{% endblock %}
     </div>
 
