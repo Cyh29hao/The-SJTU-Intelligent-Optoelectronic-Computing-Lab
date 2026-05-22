@@ -91,6 +91,11 @@
                 <input name="year" type="number" value="2025" min="2000" max="2035" required>
                 <label>Abstract</label>
                 <textarea name="abstract" rows="5" required></textarea>
+                <label>Chinese Summary (ZH)</label>
+                <textarea name="abstract_zh" rows="5"></textarea>
+                <div class="checkbox-grid">
+                    <label><input type="checkbox" name="show_abstract_zh"> Use Chinese Summary on Chinese Publication Detail</label>
+                </div>
                 <label>Paper URL</label>
                 <input name="paper_url" placeholder="https://...">
                 <label>Official Free Access URL</label>
@@ -133,6 +138,11 @@
                 <input name="year" type="number" value="{{ item.year }}" min="2000" max="2035" required>
                 <label>Abstract</label>
                 <textarea name="abstract" rows="5" required>{{ item.abstract }}</textarea>
+                <label>Chinese Summary (ZH)</label>
+                <textarea name="abstract_zh" rows="5">{{ item.abstract_zh }}</textarea>
+                <div class="checkbox-grid">
+                    <label><input type="checkbox" name="show_abstract_zh" {% if item.show_abstract_zh %}checked{% endif %}> Use Chinese Summary on Chinese Publication Detail</label>
+                </div>
                 <label>Paper URL</label>
                 <input name="paper_url" value="{{ item.paper_url }}">
                 <label>Official Free Access URL</label>

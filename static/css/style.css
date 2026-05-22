@@ -79,7 +79,7 @@ img {
 .container {
   max-width: 1060px;
   margin: 24px auto 40px;
-  padding: 0 20px;
+  padding: 0 28px;
   position: relative;
 }
 
@@ -2182,7 +2182,7 @@ footer a:not(.footer-link-card):hover {
 @media (max-width: 820px) {
   .container {
     margin: 16px auto 28px;
-    padding: 0 14px;
+    padding: 0 18px;
   }
 
   .site-topbar {
@@ -2491,7 +2491,7 @@ footer a:not(.footer-link-card):hover {
 
 @media (max-width: 480px) {
   .container {
-    padding: 0 12px;
+    padding: 0 14px;
   }
 
   .site-brand-logo {

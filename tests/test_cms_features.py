@@ -63,6 +63,8 @@ class CMSFeatureTests(unittest.TestCase):
         self.assertTrue(by_id["art_002"]["is_starred"])
         self.assertFalse(by_id["art_004"]["home_top_pinned"])
         self.assertFalse(by_id["art_004"]["is_starred"])
+        self.assertTrue(by_id["art_004"]["show_abstract_zh"])
+        self.assertIn("光计算芯片依托片上传播", by_id["art_004"]["abstract_zh"])
         self.assertFalse(by_id["art_005"]["home_top_pinned"])
         self.assertFalse(by_id["art_005"]["is_starred"])
 
@@ -143,6 +145,42 @@ class CMSFeatureTests(unittest.TestCase):
         self.assertIn("Browse lab publications by year", html)
         self.assertIn("A one-time information record is required before opening external paper and resource links.", html)
         self.assertNotIn("<div class=\"portal-side-label\">Resources</div>", html)
+
+    def test_publication_detail_uses_optional_chinese_summary_with_english_fallback(self):
+        articles = {item["id"]: item for item in self.module.load_articles_data()}
+        with self.client.session_transaction() as browser_session:
+            browser_session["lang"] = "zh"
+
+        chinese_response = self.client.get("/article/art_004")
+        self.assertEqual(chinese_response.status_code, 200)
+        chinese_html = chinese_response.get_data(as_text=True)
+        self.assertIn("光计算芯片依托片上传播", chinese_html)
+        self.assertNotIn("Photonic computing chips, enabled by on chip light propagation", chinese_html)
+
+        fallback_response = self.client.get("/article/art_001")
+        self.assertEqual(fallback_response.status_code, 200)
+        self.assertIn(articles["art_001"]["abstract"][:120], fallback_response.get_data(as_text=True))
+
+    def test_article_add_saves_optional_chinese_summary_fields(self):
+        self.module._add_item(
+            "article",
+            MultiDict(
+                {
+                    "title": "Summary Test",
+                    "authors": "Author A, Author B",
+                    "authors_display_count": "2",
+                    "venue": "Test Venue",
+                    "year": "2026",
+                    "abstract": "English abstract.",
+                    "abstract_zh": "中文综述。",
+                    "show_abstract_zh": "on",
+                }
+            ),
+        )
+
+        added = next(item for item in self.module.load_articles_data() if item["title"] == "Summary Test")
+        self.assertEqual(added["abstract_zh"], "中文综述。")
+        self.assertTrue(added["show_abstract_zh"])
 
     def test_empty_publication_years_and_people_categories_are_hidden(self):
         articles_response = self.client.get("/articles")

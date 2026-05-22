@@ -18,8 +18,9 @@
   </div>
   {% endif %}
 
+  {% set detail_abstract = lang_value(item, 'abstract') if item.show_abstract_zh else item.abstract %}
   <div style="margin-top: 20px; padding: 16px; background: var(--bg-gradient); border-radius: 8px; text-align: left; border: 1px solid var(--border);">
-    <p style="margin: 0; white-space: pre-wrap; text-align: left; color: var(--text);">{{ item.abstract }}</p>
+    <p style="margin: 0; white-space: pre-wrap; text-align: left; color: var(--text);">{{ detail_abstract }}</p>
   </div>
 
   <div class="paper-action-row" style="margin-top: 24px; display: flex; gap: 12px; justify-content: center; flex-direction: column; align-items: center;">

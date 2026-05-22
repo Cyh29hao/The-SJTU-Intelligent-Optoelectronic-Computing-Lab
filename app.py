@@ -241,7 +241,7 @@ DEFAULT_ADMISSIONS_DIRECTIONS = [
         'summary_zh': '软硬件兼顾，面向智能光电系统应用。'
     }
 ]
-DEFAULT_SITE_VERSION = '1.3.4'
+DEFAULT_SITE_VERSION = '1.4.2'
 DEFAULT_FRIEND_LINKS = [
     {
         'title': 'SJTU',
@@ -295,7 +295,7 @@ DEFAULT_SITE_CONFIG = {
     'footer_copyright': '2026 OPTICompt Lab',
     'footer_copyright_zh': '2026 OPTICompt Lab',
     'footer_icp_record': '',
-    'logo_filename': 'site_logo.svg',
+    'logo_filename': 'site_logo.png',
     'friend_links': DEFAULT_FRIEND_LINKS,
     'research_highlights': DEFAULT_RESEARCH_HIGHLIGHTS,
     'person_tags': DEFAULT_PERSON_TAGS
@@ -1493,6 +1493,12 @@ def _normalize_article_records(items):
             if key not in current or not isinstance(current.get(key), str):
                 current[key] = '' if key != 'venue' and key != 'abstract' and key != 'title' else current.get(key, '') or ''
                 changed = True
+        if 'abstract_zh' in current and not isinstance(current.get('abstract_zh'), str):
+            current['abstract_zh'] = ''
+            changed = True
+        if 'show_abstract_zh' in current and not isinstance(current.get('show_abstract_zh'), bool):
+            current['show_abstract_zh'] = bool(current.get('show_abstract_zh'))
+            changed = True
         if 'resource_kinds' not in current or not isinstance(current.get('resource_kinds'), list):
             current['resource_kinds'] = ['Code']
             changed = True
@@ -1712,6 +1718,8 @@ def _add_item(item_type, form_data):
         'venue': form_data.get('venue', '').strip(),
         'year': int(form_data.get('year', 2025)),
         'abstract': form_data.get('abstract', '').strip(),
+        'abstract_zh': form_data.get('abstract_zh', '').strip(),
+        'show_abstract_zh': form_data.get('show_abstract_zh') == 'on',
         'paper_url': form_data.get('paper_url', '').strip(),
         'official_free_access_url': form_data.get('official_free_access_url', '').strip(),
         'resource_url': form_data.get('resource_url', '').strip(),
@@ -1741,6 +1749,10 @@ def _update_item(item_type, item_id, form_data):
             item['year'] = int(form_data.get('year', item['year']))
             item['venue'] = form_data.get('venue', item.get('venue', '')).strip()
             item['abstract'] = form_data.get('abstract', item.get('abstract', '')).strip()
+            abstract_zh_in = form_data.get('abstract_zh')
+            if abstract_zh_in is not None:
+                item['abstract_zh'] = abstract_zh_in.strip()
+            item['show_abstract_zh'] = form_data.get('show_abstract_zh') == 'on'
             adc = form_data.get('authors_display_count')
             if adc is not None:
                 try:
