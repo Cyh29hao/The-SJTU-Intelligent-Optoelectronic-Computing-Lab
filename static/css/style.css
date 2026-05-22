@@ -83,6 +83,10 @@ img {
   position: relative;
 }
 
+.home-page {
+  margin-inline: -8px;
+}
+
 .site-topbar {
   display: flex;
   align-items: center;
@@ -2185,6 +2189,10 @@ footer a:not(.footer-link-card):hover {
     padding: 0 18px;
   }
 
+  .home-page {
+    margin-inline: -4px;
+  }
+
   .site-topbar {
     position: relative;
     align-items: center;
@@ -2492,6 +2500,10 @@ footer a:not(.footer-link-card):hover {
 @media (max-width: 480px) {
   .container {
     padding: 0 14px;
+  }
+
+  .home-page {
+    margin-inline: -2px;
   }
 
   .site-brand-logo {
