@@ -1,4 +1,4 @@
-"""Send a local news draft to the preview server and return its preview link."""
+"""Send a news draft to the lab site or its local preview."""
 
 import argparse
 import hashlib
@@ -17,13 +17,16 @@ from news_editor_store import MAX_IMAGE_BYTES
 
 TOKEN_VARIABLE = 'OPTICOM_DRAFT_TOKEN'
 DRAFT_ENDPOINT = '/editor/api/v1/news/drafts'
+LAB_SITE = 'https://opticompt-lab.sjtu.edu.cn'
 
 
 class UploadError(Exception):
     pass
 
 
-def local_origin(value):
+def draft_origin(value):
+    if value in (LAB_SITE, LAB_SITE + '/'):
+        return LAB_SITE
     try:
         site = urlsplit(value)
         port = site.port
@@ -34,7 +37,7 @@ def local_origin(value):
         or site.username is not None or site.password is not None
         or site.path not in ('', '/') or site.query or site.fragment or port == 0
     ):
-        raise UploadError('请选择本机预览地址，例如 http://localhost:8000。')
+        raise UploadError(f'请选择 {LAB_SITE} 或本机预览地址，如 http://localhost:8000。')
     return f'http://{site.hostname}' + (f':{port}' if port is not None else '')
 
 
@@ -98,7 +101,7 @@ def post_draft(origin, payload, image_path, image, key, token):
         details = result.get('error') if isinstance(result, dict) else None
         if isinstance(details, str):
             details = ' '.join(details.replace(token, '[凭证已隐藏]').split())[:350]
-        raise UploadError(f'草稿提交失败（HTTP {response.status_code}）。{details or "请检查本机预览服务。"}')
+        raise UploadError(f'草稿提交失败（HTTP {response.status_code}）。{details or "请检查草稿服务。"}')
 
     news_id = result.get('id') if isinstance(result, dict) else None
     if not isinstance(news_id, str) or not re.fullmatch(r'[A-Za-z0-9_-]{1,80}', news_id):
@@ -122,13 +125,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('draft', type=Path, help='UTF-8 JSON 草稿文件')
     parser.add_argument('--image', type=Path, help='PNG、JPEG 或 WebP 配图')
-    parser.add_argument('--site', default='http://localhost:8000', help='本机预览地址')
+    parser.add_argument('--site', default='http://localhost:8000', help='正式站 HTTPS 或本机预览地址')
     parser.add_argument('--submission-key', help='同一次提交重试时复用的键，省略时按素材自动生成')
     parser.add_argument('--json', action='store_true', help='输出 JSON 供 Agent 读取')
     args = parser.parse_args()
 
     try:
-        origin = local_origin(args.site)
+        origin = draft_origin(args.site)
         payload = read_draft(args.draft)
         image = read_image(args.image) if args.image is not None else b''
         key = args.submission_key

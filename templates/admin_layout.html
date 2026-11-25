@@ -339,6 +339,11 @@
             max-width: 760px;
             margin: 0 auto;
         }
+        .home-shell > .handoff-actions {
+            width: min(100%, 760px);
+            margin-inline: auto;
+            align-items: center;
+        }
         @media (max-width: 860px) {
             body { padding: 16px; }
             .admin-topbar { flex-direction: column; }
@@ -353,11 +358,12 @@
         <h1>{% block admin_header %}Admin Dashboard{% endblock %}</h1>
     </div>
 
-    <div class="quick-actions">
+    <div class="quick-actions{% if config.ADMIN_HANDOFF_ENABLED %} handoff-actions{% endif %}">
         {% if active_module != 'home' %}
         <a href="{{ url_for('admin_dashboard') }}" class="home">Back to Admin Home</a>
         {% endif %}
-        {% if config.ADMIN_HANDOFF_PREVIEW %}
+        {% if config.ADMIN_HANDOFF_ENABLED %}
+        <span class="helper-note">{{ '站长' if admin_role == 'owner' else '内容编辑' }}</span>
         <a href="{{ url_for('admin_content') }}#drafts">草稿和回收站</a>
         {% if admin_role == 'owner' %}
         <a href="{{ url_for('news_editor.access') }}">脚本凭证</a>

@@ -2,14 +2,14 @@
 
 {% block admin_body %}
 <div class="home-grid">
-    {% set full_admin = config.ADMIN_HANDOFF_PREVIEW %}
+    {% set full_admin = config.ADMIN_HANDOFF_ENABLED %}
     {% set full_owner = not full_admin or admin_role == 'owner' %}
     {% if full_owner %}
     <div class="section-card" style="margin-bottom:20px;">
         <div class="inline-actions" style="justify-content:space-between; align-items:flex-start;">
             <div style="min-width:0;">
                 <h3 style="margin-bottom:8px;">{{ '内容 Git 同步' if full_admin else 'GitHub Sync Status' }}</h3>
-                <p class="helper-note" style="margin:0;">{{ git_sync_summary.description|replace('GitHub', 'the local preview remote') if full_admin else git_sync_summary.description }}</p>
+                <p class="helper-note" style="margin:0;">{{ git_sync_summary.description|replace('GitHub', 'the local preview remote') if config.ADMIN_HANDOFF_PREVIEW else git_sync_summary.description }}</p>
                 <p class="helper-note" style="margin:8px 0 0;">Branch: <span class="mono">{{ sync_down_status.branch }}</span></p>
             </div>
             <span class="sync-pill {{ git_sync_summary.kind }}">{{ git_sync_summary.label }}</span>
@@ -39,7 +39,7 @@
         {% if full_owner %}
         <a href="{{ url_for('admin_analytics') }}" class="module-card large" style="background:linear-gradient(145deg,#2aa886 0%,#1f8a6d 100%);">
             <div class="module-card-title">📊 View Analytics</div>
-            <div class="module-card-text">{{ '访问统计、导出和本机内容 Git 同步。' if full_admin else 'Analytics, exports, and GitHub sync up/down for site content.' }}</div>
+            <div class="module-card-text">{{ '访问统计、导出和本机内容 Git 同步。' if config.ADMIN_HANDOFF_PREVIEW else 'Analytics, exports, and GitHub sync up/down for site content.' }}</div>
         </a>
         {% endif %}
         <a href="{{ url_for('admin_assets') }}" class="module-card large" style="background:linear-gradient(145deg,#7f66dd 0%,#654bc5 100%);">

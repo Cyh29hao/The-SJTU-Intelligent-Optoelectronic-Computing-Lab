@@ -68,7 +68,7 @@ class ContentWorkflow:
     def __init__(self, content_root, state_dir):
         self.content_root = Path(content_root).resolve()
         self.state_dir = Path(state_dir).resolve()
-        if self.state_dir.is_relative_to(self.content_root):
+        if self.state_dir == self.content_root or self.content_root in self.state_dir.parents:
             raise ValueError('Workflow state must be outside published content.')
         self.file_dir = self.state_dir / 'draft-files'
         self.path = self.state_dir / 'workflow.sqlite3'
@@ -112,7 +112,7 @@ class ContentWorkflow:
     def _published_path(self, kind):
         _validate_kind(kind)
         path = self.content_root / RECORD_KINDS[kind][0]
-        if not path.resolve().is_relative_to(self.content_root):
+        if self.content_root not in path.resolve().parents:
             raise WorkflowError('公开文件路径超出内容目录。', 409)
         return path
 
@@ -156,7 +156,8 @@ class ContentWorkflow:
         if state is None and live is None:
             return None
         state = state or self._initial_state(kind, record_id, live)
-        return {key: value for key, value in state.items() if key != 'base'} | {
+        return {
+            **{key: value for key, value in state.items() if key != 'base'},
             'published': live, 'conflicted': state['base'] != _fingerprint(live),
         }
 
@@ -202,7 +203,7 @@ class ContentWorkflow:
 
     def _private_media_path(self, filename):
         path = self.file_dir / filename
-        if not path.resolve().is_relative_to(self.state_dir):
+        if self.state_dir not in path.resolve().parents:
             raise WorkflowError('私有文件路径超出草稿目录。', 409)
         return path
 
@@ -273,7 +274,7 @@ class ContentWorkflow:
             if state and state['archived']:
                 raise WorkflowError('请先从回收区恢复这条内容。', 409)
             prior = state['draft'] if state else live or {}
-            draft = dict(prior) | record
+            draft = {**prior, **record}
             draft.update(id=record_id, last_edited=datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
             draft.pop('attachments', None)
             media = {file['name']: file for file in (state['attachments'] if state else prior.get('attachments', []))}
@@ -298,7 +299,7 @@ class ContentWorkflow:
         folder = self.content_root / 'attachments' if filename.endswith('.pdf') else (
             self.content_root / 'images' / RECORD_KINDS[kind][1])
         path = folder / filename
-        if not path.resolve().is_relative_to(self.content_root):
+        if self.content_root not in path.resolve().parents:
             raise WorkflowError('公开文件路径超出内容目录。', 409)
         return path
 
@@ -451,7 +452,7 @@ class ContentWorkflow:
                     continue
                 draft, published = entry['draft'].copy(), entry['published']
                 if published:
-                    published = collection.get(news_id, {}) | published
+                    published = {**collection.get(news_id, {}), **published}
                 for snapshot in (draft, published):
                     if snapshot is None:
                         continue

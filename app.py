@@ -807,7 +807,7 @@ def _normalize_person_tags(items):
 
 def _run_git_command(args):
     """Run Git in the repository that owns the published content."""
-    env = None
+    env = {**os.environ, 'GIT_TERMINAL_PROMPT': '0'}
     if CONTENT_GIT_OFFLINE:
         from scripts.preview_content_git import offline_git_env
 
@@ -822,7 +822,8 @@ def _run_git_command(args):
             capture_output=True,
             text=True,
             encoding='utf-8',
-            errors='replace'
+            errors='replace',
+            timeout=15,
         )
         return {
             'ok': result.returncode == 0,
@@ -2306,19 +2307,21 @@ def _admin_text_value(form, key, current_value, default_value=''):
 
 def _build_admin_common_context(pop_notice=False):
     site_cfg = load_site_config()
-    local_cms_status = _get_local_cms_status()
+    owner_access = g.get('handoff_role') != 'editor'
     return {
         'start_time': START_TIME,
         'admin_login_time': session.get('admin_login_at') or START_TIME,
         'content_last_modified': _latest_content_modified_time(),
         'lab_name': site_cfg.get('lab_name_full', LAB_NAME),
         'site_cfg': site_cfg,
-        'local_cms_status': local_cms_status,
-        'analytics_backend': 'Supabase only' if _supabase_logs_ready() else 'Supabase not configured',
+        'local_cms_status': _get_local_cms_status() if owner_access else None,
+        'analytics_backend': ('Supabase only' if _supabase_logs_ready() else 'Supabase not configured') if owner_access else None,
         'admin_notice': session.pop('admin_notice', None) if pop_notice else session.get('admin_notice'),
     }
 
 def _build_admin_home_context(local_cms_status=None):
+    if g.get('handoff_role') == 'editor':
+        return {}
     sync_down_status = _get_sync_from_github_status(fetch_remote=True)
     return {
         'git_sync_summary': _build_git_sync_summary(local_cms_status, sync_down_status),
@@ -2531,23 +2534,24 @@ def _build_admin_content_context():
     articles = load_articles_data()
     people = load_people_data()
     news_items = load_news_data()
-    analytics = _build_admin_analytics_context()
-    unique_downloaders = {}
-    for row in _load_resource_open_rows():
-        item_id = row.get('resource_id')
-        if item_id:
-            unique_downloaders.setdefault(item_id, set()).add((row.get('name',''), row.get('affiliation',''), row.get('email','')))
     context = {
         'articles': articles,
         'people': people,
         'news_items': news_items,
-        'download_counts': analytics['download_counts'],
-        'total_downloads': analytics['total_downloads'],
-        'last_download_times': analytics['last_download_times'],
-        'unique_counts': {aid: len(unique_downloaders.get(aid, set())) for aid in analytics['download_counts'].keys()},
-        'article_view_counts': analytics['article_view_counts'],
         **_build_people_photo_context(people)
     }
+    if g.get('handoff_role') != 'editor':
+        analytics = _build_admin_analytics_context()
+        unique_downloaders = {}
+        for row in _load_resource_open_rows():
+            item_id = row.get('resource_id')
+            if item_id:
+                unique_downloaders.setdefault(item_id, set()).add((row.get('name', ''), row.get('affiliation', ''), row.get('email', '')))
+        context.update(
+            download_counts=analytics['download_counts'],
+            article_view_counts=analytics['article_view_counts'],
+            unique_counts={aid: len(unique_downloaders.get(aid, set())) for aid in analytics['download_counts']},
+        )
     if app.config.get('CONTENT_WORKFLOW') is not None:
         from news_editor import add_workflow_admin_context
 
@@ -2644,13 +2648,14 @@ def _dispatch_admin_actions(default_module):
 
     if action in ('edit_site_welcome', 'edit_site_content', 'edit_site_branding', 'edit_friend_links', 'edit_research_highlights', 'edit_person_tags', 'edit_join_us'):
         cfg = load_site_config()
-        if action in ('edit_site_welcome', 'edit_site_content', 'edit_site_branding', 'edit_join_us'):
+        if action in ('edit_site_welcome', 'edit_site_content'):
             cfg['home_welcome'] = _admin_text_value(request.form, 'home_welcome', cfg.get('home_welcome', ''), DEFAULT_SITE_CONFIG['home_welcome'])
             cfg['home_welcome_zh'] = _admin_text_value(request.form, 'home_welcome_zh', cfg.get('home_welcome_zh', ''), DEFAULT_SITE_CONFIG['home_welcome_zh'])
             cfg['home_note'] = _admin_text_value(request.form, 'home_note', cfg.get('home_note', ''), DEFAULT_SITE_CONFIG['home_note'])
             cfg['home_note_zh'] = _admin_text_value(request.form, 'home_note_zh', cfg.get('home_note_zh', ''), DEFAULT_SITE_CONFIG['home_note_zh'])
             cfg['hero_summary'] = _admin_text_value(request.form, 'hero_summary', cfg.get('hero_summary', ''), DEFAULT_SITE_CONFIG['hero_summary'])
             cfg['hero_summary_zh'] = _admin_text_value(request.form, 'hero_summary_zh', cfg.get('hero_summary_zh', ''), DEFAULT_SITE_CONFIG['hero_summary_zh'])
+        if action in ('edit_site_content', 'edit_site_branding'):
             cfg['lab_name_short'] = _admin_text_value(request.form, 'lab_name_short', cfg.get('lab_name_short', ''), DEFAULT_SITE_CONFIG['lab_name_short'])
             cfg['lab_name_short_zh'] = _admin_text_value(request.form, 'lab_name_short_zh', cfg.get('lab_name_short_zh', ''), DEFAULT_SITE_CONFIG['lab_name_short_zh'])
             cfg['lab_name_full'] = _admin_text_value(request.form, 'lab_name_full', cfg.get('lab_name_full', ''), DEFAULT_SITE_CONFIG['lab_name_full'])
@@ -2730,7 +2735,7 @@ def _dispatch_admin_actions(default_module):
 
 def _legacy_admin_can_read():
     if app.config.get('NEWS_EDITOR_STORE') is not None:
-        return g.get('preview_owner_admin_read', False)
+        return g.get('handoff_admin_access', False)
     return bool(session.get('is_admin'))
 
 
@@ -3382,18 +3387,22 @@ app.view_functions['open_link'] = _open_link_supabase_only
 app.view_functions['download_file'] = _download_file_compat
 app.view_functions['admin_upload_file'] = _admin_upload_file_retired
 
-if os.environ.get('NEWS_EDITOR_PREVIEW') == '1':
-    if not IS_LOCAL or LOCAL_HOST != '127.0.0.1':
+editor_production = os.environ.get('ADMIN_HANDOFF_PRODUCTION') == '1'
+editor_preview = os.environ.get('NEWS_EDITOR_PREVIEW') == '1'
+if editor_production or editor_preview:
+    if editor_production and (IS_LOCAL or editor_preview):
+        raise RuntimeError('Production editor requires APP_MODE=production with preview disabled.')
+    if editor_preview and (not IS_LOCAL or LOCAL_HOST != '127.0.0.1'):
         raise RuntimeError('The news editor preview requires local mode on 127.0.0.1.')
 
     from news_editor import configure_news_editor
 
-    configure_news_editor(app, _load_legacy_news_data(), {
+    configure_news_editor(app, CONTENT_ROOT, {
         'resolve_article_flags': _resolve_article_form_flags,
         'normalize_person_tags': _normalize_selected_tags,
         'normalize_carousel': _normalize_home_carousel_flags,
         'asset_image_url': asset_image_url,
-    })
+    }, production=editor_production, seed_news=_load_legacy_news_data() if editor_preview else ())
 
 
 # ==============================================================================

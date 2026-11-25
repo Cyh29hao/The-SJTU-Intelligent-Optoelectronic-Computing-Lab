@@ -56,7 +56,7 @@
   </div>
   {% endif %}
 
-  {% if config.ADMIN_HANDOFF_PREVIEW and item.attachments %}
+  {% if config.ADMIN_HANDOFF_ENABLED and item.attachments %}
   <section aria-label="{{ '补充 PDF' if current_lang == 'zh' else 'Supplementary PDFs' }}">
     <h3>{{ '补充 PDF' if current_lang == 'zh' else 'Supplementary PDFs' }}</h3>
     <ul>

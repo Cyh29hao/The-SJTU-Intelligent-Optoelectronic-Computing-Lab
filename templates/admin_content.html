@@ -3,7 +3,7 @@
 
 {% block admin_body %}
 {% set active_section = request.args.get('section', '') %}
-{% set full_admin = config.ADMIN_HANDOFF_PREVIEW %}
+{% set full_admin = config.ADMIN_HANDOFF_ENABLED %}
 {% set revisions = draft_revisions|default({}) %}
 {% set editing_id = draft_edit.id if draft_edit else none %}
 {% set new_record = full_admin and request.args.get('new') == '1' %}
@@ -197,7 +197,9 @@
     <details id="article-{{ item.id }}"{% if full_admin %} data-workflow-state="{{ 'draft' if editing_id == item.id and not draft_edit.published else 'published' }}" data-workflow-label="{{ item.title }} {{ item.id }}"{% endif %}{% if editing_id == item.id %} open{% endif %}>
         <summary>{{ item.title }} <span class="mono" style="margin-left:8px;">{{ item.id }}</span></summary>
         <div class="details-body">
+            {% if admin_role != 'editor' %}
             <p class="helper-note">Tracked opens: {{ download_counts.get(item.id, 0) }} | Views: {{ article_view_counts.get(item.id, 0) }} | Unique users: {{ unique_counts.get(item.id, 0) }}</p>
+            {% endif %}
             <form method="POST"{% if full_admin %} enctype="multipart/form-data"{% endif %} action="{{ url_for(module_endpoint) }}" data-official-free-defaults="1">
                 {{ csrf() }}
                 {{ revision(revisions.get(item.id, 0)) }}

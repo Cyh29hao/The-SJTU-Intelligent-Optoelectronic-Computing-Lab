@@ -16,3 +16,8 @@ Wish our lab keep prospering every day.
 - [论文草稿助手操作规范](docs/paper-agent.md)
 
 本机使用独立内容仓库、Git 远端和试用数据。正式环境的发布使用原部署流程。
+
+## 交大云网站后台
+
+- [网站后台](https://opticompt-lab.sjtu.edu.cn/admin)
+- [启用和维护正式站编辑后台](docs/jcloud-handoff.md)

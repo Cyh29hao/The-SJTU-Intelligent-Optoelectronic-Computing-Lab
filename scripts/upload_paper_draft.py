@@ -1,4 +1,4 @@
-"""Prepare a paper draft from local PDFs and return its localhost preview URL."""
+"""Prepare a paper draft from local PDFs and return its preview URL."""
 
 import argparse
 import hashlib
@@ -13,7 +13,7 @@ from urllib.parse import quote, urlsplit
 
 import requests
 
-from scripts.upload_news_draft import UploadError, draft_token, local_origin
+from scripts.upload_news_draft import UploadError, draft_origin, draft_token
 
 
 ARTICLES = Path(__file__).resolve().parents[1] / 'site_content' / 'articles.json'
@@ -218,13 +218,13 @@ def _preview_link(origin, value):
     if not isinstance(value, str) or any(char.isspace() or char == '\\' or ord(char) < 32 for char in value):
         raise UploadError('服务器返回的草稿链接格式不正确。')
     if not value.startswith('/') or value.startswith('//'):
-        raise UploadError('服务器返回了非本机草稿链接。')
+        raise UploadError('服务器返回了站外草稿链接。')
     try:
         parsed = urlsplit(value)
     except ValueError:
         raise UploadError('服务器返回的草稿链接格式不正确。') from None
     if parsed.scheme or parsed.netloc:
-        raise UploadError('服务器返回了非本机草稿链接。')
+        raise UploadError('服务器返回了站外草稿链接。')
     return origin + value
 
 
@@ -245,7 +245,7 @@ def submit(origin, fields, attachments, token):
                 timeout=(4, 25), allow_redirects=False,
             )
         except requests.RequestException:
-            raise UploadError(f'无法确认本机已收到草稿。请检查 {origin} 后用同一材料重试。') from None
+            raise UploadError(f'无法确认站点已收到草稿。请检查 {origin} 后用同一材料重试。') from None
     try:
         result = response.json()
     except ValueError:
@@ -253,7 +253,7 @@ def submit(origin, fields, attachments, token):
     if response.status_code not in (200, 201) or not isinstance(result, dict):
         detail = result.get('error') if isinstance(result, dict) else ''
         message = ' '.join(detail.replace(token, '[凭证已隐藏]').split())[:350] if isinstance(detail, str) else ''
-        raise UploadError(f'草稿提交失败（HTTP {response.status_code}）。{message or "请检查本机预览服务。"}')
+        raise UploadError(f'草稿提交失败（HTTP {response.status_code}）。{message or "请检查草稿服务。"}')
     item_id = result.get('id')
     if not isinstance(item_id, str) or not re.fullmatch(r'[A-Za-z0-9_-]{1,80}', item_id):
         raise UploadError('服务器未返回有效的草稿编号。')
@@ -277,10 +277,10 @@ def main():
     parser.add_argument('--offline', action='store_true', help='跳过 Crossref DOI 核对')
     parser.add_argument('--inspect', action='store_true', help='只输出整理结果，便于核对')
     parser.add_argument('--json', action='store_true', help='输出 JSON 回执')
-    parser.add_argument('--site', default='http://localhost:8000', help='本机预览地址')
+    parser.add_argument('--site', default='http://localhost:8000', help='正式站 HTTPS 或本机预览地址')
     args = parser.parse_args()
     try:
-        origin = local_origin(args.site)
+        origin = draft_origin(args.site)
         fields, provenance, warnings = prepare_metadata(args.paper, args.metadata, args.offline)
         paths = ([args.paper] if args.attach_paper else []) + args.supplement
         attachments = _attachments(paths)
@@ -306,7 +306,7 @@ def main():
             print('私有附件', attachment.get('name') or attachment.get('filename'))
         for warning in warnings:
             print(warning)
-        print('本机预览', report['preview_url'])
+        print('预览链接', report['preview_url'])
         print('请登录编辑账号核对草稿与公开附件，然后决定是否发布。')
     return 0
 

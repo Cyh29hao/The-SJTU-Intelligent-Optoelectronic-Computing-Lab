@@ -2,7 +2,7 @@
 {% set sections = {'article': 'publications', 'person': 'people', 'news': 'news'} %}
 {% set edit_url = url_for('admin_content', section=sections[preview_record.kind], draft=preview_record.id) ~ '#' ~ preview_record.kind ~ '-' ~ preview_record.id %}
 <aside class="news-draft-banner" aria-label="预览操作">
-    <strong>草稿预览 · 本机演示</strong>
+    <strong>草稿预览{% if config.ADMIN_HANDOFF_PREVIEW %} · 本机演示{% endif %}</strong>
     {% if preview_error %}<p role="alert">{{ preview_error }}</p>{% endif %}
     {% if preview_record.archived %}
     {% if admin_role == 'owner' %}
@@ -30,7 +30,7 @@
     {% endif %}
     {{ transition(preview_record.kind, preview_record.id, preview_record.revision, 'rebase', '已核对，以当前公开状态为基准') }}
     {% else %}
-    <p>发布后，本机预览站的公开页面将展示这个版本和所选附件。</p>
+    <p>发布后，{{ '本机预览站的' if config.ADMIN_HANDOFF_PREVIEW else '课题组网站的' }}公开页面将展示这个版本{% if preview_record.attachments %}和所选附件{% endif %}。</p>
     <form method="post" action="{{ url_for('news_editor.record_action', kind=preview_record.kind, record_id=preview_record.id) }}">
         {{ csrf() }}
         {{ revision(preview_record.revision) }}

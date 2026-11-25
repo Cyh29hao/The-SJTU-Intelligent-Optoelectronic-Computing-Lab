@@ -3,7 +3,7 @@
 
 {% block admin_body %}
 {% set active_section = request.args.get('section', '') %}
-{% set full_admin = config.ADMIN_HANDOFF_PREVIEW %}
+{% set full_admin = config.ADMIN_HANDOFF_ENABLED %}
 {% set revisions = draft_revisions|default({}) %}
 
 {% if not full_admin or admin_role == 'owner' %}

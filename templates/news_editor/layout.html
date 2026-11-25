@@ -16,7 +16,7 @@
         {% if site_cfg_global is defined %}
         <img src="{{ asset_image_url('site', site_cfg_global.logo_filename) }}" width="34" height="34" alt="">
         {% endif %}
-        <span><strong>OPTICompt Lab</strong><span class="editor-brand-caption">{{ '网站管理' if config.CONTENT_WORKFLOW else '新闻管理' }} · 本机预览</span></span>
+        <span><strong>OPTICompt Lab</strong><span class="editor-brand-caption">{{ '网站管理' if config.CONTENT_WORKFLOW else '新闻管理' }}{% if config.ADMIN_HANDOFF_PREVIEW %} · 本机预览{% endif %}</span></span>
       </a>
       <nav class="editor-nav" aria-label="后台导航">
         {% if editor_role %}
@@ -25,9 +25,9 @@
         <a href="{{ url_for('news_editor.access') }}"{% if request.endpoint == 'news_editor.access' %} aria-current="page"{% endif %}>脚本凭证</a>
         {% endif %}
         {% endif %}
-        <a href="{{ url_for('index') }}">返回预览首页</a>
+        <a href="{{ url_for('index') }}">{{ '返回预览首页' if config.ADMIN_HANDOFF_PREVIEW else '返回网站首页' }}</a>
         {% if editor_role %}
-        {% if config.ADMIN_HANDOFF_PREVIEW %}
+        {% if config.ADMIN_HANDOFF_ENABLED %}
         <form action="{{ url_for('news_editor.view_as_visitor') }}" method="post">
           <input type="hidden" name="csrf_token" value="{{ editor_csrf_token() }}">
           <button class="editor-nav-button" type="submit">以访客身份查看</button>

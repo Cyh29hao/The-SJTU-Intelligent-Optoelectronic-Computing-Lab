@@ -2,9 +2,11 @@
 
 import os
 import re
+import sqlite3
 import stat
+from contextlib import closing
 from pathlib import Path, PurePosixPath
-from tempfile import SpooledTemporaryFile
+from tempfile import SpooledTemporaryFile, TemporaryDirectory
 from unicodedata import normalize
 from zipfile import ZIP_DEFLATED, ZIP_STORED, ZipFile
 
@@ -111,8 +113,12 @@ def build_handoff_backup(workflow):
     try:
         with workflow.content_write() as db:
             with ZipFile(output, 'w', compression=ZIP_DEFLATED) as archive:
-                # The same connection includes any pending journal recovery. Return only after commit.
-                archive.writestr(DATABASE_MEMBER, db.serialize())
+                # Dump the same transaction used to recover updates and lock the published files.
+                with TemporaryDirectory(prefix='handoff-snapshot-') as temporary:
+                    snapshot_path = Path(temporary) / 'workflow.sqlite3'
+                    with closing(sqlite3.connect(snapshot_path)) as snapshot:
+                        snapshot.executescript('\n'.join(db.iterdump()))
+                    archive.write(snapshot_path, DATABASE_MEMBER)
                 for root, prefix in ((workflow.content_root, CONTENT_PREFIX), (workflow.file_dir, DRAFT_PREFIX)):
                     for member, path in _backup_files(root, prefix):
                         archive.write(path, member)

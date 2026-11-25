@@ -45,7 +45,7 @@ class NewsEditorPreviewTests(unittest.TestCase):
         return client
 
     def test_legacy_review_opens_owner_pages_without_authorizing_legacy_writes(self):
-        with patch.dict(self.app.config, ADMIN_HANDOFF_PREVIEW=True):
+        with patch.dict(self.app.config, ADMIN_HANDOFF_ENABLED=True):
             owner = self.sign_in('owner')
             editor = self.sign_in('editor')
             anonymous = self.app.test_client()
@@ -68,7 +68,7 @@ class NewsEditorPreviewTests(unittest.TestCase):
             self.assertEqual(owner.get('/admin/content?action=delete&item_type=news&id=news_003').status_code, 403)
 
     def test_visitor_preview_returns_to_the_same_role(self):
-        with patch.dict(self.app.config, ADMIN_HANDOFF_PREVIEW=True):
+        with patch.dict(self.app.config, ADMIN_HANDOFF_ENABLED=True):
             for role, dashboard in (('owner', '/admin'), ('editor', '/editor/')):
                 with self.subTest(role=role):
                     browser = self.sign_in(role)

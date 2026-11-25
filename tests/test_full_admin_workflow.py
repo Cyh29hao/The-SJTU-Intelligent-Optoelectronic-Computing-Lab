@@ -28,11 +28,19 @@ def field_value(response, name):
     return re.search(rf'name="{name}" value="([^"]*)"', response.get_data(as_text=True))[1]
 
 
-def isolated_app(state_dir, module_name):
+def isolated_app(state_dir, module_name, *, production=False):
     with patch.dict(os.environ):
         credentials = prepare_preview(state_dir)
         passwords = json.loads(credentials.read_text(encoding='utf-8'))
         os.environ['ADMIN_HANDOFF_PREVIEW'] = '1'
+        if production:
+            os.environ.pop('NEWS_EDITOR_PREVIEW')
+            os.environ.pop('ADMIN_HANDOFF_PREVIEW')
+            os.environ.update(
+                APP_MODE='production',
+                ADMIN_HANDOFF_PRODUCTION='1',
+                ADMIN_HANDOFF_HOST='lab.example.edu',
+            )
         spec = importlib.util.spec_from_file_location(module_name, ROOT / 'app.py')
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
@@ -46,6 +54,7 @@ class FullAdminWorkflowTests(unittest.TestCase):
         state = tempfile.TemporaryDirectory(prefix='full-admin-test-')
         cls.addClassCleanup(state.cleanup)
         module, cls.passwords = isolated_app(Path(state.name), 'full_admin_test_app')
+        cls.module = module
         cls.app = module.app
         cls.content = Path(module.CONTENT_ROOT)
 
@@ -84,6 +93,10 @@ class FullAdminWorkflowTests(unittest.TestCase):
             self.assertEqual(editor.get(url).status_code, 200)
         for url in ('/admin/settings', '/admin/analytics', '/admin/download-logs.csv', '/editor/access'):
             self.assertEqual(editor.get(url).status_code, 403)
+        with patch.object(self.module, '_load_resource_open_rows', side_effect=AssertionError('editor read analytics')):
+            content_page = editor.get('/admin/content').get_data(as_text=True)
+        self.assertNotIn('Tracked opens:', content_page)
+        self.assertIn('Tracked opens:', owner.get('/admin/content').get_data(as_text=True))
         with ZipFile(BytesIO(owner.get('/admin/download-site-content.zip').data)) as backup:
             self.assertTrue({'articles.json', 'people.json', 'news.json', 'site.json'} <= set(backup.namelist()))
         self.assertEqual(owner.get('/admin/download-logs.csv').status_code, 200)
@@ -117,6 +130,47 @@ class FullAdminWorkflowTests(unittest.TestCase):
             self.assertEqual(config['lab_name_short'], 'Owner branding')
         finally:
             config_path.write_bytes(original)
+
+    def test_production_editor_uses_the_official_host_and_persists_drafts(self):
+        with tempfile.TemporaryDirectory(prefix='handoff-prod-test-') as tmp:
+            state = Path(tmp)
+            module, passwords = isolated_app(state, 'handoff_production_test', production=True)
+            https = 'https://lab.example.edu'
+            anon = module.app.test_client()
+            self.assertEqual(anon.get('/').status_code, 200)
+            self.assertEqual(anon.get('/admin', base_url='http://192.0.2.1').status_code, 403)
+            self.assertEqual(anon.get('/editor/login', base_url='https://other.example.edu').status_code, 403)
+            self.assertEqual(anon.get('/admin', base_url=https).location, '/editor/login')
+            for role in ('editor', 'owner'):
+                with self.subTest(role=role):
+                    client = module.app.test_client()
+                    login = client.get('/editor/login', base_url=https)
+                    self.assertNotIn('本机预览', login.get_data(as_text=True))
+                    signed_in = client.post('/editor/login', base_url=https, data={
+                        'username': role, 'password': passwords[role], 'csrf_token': field_value(login, 'csrf_token'),
+                    })
+                    self.assertEqual(signed_in.location, '/admin')
+                    self.assertIn('Secure; HttpOnly;', signed_in.headers['Set-Cookie'])
+                    self.assertIn('SameSite=Lax', signed_in.headers['Set-Cookie'])
+                    self.assertEqual(client.get('/admin/settings', base_url=https).status_code,
+                                     200 if role == 'owner' else 403)
+                    if role == 'editor':
+                        content = client.get('/admin/content', base_url=https)
+                        created = client.post('/admin/content', base_url=https, data={
+                            'action': 'add', 'item_type': 'news', 'title_zh': '正式模式草稿验证',
+                            'csrf_token': field_value(content, 'csrf_token'),
+                        })
+                        self.assertEqual(created.status_code, 303)
+                        self.assertEqual(anon.get(created.location, base_url=https).status_code, 302)
+                        record_id = parse_qs(urlsplit(created.location).query)['draft'][0]
+                        preview_path = f'/editor/records/news/{record_id}/preview'
+                        self.assertEqual(anon.get(preview_path, base_url=https).status_code, 302)
+                        public_path = f'/news/{record_id}'
+                        self.assertEqual(anon.get(public_path, base_url=https).status_code, 404)
+            restarted, _ = isolated_app(state, 'handoff_production_restart_test', production=True)
+            draft = restarted.app.config['CONTENT_WORKFLOW'].get('news', record_id)
+            self.assertEqual(draft['draft']['title_zh'], '正式模式草稿验证')
+            self.assertIsNone(draft['published'])
 
     def test_legacy_image_upload_tools_preserve_the_published_record(self):
         owner, _ = self.sign_in('owner')

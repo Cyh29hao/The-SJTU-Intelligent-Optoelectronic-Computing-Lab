@@ -1,11 +1,11 @@
 {% macro csrf() -%}
-{% if config.ADMIN_HANDOFF_PREVIEW %}
+{% if config.ADMIN_HANDOFF_ENABLED %}
 <input type="hidden" name="csrf_token" value="{{ preview_csrf_token() }}">
 {% endif %}
 {%- endmacro %}
 
 {% macro revision(value) -%}
-{% if config.ADMIN_HANDOFF_PREVIEW %}
+{% if config.ADMIN_HANDOFF_ENABLED %}
 <input type="hidden" name="revision" value="{{ value }}">
 {% endif %}
 {%- endmacro %}

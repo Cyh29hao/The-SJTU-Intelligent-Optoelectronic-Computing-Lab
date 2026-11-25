@@ -42,40 +42,57 @@ JOIN_FIELDS = {
 }
 
 
-def configure_news_editor(app, seed_news, record_helpers=None):
-    store_path = Path(os.environ['NEWS_EDITOR_DB']).resolve()
+def configure_news_editor(app, content_root, record_helpers, *, production=False, seed_news=()):
+    configured_path = Path(os.environ['NEWS_EDITOR_DB'])
+    if production and not configured_path.is_absolute():
+        raise RuntimeError('Production requires an absolute NEWS_EDITOR_DB path.')
+    store_path = configured_path.resolve()
+    content_root = Path(content_root).resolve()
+    if store_path == content_root or content_root in store_path.parents:
+        raise RuntimeError('Editor state must live outside the published content directory.')
     roles = ('owner', 'editor')
     accounts = {role: os.environ[f'NEWS_EDITOR_{role.upper()}_PASSWORD_HASH'] for role in roles}
     if not all(accounts.values()) or not os.environ.get('APP_SECRET_KEY'):
         raise RuntimeError('The news editor requires separate accounts and a session key.')
+    admin_host = os.environ.get('ADMIN_HANDOFF_HOST', '').strip().lower()
+    if production and not re.fullmatch(r'[a-z0-9-]+(?:\.[a-z0-9-]+)+', admin_host):
+        raise RuntimeError('Production requires ADMIN_HANDOFF_HOST to be the official HTTPS hostname.')
     store_path.parent.mkdir(parents=True, exist_ok=True)
     store = NewsStore(store_path)
     store.initialize(seed_news)
-    full_admin = os.environ.get('ADMIN_HANDOFF_PREVIEW') == '1'
+    full_admin = production or os.environ.get('ADMIN_HANDOFF_PREVIEW') == '1'
     if full_admin:
         from content_workflow import ContentWorkflow
 
-        records = ContentWorkflow(Path(os.environ['CONTENT_ROOT']), store_path.parent / 'record-workflow')
-        records.migrate_news_pilot(store)
+        records = ContentWorkflow(content_root, store_path.parent / 'record-workflow')
+        if not production:
+            records.migrate_news_pilot(store)
         app.config['CONTENT_WORKFLOW'] = records
         app.config['CONTENT_RECORD_HELPERS'] = record_helpers or {}
     app.config.update(
         NEWS_EDITOR_STORE=store,
         NEWS_EDITOR_ACCOUNTS=accounts,
-        ADMIN_HANDOFF_PREVIEW=full_admin,
+        ADMIN_HANDOFF_ENABLED=full_admin,
+        ADMIN_HANDOFF_PREVIEW=not production,
         MAX_CONTENT_LENGTH=24 * 1024 * 1024 if full_admin else MAX_IMAGE_BYTES + 1024 * 1024,
-        SESSION_COOKIE_NAME='opticom_news_preview',
+        SESSION_COOKIE_NAME='session' if production else 'opticom_news_preview',
+        SESSION_COOKIE_SECURE=production,
         SESSION_COOKIE_SAMESITE='Lax',
     )
 
     @app.before_request
-    def restrict_local_preview():
-        if request.remote_addr != '127.0.0.1' or request.host.partition(':')[0] not in ('localhost', '127.0.0.1'):
+    def authorize_admin_request():
+        admin_path = _is_legacy_admin_path()
+        editor_path = _is_editor_path()
+        host = request.host.partition(':')[0].lower()
+        if production and (admin_path or editor_path) and host != admin_host:
             abort(403)
-        if not _is_legacy_admin_path():
+        if not production and (request.remote_addr != '127.0.0.1' or host not in ('localhost', '127.0.0.1')):
+            abort(403)
+        if not admin_path:
             return None
         entry = request.path in ('/admin', '/admin/') and request.method in ('GET', 'HEAD')
-        if not app.config['ADMIN_HANDOFF_PREVIEW']:
+        if not app.config['ADMIN_HANDOFF_ENABLED']:
             if entry:
                 return redirect(url_for('news_editor.dashboard'))
             abort(403)
@@ -92,11 +109,12 @@ def configure_news_editor(app, seed_news, record_helpers=None):
                 abort(403)
         else:
             _authorize_legacy_request(role)
-        g.preview_owner_admin_read = True
+        g.handoff_admin_access = True
+        g.handoff_role = role
 
     @app.after_request
     def protect_legacy_admin_responses(response):
-        if _is_legacy_admin_path() or session.get('news_visitor_view'):
+        if _is_legacy_admin_path() or _is_editor_path() or session.get('news_visitor_view'):
             return protect_private_responses(response)
         return response
 
@@ -113,6 +131,10 @@ def configure_news_editor(app, seed_news, record_helpers=None):
 
 def _is_legacy_admin_path():
     return request.path == '/admin' or request.path.startswith('/admin/')
+
+
+def _is_editor_path():
+    return request.path == '/editor' or request.path.startswith('/editor/')
 
 
 def _authorize_legacy_request(role):
@@ -289,6 +311,9 @@ def login():
         ), 401
     session.pop('news_csrf_token', None)
     session.pop('news_visitor_view', None)
+    session.pop('is_admin', None)
+    session.pop('admin_shadow', None)
+    session['admin_login_at'] = time.strftime('%Y-%m-%d %H:%M:%S')
     session['news_role'] = username
     session['news_login_fingerprint'] = _fingerprint(password_hash)
     session['news_valid_until'] = int(time.time()) + SESSION_SECONDS
@@ -301,13 +326,13 @@ def _editor_destination(role, preview_id, next_record=None):
     if preview_id:
         return url_for('news_editor.preview', news_id=preview_id)
     return url_for('admin_dashboard' if current_app.config.get('CONTENT_WORKFLOW') is not None
-                   or role == 'owner' and current_app.config['ADMIN_HANDOFF_PREVIEW']
+                   or role == 'owner' and current_app.config['ADMIN_HANDOFF_ENABLED']
                    else 'news_editor.dashboard')
 
 
 @editor.post('/logout')
 def logout():
-    for name in ('news_role', 'news_login_fingerprint', 'news_valid_until', 'news_csrf_token', 'news_visitor_view'):
+    for name in ('news_role', 'news_login_fingerprint', 'news_valid_until', 'news_csrf_token', 'news_visitor_view', 'admin_login_at'):
         session.pop(name, None)
     return redirect(url_for('news_editor.login'), code=303)
 
@@ -315,7 +340,7 @@ def logout():
 @editor.post('/view-as-visitor')
 @_editors_only
 def view_as_visitor():
-    if not current_app.config['ADMIN_HANDOFF_PREVIEW']:
+    if not current_app.config['ADMIN_HANDOFF_ENABLED']:
         abort(404)
     session['news_visitor_view'] = True
     return redirect(url_for('index'), code=303)
@@ -324,7 +349,7 @@ def view_as_visitor():
 @editor.post('/return-from-visitor')
 def return_from_visitor():
     role = _account_role()
-    if not current_app.config['ADMIN_HANDOFF_PREVIEW'] or not session.get('news_visitor_view') or role is None:
+    if not current_app.config['ADMIN_HANDOFF_ENABLED'] or not session.get('news_visitor_view') or role is None:
         abort(403)
     session.pop('news_visitor_view', None)
     return redirect(_editor_destination(role, None), code=303)
