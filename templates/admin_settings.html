@@ -1,4 +1,5 @@
 {% extends "admin_layout.html" %}
+{% from "admin_workflow_macros.html" import csrf with context %}
 
 {% block admin_body %}
 {% set active_section = request.args.get('section', '') %}
@@ -7,6 +8,7 @@
     <summary>⚙️ Branding</summary>
     <div class="details-body">
     <form method="POST" action="{{ url_for(module_endpoint) }}">
+        {{ csrf() }}
         <input type="hidden" name="action" value="edit_site_branding">
         <input type="hidden" name="item_type" value="site">
         <label>Lab Name (Header / Short)</label>
@@ -39,6 +41,7 @@
     <summary>🔗 Friendly Links</summary>
     <div class="details-body">
     <form method="POST" action="{{ url_for(module_endpoint) }}">
+        {{ csrf() }}
         <input type="hidden" name="action" value="edit_friend_links">
         <input type="hidden" name="item_type" value="site">
         <div class="settings-grid">
@@ -63,6 +66,7 @@
     <summary>💡 Research Focus</summary>
     <div class="details-body">
     <form method="POST" action="{{ url_for(module_endpoint) }}">
+        {{ csrf() }}
         <input type="hidden" name="action" value="edit_research_highlights">
         <input type="hidden" name="item_type" value="site">
         {% for highlight in site_cfg.research_highlights %}
@@ -87,6 +91,7 @@
     <summary>🏷️ People Tags</summary>
     <div class="details-body">
     <form method="POST" action="{{ url_for(module_endpoint) }}">
+        {{ csrf() }}
         <input type="hidden" name="action" value="edit_person_tags">
         <input type="hidden" name="item_type" value="site">
         <label>Available Tags</label>

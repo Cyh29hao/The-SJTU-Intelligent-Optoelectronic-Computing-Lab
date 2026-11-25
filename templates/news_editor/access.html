@@ -1,0 +1,47 @@
+{% extends 'news_editor/layout.html' %}
+{% block title %}脚本凭证{% endblock %}
+
+{% block body %}
+<a class="editor-back-link" href="{{ url_for('news_editor.dashboard') }}">← {{ '返回后台总览' if config.CONTENT_WORKFLOW else '返回新闻列表' }}</a>
+<header class="editor-heading">
+  <h1>脚本凭证</h1>
+  <p class="editor-muted">脚本可以用此凭证提交{{ '论文和新闻' if config.CONTENT_WORKFLOW else '新闻' }}草稿。内容编辑在后台预览后发布。</p>
+</header>
+
+<section class="editor-panel editor-stack" aria-labelledby="token-heading">
+  <div class="editor-section-heading">
+    <h2 id="token-heading">草稿接口</h2>
+    {% if token_configured %}
+    <span class="editor-status editor-status-live">已有有效凭证</span>
+    {% else %}
+    <span class="editor-status editor-status-draft">尚无凭证</span>
+    {% endif %}
+  </div>
+  {% if issued_token %}
+  <div class="editor-token-block">
+    <label class="editor-field">
+      <span>新凭证</span>
+      <input class="editor-token" type="text" value="{{ issued_token }}" readonly autocomplete="off" spellcheck="false">
+    </label>
+    <p class="editor-muted">请现在复制并妥善保管。离开页面后，凭证只可重新生成。</p>
+  </div>
+  {% endif %}
+  {% if token_configured %}
+  <p class="editor-muted">生成新凭证时，原凭证立即失效。</p>
+  {% endif %}
+  <div class="editor-form-actions">
+    <form method="post" action="{{ url_for('news_editor.access') }}">
+      <input type="hidden" name="csrf_token" value="{{ editor_csrf_token() }}">
+      <input type="hidden" name="action" value="issue">
+      <button class="editor-button editor-button-primary" type="submit">生成新凭证</button>
+    </form>
+    {% if token_configured %}
+    <form method="post" action="{{ url_for('news_editor.access') }}">
+      <input type="hidden" name="csrf_token" value="{{ editor_csrf_token() }}">
+      <input type="hidden" name="action" value="revoke">
+      <button class="editor-button editor-button-danger" type="submit">撤销当前凭证</button>
+    </form>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

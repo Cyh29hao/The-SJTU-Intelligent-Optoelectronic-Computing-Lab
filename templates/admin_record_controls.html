@@ -1,0 +1,60 @@
+{% from 'admin_workflow_macros.html' import csrf, revision, transition with context %}
+{% set sections = {'article': 'publications', 'person': 'people', 'news': 'news'} %}
+{% set edit_url = url_for('admin_content', section=sections[preview_record.kind], draft=preview_record.id) ~ '#' ~ preview_record.kind ~ '-' ~ preview_record.id %}
+<aside class="news-draft-banner" aria-label="预览操作">
+    <strong>草稿预览 · 本机演示</strong>
+    {% if preview_error %}<p role="alert">{{ preview_error }}</p>{% endif %}
+    {% if preview_record.archived %}
+    {% if admin_role == 'owner' %}
+    <p>这条内容在回收站中，恢复后可继续编辑。</p>
+    {{ transition(preview_record.kind, preview_record.id, preview_record.revision, 'restore', '恢复草稿') }}
+    {% else %}
+    <p>这条内容在回收站中，站长可以恢复。</p>
+    {% endif %}
+    {% elif preview_record.conflicted %}
+    <p role="alert">草稿保存后，公开内容发生了变化。草稿已保留，请先核对当前公开版本，再决定是否继续发布。</p>
+    <div class="inline-actions">
+        {% if preview_record.published %}
+        <a href="{{ url_for(preview_record.kind ~ '_detail', id=preview_record.id) }}" target="_blank" rel="noopener noreferrer">查看当前公开版本</a>
+        {% else %}
+        <span>当前没有公开版本。</span>
+        {% endif %}
+        <a href="{{ edit_url }}">继续编辑草稿</a>
+    </div>
+    {% if preview_record.attachments %}
+    <ul>
+        {% for attachment in preview_record.attachments %}
+        <li><a href="{{ url_for('news_editor.record_file', kind=preview_record.kind, record_id=preview_record.id, filename=attachment.filename) }}">{{ attachment.name }}</a></li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+    {{ transition(preview_record.kind, preview_record.id, preview_record.revision, 'rebase', '已核对，以当前公开状态为基准') }}
+    {% else %}
+    <p>发布后，本机预览站的公开页面将展示这个版本和所选附件。</p>
+    <form method="post" action="{{ url_for('news_editor.record_action', kind=preview_record.kind, record_id=preview_record.id) }}">
+        {{ csrf() }}
+        {{ revision(preview_record.revision) }}
+        <input type="hidden" name="action" value="publish">
+        {% if preview_record.attachments %}
+        {% set public_filenames = ((preview_record.published.attachments|default([])) if preview_record.published else [])|map(attribute='filename')|list %}
+        <fieldset style="flex-basis:100%; border:1px solid var(--border);">
+            <legend>随此版本公开的 PDF</legend>
+            {% for attachment in preview_record.attachments %}
+            <div>
+                <label>
+                    <input name="published_attachments" type="checkbox" value="{{ attachment.filename }}"{% if attachment.filename in public_filenames %} checked{% endif %}>
+                    {{ attachment.name }} · {{ ((attachment.size or 0) / 1024)|round|int }} KB
+                </label>
+                <a href="{{ url_for('news_editor.record_file', kind=preview_record.kind, record_id=preview_record.id, filename=attachment.filename) }}">查看附件</a>
+            </div>
+            {% endfor %}
+        </fieldset>
+        {% endif %}
+        <button type="submit">发布这版内容</button>
+        <a href="{{ edit_url }}">继续编辑</a>
+    </form>
+    {% if preview_record.published %}
+    {{ transition(preview_record.kind, preview_record.id, preview_record.revision, 'withdraw', '撤回公开版本') }}
+    {% endif %}
+    {% endif %}
+</aside>

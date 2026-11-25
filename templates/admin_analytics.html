@@ -1,4 +1,5 @@
 {% extends "admin_layout.html" %}
+{% from "admin_workflow_macros.html" import csrf with context %}
 
 {% block admin_body %}
 <div class="stats-grid">
@@ -111,6 +112,7 @@
             <h3 style="margin-top:0; color:#8b2f2f;">Danger Zone: Clear Analytics Data</h3>
             <p class="helper-note">This clears the Supabase analytics tables <code>page_views</code> and <code>resource_opens</code>. Download a backup first if you need to preserve the current data.</p>
             <form method="POST" action="{{ url_for('admin_analytics') }}">
+                {{ csrf() }}
                 <input type="hidden" name="action" value="clear_supabase_analytics">
                 <input type="hidden" name="item_type" value="site">
                 <label>Type CLEAR to confirm</label>
@@ -121,7 +123,11 @@
 
         <div id="git-sync" style="margin-top:26px; padding-top:20px; border-top:1px solid #e3eaf2;">
             <h3 style="margin-top:0;">Git Sync Up</h3>
+            {% if config.ADMIN_HANDOFF_PREVIEW %}
+            <p class="helper-note">将 <code>site_content/</code> 的改动提交并推送到本机隔离远端。</p>
+            {% else %}
             <p class="helper-note">Commit and push the current <code>site_content/</code> changes from this server to GitHub. This keeps online edits and the repository in sync.</p>
+            {% endif %}
 
             <div class="helper-note" style="margin-bottom:12px;">
                 <strong>Branch:</strong> {{ local_cms_status.branch }}<br>
@@ -144,11 +150,12 @@
 
             {% if local_cms_status.allow_publish %}
             <form method="POST" action="{{ url_for('admin_analytics') }}">
+                {{ csrf() }}
                 <input type="hidden" name="action" value="publish_content_to_github">
                 <input type="hidden" name="item_type" value="site">
                 <label>Commit Message</label>
                 <input name="commit_message" placeholder="Update site content from admin">
-                <button type="submit" {% if not local_cms_status.has_changes %}disabled style="opacity:0.55; cursor:not-allowed;"{% endif %}>Publish site_content to GitHub</button>
+                <button type="submit" {% if not local_cms_status.has_changes %}disabled style="opacity:0.55; cursor:not-allowed;"{% endif %}>{{ '推送内容到本机远端' if config.ADMIN_HANDOFF_PREVIEW else 'Publish site_content to GitHub' }}</button>
             </form>
             {% else %}
             <p class="helper-note">Git sync is unavailable because the repository branch or remote could not be detected on this server.</p>
@@ -157,7 +164,11 @@
 
         <div id="git-sync-down" style="margin-top:26px; padding-top:20px; border-top:1px solid #e3eaf2;">
             <h3 style="margin-top:0;">Git Sync Down</h3>
+            {% if config.ADMIN_HANDOFF_PREVIEW %}
+            <p class="helper-note">从本机隔离远端检查更新。同步须为快进，并且变更仅限 <code>site_content/</code>。</p>
+            {% else %}
             <p class="helper-note">Fetch GitHub first, then only allow a fast-forward sync when the incoming changes are limited to <code>site_content/</code>.</p>
+            {% endif %}
 
             <div class="helper-note" style="margin-bottom:12px;">
                 <strong>Branch:</strong> {{ sync_down_status.branch }}<br>
@@ -201,9 +212,10 @@
             {% endif %}
 
             <form method="POST" action="{{ url_for('admin_analytics') }}">
+                {{ csrf() }}
                 <input type="hidden" name="action" value="sync_content_from_github">
                 <input type="hidden" name="item_type" value="site">
-                <button type="submit" {% if not sync_down_status.can_sync %}disabled style="opacity:0.55; cursor:not-allowed;"{% endif %}>Sync site_content from GitHub</button>
+                <button type="submit" {% if not sync_down_status.can_sync %}disabled style="opacity:0.55; cursor:not-allowed;"{% endif %}>{{ '从本机远端同步内容' if config.ADMIN_HANDOFF_PREVIEW else 'Sync site_content from GitHub' }}</button>
             </form>
         </div>
     </div>

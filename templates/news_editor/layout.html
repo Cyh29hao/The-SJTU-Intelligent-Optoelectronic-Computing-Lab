@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}新闻管理{% endblock %} · OPTICompt Lab</title>
+  {% if asset_image_url is defined %}
+  <link rel="icon" type="image/png" href="{{ asset_image_url('site', 'favicon-32.png') }}">
+  {% endif %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/news_editor.css') }}">
+</head>
+<body>
+  <header class="editor-header">
+    <div class="editor-header-inner">
+      <a class="editor-brand" href="{{ url_for('news_editor.dashboard' if editor_role else 'news_editor.login') }}">
+        {% if site_cfg_global is defined %}
+        <img src="{{ asset_image_url('site', site_cfg_global.logo_filename) }}" width="34" height="34" alt="">
+        {% endif %}
+        <span><strong>OPTICompt Lab</strong><span class="editor-brand-caption">{{ '网站管理' if config.CONTENT_WORKFLOW else '新闻管理' }} · 本机预览</span></span>
+      </a>
+      <nav class="editor-nav" aria-label="后台导航">
+        {% if editor_role %}
+        <a href="{{ url_for('news_editor.dashboard') }}"{% if request.endpoint == 'news_editor.dashboard' %} aria-current="page"{% endif %}>新闻列表</a>
+        {% if editor_role == 'owner' %}
+        <a href="{{ url_for('news_editor.access') }}"{% if request.endpoint == 'news_editor.access' %} aria-current="page"{% endif %}>脚本凭证</a>
+        {% endif %}
+        {% endif %}
+        <a href="{{ url_for('index') }}">返回预览首页</a>
+        {% if editor_role %}
+        {% if config.ADMIN_HANDOFF_PREVIEW %}
+        <form action="{{ url_for('news_editor.view_as_visitor') }}" method="post">
+          <input type="hidden" name="csrf_token" value="{{ editor_csrf_token() }}">
+          <button class="editor-nav-button" type="submit">以访客身份查看</button>
+        </form>
+        {% endif %}
+        <form action="{{ url_for('news_editor.logout') }}" method="post">
+          <input type="hidden" name="csrf_token" value="{{ editor_csrf_token() }}">
+          <button class="editor-nav-button" type="submit">退出</button>
+        </form>
+        {% endif %}
+      </nav>
+    </div>
+  </header>
+  <main class="editor-main{% block main_class %}{% endblock %}">
+    {% for notice in get_flashed_messages() %}
+    <p class="editor-alert editor-alert-success" role="status">{{ notice }}</p>
+    {% endfor %}
+    {% if error %}
+    <p class="editor-alert editor-alert-error" role="alert">{{ error }}</p>
+    {% endif %}
+    {% block body %}{% endblock %}
+  </main>
+</body>
+</html>

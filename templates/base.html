@@ -57,6 +57,12 @@
       <a href="{{ url_for('admin_return') }}" class="admin-return-link">{{ t('return_to_admin') }}</a>
       {% endif %}
     </header>
+    {% if preview_visitor_mode %}
+    <form class="admin-return-form" action="{{ url_for('news_editor.return_from_visitor') }}" method="post">
+      <input type="hidden" name="csrf_token" value="{{ preview_csrf_token() }}">
+      <button type="submit">{{ t('return_to_admin') }}</button>
+    </form>
+    {% endif %}
 
     <!-- Page Content -->
     <div class="content-card{% if request.path == '/' %} content-card-home{% endif %}">

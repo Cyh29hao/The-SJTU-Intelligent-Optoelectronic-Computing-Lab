@@ -2,34 +2,56 @@
 
 {% block admin_body %}
 <div class="home-grid">
+    {% set full_admin = config.ADMIN_HANDOFF_PREVIEW %}
+    {% set full_owner = not full_admin or admin_role == 'owner' %}
+    {% if full_owner %}
     <div class="section-card" style="margin-bottom:20px;">
         <div class="inline-actions" style="justify-content:space-between; align-items:flex-start;">
             <div style="min-width:0;">
-                <h3 style="margin-bottom:8px;">GitHub Sync Status</h3>
-                <p class="helper-note" style="margin:0;">{{ git_sync_summary.description }}</p>
+                <h3 style="margin-bottom:8px;">{{ '内容 Git 同步' if full_admin else 'GitHub Sync Status' }}</h3>
+                <p class="helper-note" style="margin:0;">{{ git_sync_summary.description|replace('GitHub', 'the local preview remote') if full_admin else git_sync_summary.description }}</p>
                 <p class="helper-note" style="margin:8px 0 0;">Branch: <span class="mono">{{ sync_down_status.branch }}</span></p>
             </div>
             <span class="sync-pill {{ git_sync_summary.kind }}">{{ git_sync_summary.label }}</span>
         </div>
     </div>
+    {% if full_admin %}
+    <div class="quick-actions" aria-label="内容备份">
+        <a href="{{ url_for('admin_handoff_backup') }}">下载完整恢复包</a>
+        <a href="{{ url_for('download_site_content_zip') }}">下载内容 ZIP（兼容旧版）</a>
+    </div>
+    {% endif %}
+    {% endif %}
+
+    {% if full_admin %}
+    <div class="quick-actions" aria-label="新建内容">
+        <a class="home" href="{{ url_for('admin_content', section='publications', new=1) }}#publications-section">新建论文</a>
+        <a class="home" href="{{ url_for('admin_content', section='people', new=1) }}#people-section">新建人员</a>
+        <a class="home" href="{{ url_for('admin_content', section='news', new=1) }}#news-section">新建新闻</a>
+    </div>
+    {% endif %}
 
     <div class="card-grid two-by-two">
         <a href="{{ url_for('admin_content') }}" class="module-card large" style="background:linear-gradient(145deg,#4c7cff 0%,#275edb 100%);">
             <div class="module-card-title">✍️ Edit Content</div>
             <div class="module-card-text">Homepage, publications, people, and news.</div>
         </a>
+        {% if full_owner %}
         <a href="{{ url_for('admin_analytics') }}" class="module-card large" style="background:linear-gradient(145deg,#2aa886 0%,#1f8a6d 100%);">
             <div class="module-card-title">📊 View Analytics</div>
-            <div class="module-card-text">Analytics, exports, and GitHub sync up/down for site content.</div>
+            <div class="module-card-text">{{ '访问统计、导出和本机内容 Git 同步。' if full_admin else 'Analytics, exports, and GitHub sync up/down for site content.' }}</div>
         </a>
+        {% endif %}
         <a href="{{ url_for('admin_assets') }}" class="module-card large" style="background:linear-gradient(145deg,#7f66dd 0%,#654bc5 100%);">
             <div class="module-card-title">🖼️ Manage Assets</div>
-            <div class="module-card-text">Logo, people photos, article thumbnails, news images, and footer-link icons.</div>
+            <div class="module-card-text">{{ 'People photos, article thumbnails, and news images.' if not full_owner else 'Logo, people photos, article thumbnails, news images, and footer-link icons.' }}</div>
         </a>
+        {% if full_owner %}
         <a href="{{ url_for('admin_settings') }}" class="module-card large" style="background:linear-gradient(145deg,#f39c4d 0%,#e67e22 100%);">
             <div class="module-card-title">⚙️ Site Settings</div>
             <div class="module-card-text">Branding, links, research focus, tags, and version.</div>
         </a>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

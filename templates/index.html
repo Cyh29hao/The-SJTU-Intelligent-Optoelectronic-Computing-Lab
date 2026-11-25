@@ -39,53 +39,89 @@
             <span class="portal-brand-accent">Com</span><span class="portal-brand-accent">p</span>u<span class="portal-brand-accent">t</span>ing
           </p>
         </div>
-        <p class="portal-hero-summary">
-          {{ lang_value(site_cfg, 'hero_summary')|trim }}
-        </p>
+        <p class="portal-hero-summary">{{ lang_value(site_cfg, 'hero_summary')|trim }}</p>
       </div>
 
       {% if site_cfg.research_highlights %}
       <div class="portal-hero-side">
-        <div class="portal-hero-panel" data-highlight-panel>
-          <div class="portal-hero-panel-label">{{ t('research_focus') }}</div>
+        <details class="portal-hero-panel" data-highlight-panel open>
+          <summary class="portal-hero-panel-label">{{ t('research_focus') }}</summary>
           <div class="portal-highlights portal-highlights-hero">
-            <div class="portal-highlight-nav" role="tablist" aria-label="Research focus">
+            <div class="portal-highlight-nav" role="group" aria-label="{{ t('research_focus') }}">
               {% for highlight in site_cfg.research_highlights %}
               <button
                 type="button"
                 class="portal-highlight-trigger{% if loop.first %} is-active{% endif %}"
                 data-highlight-index="{{ loop.index0 }}"
-                aria-selected="{{ 'true' if loop.first else 'false' }}"
+                aria-pressed="{{ 'true' if loop.first else 'false' }}"
+                aria-controls="home-research-{{ loop.index }}"
               >
-                {{ lang_value(highlight, 'title').replace(' ', '<br>', 1)|safe }}
+                {{ lang_value(highlight, 'title') }}
               </button>
               {% endfor %}
             </div>
             <div class="portal-highlight-display">
               {% for highlight in site_cfg.research_highlights %}
-              <article class="portal-highlight-card{% if loop.first %} is-active{% endif %}" data-highlight-panel-index="{{ loop.index0 }}">
-                <div class="portal-highlight-index">0{{ loop.index }}</div>
-                <h4>{{ lang_value(highlight, 'title').replace(' ', '<br>', 1)|safe }}</h4>
+              <article class="portal-highlight-card{% if loop.first %} is-active{% endif %}" id="home-research-{{ loop.index }}">
+                <h4>{{ lang_value(highlight, 'title') }}</h4>
                 <p>{{ lang_value(highlight, 'summary') }}</p>
               </article>
               {% endfor %}
             </div>
           </div>
-        </div>
+        </details>
       </div>
       {% endif %}
     </div>
   </div>
 </section>
 
-<section class="portal-carousel-section">
+{% if latest_news or featured_articles %}
+<div class="portal-home-feed{% if latest_news and featured_articles %} portal-home-feed-split{% endif %}">
+{% if latest_news %}
+<section class="portal-home-news" aria-labelledby="home-news-heading">
   <div class="portal-section-head">
-    <h3>{{ t('selected_publications') }}</h3>
+    <h3 id="home-news-heading">{{ t('latest_news') }}</h3>
+    <a href="{{ url_for('news') }}" class="portal-inline-link">{{ t('view_all_news') }}</a>
+  </div>
+  <ul class="portal-latest-news-card portal-latest-news-list">
+    {% for news_item in latest_news %}
+    <li class="portal-latest-news-item">
+      <time datetime="{{ news_item.date }}" class="portal-news-meta">{{ news_item.date }}</time>
+      <a href="{{ url_for('news_detail', id=news_item.id) }}" class="portal-news-title portal-news-title-inline">{{ lang_value(news_item, 'title') }}</a>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% if featured_articles %}
+<section class="portal-carousel-section" aria-labelledby="home-publications-heading">
+  <div class="portal-section-head">
+    <h3 id="home-publications-heading">{{ t('selected_publications') }}</h3>
   </div>
   <div class="portal-carousel" data-carousel>
     <div class="portal-carousel-track">
       {% for article in featured_articles %}
       <article class="portal-slide{% if loop.first %} is-active{% endif %}">
+        <div class="portal-slide-content">
+          <a href="{{ url_for('article_detail', id=article.id) }}" class="portal-slide-title">{{ article.title }}</a>
+          {% set adc = article.authors_display_count or 3 %}
+          {% set total = article.authors|length %}
+          {% set shown = article.authors[:adc] %}
+          {% set remaining = total - adc %}
+          <p class="portal-slide-authors">
+            {{ shown|join(', ') }}{% if remaining > 0 %} et al.{% endif %}
+          </p>
+          <p class="portal-slide-meta">{{ article.venue }}, {{ article.year }}</p>
+          {% set abstract = lang_value(article, 'abstract') if article.show_abstract_zh else article.abstract %}
+          {% if abstract %}
+          <p class="portal-slide-summary">{{ (abstract[:200] ~ '...') if abstract|length > 200 else abstract }}</p>
+          {% endif %}
+          <div class="portal-slide-actions">
+            <a href="{{ url_for('article_detail', id=article.id) }}" class="portal-slide-link">{{ t('read_article') }} &rarr;</a>
+          </div>
+        </div>
         <div class="portal-slide-media">
           <img
             src="{{ asset_image_url('articles', article.thumbnail_filename) }}"
@@ -97,34 +133,21 @@
             {% if loop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %}
           >
         </div>
-        <div class="portal-slide-content">
-          <div class="portal-slide-index">0{{ loop.index }}</div>
-          <a href="{{ url_for('article_detail', id=article.id) }}" class="portal-slide-title">{{ article.title }}</a>
-          {% set adc = article.authors_display_count or 3 %}
-          {% set total = article.authors|length %}
-          {% set shown = article.authors[:adc] %}
-          {% set remaining = total - adc %}
-          <p class="portal-slide-authors">
-            {{ shown|join(', ') }}{% if remaining > 0 %} et al.{% endif %}
-          </p>
-          <p class="portal-slide-meta">{{ article.venue }}, {{ article.year }}</p>
-          <p class="portal-slide-summary">
-            {{ (article.abstract[:200] ~ '...') if article.abstract and article.abstract|length > 200 else article.abstract }}
-          </p>
-          <div class="portal-slide-actions">
-            <a href="{{ url_for('article_detail', id=article.id) }}" class="portal-slide-link">{{ t('read_article') }} &rarr;</a>
-          </div>
-        </div>
       </article>
       {% endfor %}
     </div>
+    {% if featured_articles|length > 1 %}
     <div class="portal-carousel-dots">
       {% for article in featured_articles %}
-      <button type="button" class="portal-dot{% if loop.first %} is-active{% endif %}" data-slide-index="{{ loop.index0 }}" aria-label="Go to slide {{ loop.index }}"></button>
+      <button type="button" class="portal-dot{% if loop.first %} is-active{% endif %}" aria-label="{{ article.title }}"{% if loop.first %} aria-current="true"{% endif %}></button>
       {% endfor %}
     </div>
+    {% endif %}
   </div>
 </section>
+{% endif %}
+</div>
+{% endif %}
 
 <section class="portal-lower">
   <div class="portal-home-cell portal-about">
@@ -172,25 +195,6 @@
     </div>
   </div>
   {% endif %}
-
-  <div class="portal-home-cell portal-side-note">
-    {% if latest_news %}
-    <div class="portal-section-head portal-section-head-compact portal-section-head-tightest">
-        <h3>{{ t('latest_news') }}</h3>
-    </div>
-    <div class="portal-latest-news-card">
-        <ul class="portal-latest-news-list">
-          {% for news_item in latest_news[:3] %}
-          <li class="portal-latest-news-item">
-            <span class="portal-news-meta">{{ news_item.date }}</span>
-            <a href="{{ url_for('news_detail', id=news_item.id) }}" class="portal-news-title portal-news-title-inline">{{ lang_value(news_item, 'title') }}</a>
-          </li>
-          {% endfor %}
-        </ul>
-        <a href="{{ url_for('news') }}" class="portal-inline-link">{{ t('view_all_news') }}</a>
-    </div>
-    {% endif %}
-  </div>
 </section>
 </div>
 
@@ -208,23 +212,41 @@
   }
 
   (function() {
+    const mobileLayout = window.matchMedia('(max-width: 820px)');
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+    function watchMedia(query, callback) {
+      if (typeof query.addEventListener === 'function') {
+        query.addEventListener('change', callback);
+      } else if (typeof query.addListener === 'function') {
+        query.addListener(callback);
+      }
+    }
+
     const carousel = document.querySelector('[data-carousel]');
     if (carousel) {
       const slides = Array.from(carousel.querySelectorAll('.portal-slide'));
       const dots = Array.from(carousel.querySelectorAll('.portal-dot'));
       let current = 0;
       let timer = null;
-      const mobileCarouselQuery = window.matchMedia('(max-width: 820px)');
 
       function showSlide(index) {
         current = (index + slides.length) % slides.length;
         slides.forEach((slide, idx) => slide.classList.toggle('is-active', idx === current));
-        dots.forEach((dot, idx) => dot.classList.toggle('is-active', idx === current));
+        dots.forEach((dot, idx) => {
+          dot.classList.toggle('is-active', idx === current);
+          if (idx === current) {
+            dot.setAttribute('aria-current', 'true');
+          } else {
+            dot.removeAttribute('aria-current');
+          }
+        });
       }
 
       function startAutoplay() {
         stopAutoplay();
-        if (slides.length > 1 && !mobileCarouselQuery.matches) {
+        if (slides.length > 1 && !mobileLayout.matches && !reducedMotion.matches &&
+            !carousel.matches(':hover') && !carousel.contains(document.activeElement)) {
           timer = window.setInterval(() => showSlide(current + 1), 5200);
         }
       }
@@ -245,17 +267,26 @@
 
       carousel.addEventListener('mouseenter', stopAutoplay);
       carousel.addEventListener('mouseleave', startAutoplay);
-      if (typeof mobileCarouselQuery.addEventListener === 'function') {
-        mobileCarouselQuery.addEventListener('change', startAutoplay);
-      } else if (typeof mobileCarouselQuery.addListener === 'function') {
-        mobileCarouselQuery.addListener(startAutoplay);
-      }
+      carousel.addEventListener('focusin', stopAutoplay);
+      carousel.addEventListener('focusout', (event) => {
+        if (!carousel.contains(event.relatedTarget)) {
+          window.setTimeout(startAutoplay, 0);
+        }
+      });
+      watchMedia(mobileLayout, startAutoplay);
+      watchMedia(reducedMotion, startAutoplay);
       showSlide(0);
       startAutoplay();
     }
 
     const highlightPanel = document.querySelector('[data-highlight-panel]');
     if (highlightPanel) {
+      function expandResearchOnDesktop() {
+        highlightPanel.open = !mobileLayout.matches;
+      }
+      expandResearchOnDesktop();
+      watchMedia(mobileLayout, expandResearchOnDesktop);
+
       const triggers = Array.from(highlightPanel.querySelectorAll('.portal-highlight-trigger'));
       const cards = Array.from(highlightPanel.querySelectorAll('.portal-highlight-card'));
 
@@ -263,7 +294,7 @@
         triggers.forEach((trigger, idx) => {
           const active = idx === index;
           trigger.classList.toggle('is-active', active);
-          trigger.setAttribute('aria-selected', active ? 'true' : 'false');
+          trigger.setAttribute('aria-pressed', active ? 'true' : 'false');
         });
         cards.forEach((card, idx) => {
           card.classList.toggle('is-active', idx === index);

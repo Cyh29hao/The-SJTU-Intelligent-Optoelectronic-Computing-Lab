@@ -1,0 +1,191 @@
+\documentclass[UTF8,a4paper,zihao=-4,fontset=none]{ctexart}
+\usepackage[left=25mm,right=25mm,top=26mm,bottom=24mm,headheight=15pt]{geometry}
+\usepackage{xcolor,booktabs,tabularx,array,enumitem,fancyhdr,fancyvrb}
+\usepackage[pdfencoding=auto,colorlinks=true]{hyperref}
+
+\setmainfont{Cambria}
+\setsansfont{Arial}
+\setmonofont{Consolas}
+\setCJKmainfont[BoldFont=SimHei]{SimSun}
+\setCJKsansfont[BoldFont=Microsoft YaHei Bold]{Microsoft YaHei}
+\setCJKmonofont{Microsoft YaHei}
+
+\definecolor{navy}{HTML}{183750}
+\definecolor{teal}{HTML}{17665F}
+\definecolor{ink}{HTML}{23384A}
+\definecolor{muted}{HTML}{4D6173}
+\definecolor{line}{HTML}{BFCBD3}
+\definecolor{panel}{HTML}{EDF4F5}
+\hypersetup{
+  pdftitle={课题组网站维护手册},
+  pdfsubject={OPTICompt Lab 本地试用与内容维护},
+  pdfauthor={OPTICompt Lab},
+  linkcolor=teal,urlcolor=teal
+}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+\linespread{1.12}
+\color{ink}
+\setlist[enumerate]{leftmargin=2em,itemsep=4pt,topsep=5pt,parsep=0pt}
+\setlist[itemize]{leftmargin=1.5em,itemsep=4pt,topsep=5pt,parsep=0pt}
+\renewcommand{\arraystretch}{1.32}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcommand{\key}[1]{\textsf{\textbf{#1}}}
+\newcommand{\topic}[1]{\par\vspace{9pt}{\large\sffamily\bfseries\color{navy}#1}\par\vspace{1pt}}
+\newcommand{\pagetopic}[1]{{\LARGE\sffamily\bfseries\color{navy}#1}\par\vspace{5pt}}
+\newcommand{\notice}[1]{%
+  \par\smallskip
+  {\setlength{\fboxsep}{9pt}\noindent\colorbox{panel}{%
+    \parbox{\dimexpr\linewidth-2\fboxsep\relax}{#1}}}\par\smallskip}
+\newcommand{\adminlink}{\href{http://localhost:8000/admin}{\nolinkurl{http://localhost:8000/admin}}}
+\newcommand{\paperref}{\path{docs/paper-agent.md}}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\sffamily\color{navy} OPTICompt Lab}
+\fancyhead[R]{\small\sffamily\color{muted} 网站维护手册}
+\fancyfoot[L]{\small\sffamily\color{muted} 本地试用版}
+\fancyfoot[R]{\small\sffamily\color{navy} \thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0pt}
+\newcommand{\pagerule}{\noindent\textcolor{teal}{\rule{34mm}{1.2pt}}\par\vspace{8pt}}
+
+\begin{document}
+
+{\fontsize{28}{34}\selectfont\sffamily\bfseries\color{navy}课题组网站维护手册}\par
+{\large\sffamily\color{muted} OPTICompt Lab 本地试用与内容交接}\par
+\pagerule
+
+从 \adminlink 登录。试用站只在运行它的这台电脑上访问。文中的「发布」会更新本机前台，可用\key{以访客身份查看}核对展示效果。
+
+\topic{选择账号}
+
+\begin{tabularx}{\linewidth}{@{}p{27mm}Y@{}}
+\toprule
+\key{账号} & \key{可以完成的工作} \\
+\midrule
+\texttt{editor} & 新建和维护论文、人员、新闻，管理内容配图，修改首页与招生文案。可保存草稿、预览、发布、撤回及移至回收站。 \\
+\texttt{owner} & 包含编辑权限。此外可恢复回收站里的条目，管理品牌素材、站点设置、统计、Git、备份及脚本凭证。 \\
+\bottomrule
+\end{tabularx}
+
+\topic{首次打开或重启}
+
+\begin{enumerate}
+  \item 若 \adminlink 已能打开，直接登录。需要启动时，在本机项目目录中打开终端，运行下列命令并保留终端窗口。
+\end{enumerate}
+\begin{Verbatim}[fontsize=\small]
+python -X utf8 -m scripts.run_news_preview --handoff --port 8000
+\end{Verbatim}
+\begin{enumerate}[start=2]
+  \item 启动终端会显示本地账号文件的位置。默认路径如下。用角色名作用户名，从文件中读取对应的密码。
+\end{enumerate}
+\begin{Verbatim}[fontsize=\footnotesize]
+%LOCALAPPDATA%\OPTICompt Lab\News Preview\preview-credentials.json
+\end{Verbatim}
+\begin{enumerate}[start=3]
+  \item 总览可直接点\key{新建论文}、\key{新建人员}、\key{新建新闻}。维护既有内容时进入 \key{Edit Content} 或\key{草稿和回收站}。
+\end{enumerate}
+
+\notice{请把本机账号文件留在本机。交接材料和截图里可以保留账号名，密码与脚本凭证通过单独的可信渠道交接。}
+
+\newpage
+\pagetopic{论文、人员和新闻}
+
+\begin{tabularx}{\linewidth}{@{}p{25mm}Y@{}}
+\toprule
+\key{入口} & \key{录入时核对} \\
+\midrule
+\key{新建论文} & 论文题名、作者顺序、期刊或会议、年份与摘要。可填双语摘要、正文／免费访问／资源链接，选择代码、数据集或补充资料标签。缩略图及补充 PDF 可在同一表单选择。首页轮播、首位与列表加星按论文的实际展示需要设置。 \\
+\key{新建人员} & 姓名、分类、头像，以及需要公开的介绍、个人链接与邮箱。中英文资料和已有标签可分别填写。 \\
+\key{新建新闻} & 日期、标题、正文，并按需要附摘要和配图。可分别设置新闻页置顶及首页隐藏。发布时提供至少一套同语言的标题和正文。 \\
+\bottomrule
+\end{tabularx}
+
+\topic{从保存到发布}
+
+\begin{enumerate}
+  \item 在总览点对应的新建入口。维护已有内容时，在 \key{Edit Content} 展开对应条目。正文和图片改好后点\key{保存草稿}。
+  \item 点\key{预览与发布}。检查标题、图片、链接和公示内容。修改已公开条目时，公开页面仍显示上一次发布的版本，直到这次发布成功。
+  \item 论文草稿若有 PDF，在\key{随此版本公开的 PDF}中打开附件逐项核对，再勾选准备公开的文件。要修改时点\key{继续编辑}。
+  \item 点\key{发布这版内容}。从前台打开该条目复核。可用\key{以访客身份查看}检查公开页面，完成后点\key{返回后台}（英文界面为 \key{Return to Admin}）。
+\end{enumerate}
+
+\topic{撤回、删除与恢复}
+
+\begin{itemize}
+  \item \key{撤回公开版本}会下线当前公开版，草稿仍可继续编辑及重新发布。
+  \item \key{移至回收站}用于删除。需要找回时，由站长到\key{草稿和回收站}选择\key{恢复草稿}，再预览及发布。
+  \item 素材页 \key{Manage Assets} 中上传人员头像、新闻配图和论文缩略图，也会进入相应草稿的预览，确认后再发布。
+\end{itemize}
+
+\newpage
+\pagetopic{让 Agent 整理论文草稿}
+
+\notice{请把我本机的《论文名.pdf》和补充材料《supplement.pdf》整理成论文草稿，上传到课题组本机预览站，给我预览链接和结果报告。原论文作为资料读取，补充 PDF 随草稿上传。}
+
+\topic{一次性准备}
+
+\begin{enumerate}
+  \item 由站长登录，在\key{脚本凭证}页点\key{生成新凭证}。新值只展示一次，生成下一份凭证会使旧值失效。需要停用时点\key{撤销当前凭证}。
+  \item 通过 Agent 运行环境的密钥设置，向当前脚本进程提供 \texttt{OPTICOM\_DRAFT\_TOKEN}。手动运行脚本也可在提示出现后粘贴凭证，输入会隐藏。
+  \item 把上述指令及本机文件路径告诉 Agent，必要时附上机器可读的操作说明 \paperref{}。
+\end{enumerate}
+
+\topic{在项目目录执行}
+
+下面用两个示例路径。将其替换为实际的本机 PDF。
+
+\begin{Verbatim}[fontsize=\small]
+$paper = 'D:\materials\paper.pdf'
+$supp = 'D:\materials\supplement.pdf'
+python -X utf8 -m scripts.upload_paper_draft $paper --supplement $supp --json
+\end{Verbatim}
+
+\begin{itemize}
+  \item \texttt{--supplement} 可重复使用。每个 PDF 上限 20 MiB，附件合计上限 23 MiB。原论文默认仅作资料读取，确认可公开时才选作附件。
+  \item 有明确 DOI 时，可用 DOI 查询 Crossref 核对题名、作者与出版信息。加 \texttt{--offline} 可关闭该查询，加 \texttt{--inspect} 可先检查元数据。
+  \item 报告应给出预览链接、草稿编号、源文件、作者顺序、DOI、附件名称和大小，以及待核对字段。同一材料超时重试时沿用原文件与参数。
+\end{itemize}
+
+\notice{例如，LightGen 论文的 DOI 为 \href{https://doi.org/10.1126/science.adv7434}{\nolinkurl{10.1126/science.adv7434}}，补充文件为 \path{science.adv7434_sm.pdf}。将补充文件交给 \texttt{--supplement}，再打开返回的 \texttt{preview\_url} 检查附件。公开时由编辑在预览页勾选。}
+
+\newpage
+\pagetopic{站点维护与排错}
+
+\topic{从总览进入对应工作区}
+
+\begin{tabularx}{\linewidth}{@{}p{31mm}Y@{}}
+\toprule
+\key{工作区} & \key{常用操作} \\
+\midrule
+\key{Edit Content} & \key{Homepage Copy} 调整首页文字。\key{Join Us} 更新招生说明、方向和关联新闻。分别用 \key{Save Homepage Copy} 或 \key{Save Join Us} 保存。 \\
+\key{Manage Assets} & 站长管理课题组标识、首屏图片和页脚图标。人员、论文和新闻配图可由编辑维护。 \\
+\key{Site Settings} & 站长维护品牌文字、友情链接、研究方向和人员标签。保存后查看前台相关页面。 \\
+\key{View Analytics} & 站长查看访问和论文资源统计，下载访问／资源 CSV 或汇总 ZIP。清空前先导出留存，按页面提示输入 \texttt{CLEAR} 并确认。 \\
+\key{Git 与备份} & 在统计页查看内容同步状态。本地试用只连接本机 Git。同步前核对方向、分支和变更清单。总览可下载\key{完整恢复包}或\key{内容 ZIP（兼容旧版）}。 \\
+\bottomrule
+\end{tabularx}
+
+\topic{遇到问题时}
+
+\begin{enumerate}
+  \item \key{打不开后台}。确认运行的是带 \texttt{--handoff} 的启动命令，并检查终端显示的端口。改用其他端口时，后台地址及脚本的 \texttt{--site} 都要对应调整。
+  \item \key{找不到刚改的内容}。先到\key{草稿和回收站}定位条目。若在草稿列表，进入预览后发布。若提示已有新版本，刷新页面并核对公开版后再保存。
+  \item \key{附件未在前台出现}。确认它已上传到草稿，并在最后发布时勾选。接口超时后可用原文件及参数重试。
+  \item \key{导出、同步或设置入口不可见}。核对当前账号角色。同步失败时保留本机内容，按界面提示确认是否有本地修改、代码变更或分支冲突。
+\end{enumerate}
+
+\topic{从完整恢复包接续}
+
+在项目目录运行下列命令，替换 ZIP 路径和目标目录。请选一个尚未创建的目标目录。
+
+\begin{Verbatim}[fontsize=\footnotesize]
+$zip = '.\opticom_handoff_backup.zip'
+python -X utf8 -m scripts.restore_handoff_backup $zip --state-dir 'D:\LabRestore'
+\end{Verbatim}
+
+按恢复终端提示启动副本，用新账号文件登录。若原试用站仍在运行，启动副本时追加 \texttt{--port 8001}，随后在新端口核对公开内容、草稿、附件和回收站。内容 ZIP 则用于备份公开数据。
+
+\end{document}

@@ -1,0 +1,22 @@
+{% extends 'news_editor/layout.html' %}
+{% block title %}{{ '登录网站后台' if config.CONTENT_WORKFLOW else '登录新闻后台' }}{% endblock %}
+{% block main_class %} editor-main-narrow editor-main-login{% endblock %}
+
+{% block body %}
+<section class="editor-panel editor-login-panel" aria-labelledby="login-title">
+  <h1 id="login-title">{{ '登录网站后台' if config.CONTENT_WORKFLOW else '登录新闻后台' }}</h1>
+  <p class="editor-muted">使用课题组为你开通的账号。</p>
+  <form action="{{ url_for('news_editor.login', preview_id=preview_id, record_kind=record_kind, record_id=record_id) }}" method="post" class="editor-stack">
+    <input type="hidden" name="csrf_token" value="{{ editor_csrf_token() }}">
+    <label class="editor-field">
+      <span>账号</span>
+      <input name="username" autocomplete="username" value="{{ username|default('') }}" required>
+    </label>
+    <label class="editor-field">
+      <span>密码</span>
+      <input name="password" type="password" autocomplete="current-password" required>
+    </label>
+    <button class="editor-button editor-button-primary" type="submit">登录</button>
+  </form>
+</section>
+{% endblock %}

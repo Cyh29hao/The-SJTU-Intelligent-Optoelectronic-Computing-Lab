@@ -1,8 +1,12 @@
 {% extends "admin_layout.html" %}
+{% from "admin_workflow_macros.html" import csrf, revision with context %}
 
 {% block admin_body %}
 {% set active_section = request.args.get('section', '') %}
+{% set full_admin = config.ADMIN_HANDOFF_PREVIEW %}
+{% set revisions = draft_revisions|default({}) %}
 
+{% if not full_admin or admin_role == 'owner' %}
 <details id="site-images" {% if active_section in ('', 'site-images') %}open{% endif %}>
     <summary>🧩 Site Images</summary>
     <div class="details-body">
@@ -16,6 +20,7 @@
                 <div class="mono">{{ site_cfg.logo_filename or 'No logo uploaded yet' }}</div>
             </div>
             <form method="POST" enctype="multipart/form-data" action="{{ url_for('admin_upload_site_image', slot='logo', redirect_module='assets') }}">
+                {{ csrf() }}
                 <input type="file" name="image" accept="image/png,image/jpeg,image/jpg,image/gif,image/svg+xml,image/webp" required>
                 <button type="submit">Upload Logo</button>
             </form>
@@ -28,6 +33,7 @@
                 <div class="mono">{{ site_cfg.hero_brand_filename or 'No hero brand strip uploaded yet' }}</div>
             </div>
             <form method="POST" enctype="multipart/form-data" action="{{ url_for('admin_upload_site_image', slot='hero-brand', redirect_module='assets') }}">
+                {{ csrf() }}
                 <input type="file" name="image" accept="image/png,image/jpeg,image/jpg,image/gif,image/svg+xml,image/webp" required>
                 <button type="submit">Upload Hero Brand Strip</button>
             </form>
@@ -48,6 +54,7 @@
                 </div>
             </div>
             <form method="POST" enctype="multipart/form-data" action="{{ url_for('admin_upload_site_image', slot='friend-' ~ loop.index, redirect_module='assets') }}">
+                {{ csrf() }}
                 <input type="file" name="image" accept="image/png,image/jpeg,image/jpg,image/gif,image/svg+xml,image/webp" required>
                 <button type="submit">Upload Link Image</button>
             </form>
@@ -56,8 +63,9 @@
     </div>
     </div>
 </details>
+{% endif %}
 
-<details id="people-photos" {% if active_section == 'people-photos' %}open{% endif %}>
+<details id="people-photos" {% if active_section == 'people-photos' or (full_admin and admin_role == 'editor' and not active_section) %}open{% endif %}>
     <summary>👤 People Photos</summary>
     <div class="details-body">
     <p class="helper-note">Upload and replace member headshots here while keeping profile text editing in the Content workspace.</p>
@@ -77,6 +85,8 @@
                 {% endif %}
             </div>
             <form method="POST" enctype="multipart/form-data" action="{{ url_for('admin_upload_person_photo', person_id=person.id) }}">
+                {{ csrf() }}
+                {{ revision(revisions.get(person.id, 0)) }}
                 <input type="file" name="photo" accept="image/png,image/jpeg,image/jpg,image/gif" required>
                 <button type="submit">Upload Person Photo</button>
             </form>
@@ -103,6 +113,8 @@
                 {% endif %}
             </div>
             <form method="POST" enctype="multipart/form-data" action="{{ url_for('admin_upload_news_image', news_id=item.id) }}">
+                {{ csrf() }}
+                {{ revision(revisions.get(item.id, 0)) }}
                 <input type="file" name="image" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp" required>
                 <button type="submit">Upload News Image</button>
             </form>
@@ -129,6 +141,8 @@
                 {% endif %}
             </div>
             <form method="POST" enctype="multipart/form-data" action="{{ url_for('admin_upload_thumbnail', article_id=item.id, redirect_module='assets') }}">
+                {{ csrf() }}
+                {{ revision(revisions.get(item.id, 0)) }}
                 <input type="file" name="thumbnail" accept="image/png,image/jpeg,image/jpg,image/gif" required>
                 <button type="submit">Upload Thumbnail</button>
             </form>

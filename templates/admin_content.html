@@ -1,12 +1,71 @@
 {% extends "admin_layout.html" %}
+{% from "admin_workflow_macros.html" import csrf, revision, transition, record_links with context %}
 
 {% block admin_body %}
 {% set active_section = request.args.get('section', '') %}
+{% set full_admin = config.ADMIN_HANDOFF_PREVIEW %}
+{% set revisions = draft_revisions|default({}) %}
+{% set editing_id = draft_edit.id if draft_edit else none %}
+{% set new_record = full_admin and request.args.get('new') == '1' %}
+
+{% if full_admin %}
+{% set kind_sections = {'article': 'publications', 'person': 'people', 'news': 'news'} %}
+{% set kind_names = {'article': '论文', 'person': '人员', 'news': '新闻'} %}
+<nav class="quick-actions" aria-label="内容工作区">
+    <a class="home" href="{{ url_for(module_endpoint, section='publications', new=1) }}#publications-section">新建论文</a>
+    <a class="home" href="{{ url_for(module_endpoint, section='people', new=1) }}#people-section">新建人员</a>
+    <a class="home" href="{{ url_for(module_endpoint, section='news', new=1) }}#news-section">新建新闻</a>
+    <a href="#drafts">草稿和回收站</a>
+</nav>
+<div class="section-card workflow-search">
+    <label for="workflow-query">按论文题目、人员姓名或新闻标题查找</label>
+    <input id="workflow-query" type="search" placeholder="输入关键词" autocomplete="off">
+    <label for="workflow-status">状态</label>
+    <select id="workflow-status">
+        <option value="">全部</option>
+        <option value="published">公开内容</option>
+        <option value="draft">草稿</option>
+        <option value="archived">回收站</option>
+    </select>
+    <p id="workflow-results" class="helper-note" aria-live="polite"></p>
+</div>
+<details id="drafts"{% if not active_section %} open{% endif %}>
+    <summary>草稿和回收站</summary>
+    <div class="details-body">
+        <h3>草稿</h3>
+        {% for entry in draft_rows|default([]) if not entry.archived %}
+        <div class="inline-actions workflow-item-actions" data-workflow-state="draft" data-workflow-label="{{ entry.draft.title_zh|default('') }} {{ entry.draft.title|default('') }} {{ entry.draft.name_zh|default('') }} {{ entry.draft.name|default('') }} {{ entry.id }}">
+            <strong>{{ kind_names[entry.kind] }} · {{ entry.draft.title_zh or entry.draft.title or entry.draft.name_zh or entry.draft.name or entry.id }}</strong>
+            <span class="helper-note">{{ '有公开版本' if entry.published else '当前未公开' }}</span>
+            {% if entry.conflicted %}<strong>公开内容有变更，待核对</strong>{% endif %}
+            <a class="btn-link" href="{{ url_for(module_endpoint, section=kind_sections[entry.kind], draft=entry.id) }}#{{ entry.kind }}-{{ entry.id }}">编辑草稿</a>
+            <a class="btn-link btn-secondary" href="{{ url_for('news_editor.record_preview', kind=entry.kind, record_id=entry.id) }}">预览与发布</a>
+        </div>
+        {% else %}
+        <p class="helper-note">当前没有草稿。</p>
+        {% endfor %}
+        <h3>回收站</h3>
+        {% for entry in draft_rows|default([]) if entry.archived %}
+        <div class="inline-actions workflow-item-actions" data-workflow-state="archived" data-workflow-label="{{ entry.draft.title_zh|default('') }} {{ entry.draft.title|default('') }} {{ entry.draft.name_zh|default('') }} {{ entry.draft.name|default('') }} {{ entry.id }}">
+            <strong>{{ kind_names[entry.kind] }} · {{ entry.draft.title_zh or entry.draft.title or entry.draft.name_zh or entry.draft.name or entry.id }}</strong>
+            {% if admin_role == 'owner' %}
+            {{ transition(entry.kind, entry.id, entry.revision, 'restore', '恢复草稿') }}
+            {% else %}
+            <span class="helper-note">站长可恢复为草稿</span>
+            {% endif %}
+        </div>
+        {% else %}
+        <p class="helper-note">回收站为空。</p>
+        {% endfor %}
+    </div>
+</details>
+{% endif %}
 
 <details id="homepage-copy-section" {% if active_section == 'homepage' %}open{% endif %}>
     <summary>🏠 Homepage Copy</summary>
     <div class="details-body">
         <form method="POST" action="{{ url_for(module_endpoint) }}">
+            {{ csrf() }}
             <input type="hidden" name="action" value="edit_site_welcome">
             <input type="hidden" name="item_type" value="site">
             <label>Hero Summary Text</label>
@@ -30,6 +89,7 @@
     <summary>Join Us</summary>
     <div class="details-body">
         <form method="POST" action="{{ url_for(module_endpoint) }}">
+            {{ csrf() }}
             <input type="hidden" name="action" value="edit_join_us">
             <input type="hidden" name="item_type" value="site">
             <label>Join Us Title</label>
@@ -49,7 +109,19 @@
             <label>Read More Link Text (ZH)</label>
             <textarea name="admissions_apply_zh" rows="2">{{ site_cfg.admissions_apply_zh }}</textarea>
             <label>Recruitment News ID</label>
+            {% if full_admin %}
+            {% set selected_news = site_cfg.admissions_news_id or 'news_003' %}
+            <select name="admissions_news_id">
+                {% if selected_news not in news_items|map(attribute='id')|list %}
+                <option selected value="{{ selected_news }}">{{ selected_news }}</option>
+                {% endif %}
+                {% for story in news_items if not (draft_edit and draft_edit.id == story.id and not draft_edit.published) %}
+                <option value="{{ story.id }}"{% if selected_news == story.id %} selected{% endif %}>{{ story.title_zh or story.title }} ({{ story.id }})</option>
+                {% endfor %}
+            </select>
+            {% else %}
             <input name="admissions_news_id" value="{{ site_cfg.admissions_news_id or 'news_003' }}">
+            {% endif %}
             {% for direction in site_cfg.admissions_directions %}
             <div class="settings-card" style="margin-top:14px;">
                 <h3>Recruitment Direction {{ loop.index }}</h3>
@@ -71,10 +143,11 @@
 <details id="publications-section" {% if active_section == 'publications' %}open{% endif %}>
     <summary>📚 Publications</summary>
     <div class="details-body">
-    <details>
-        <summary>Add New Publication</summary>
+    <details{% if new_record and active_section == 'publications' %} open{% endif %}>
+        <summary>{{ '新建论文' if full_admin else 'Add New Publication' }}</summary>
         <div class="details-body">
-            <form method="POST" action="{{ url_for(module_endpoint) }}" data-official-free-defaults="1">
+            <form method="POST"{% if full_admin %} enctype="multipart/form-data"{% endif %} action="{{ url_for(module_endpoint) }}" data-official-free-defaults="1">
+                {{ csrf() }}
                 <input type="hidden" name="action" value="add">
                 <input type="hidden" name="item_type" value="article">
                 <input type="hidden" name="featured_on_home_manual" value="0">
@@ -82,15 +155,15 @@
                 <label>Title</label>
                 <input name="title" required>
                 <label>Authors (comma-separated)</label>
-                <input name="authors" required>
+                <input name="authors"{% if not full_admin %} required{% endif %}>
                 <label>Authors Display Count</label>
                 <input name="authors_display_count" type="number" min="1" value="3">
                 <label>Venue</label>
-                <input name="venue" required>
+                <input name="venue"{% if not full_admin %} required{% endif %}>
                 <label>Year</label>
-                <input name="year" type="number" value="2025" min="2000" max="2035" required>
+                <input name="year" type="number" min="2000" max="2035"{% if not full_admin %} value="2025" required{% endif %}>
                 <label>Abstract</label>
-                <textarea name="abstract" rows="5" required></textarea>
+                <textarea name="abstract" rows="5"{% if not full_admin %} required{% endif %}></textarea>
                 <label>Chinese Summary (ZH)</label>
                 <textarea name="abstract_zh" rows="5"></textarea>
                 <div class="checkbox-grid">
@@ -110,34 +183,41 @@
                     <label><input type="checkbox" name="home_top_pinned"> Pin to carousel slot 01</label>
                     <label><input type="checkbox" name="is_starred"> Star on Publications</label>
                 </div>
-                <button type="submit">Add Publication</button>
+                {% if full_admin %}
+                <label>论文缩略图 <input type="file" name="thumbnail" accept="image/png,image/jpeg,image/gif,image/webp"></label>
+                <label>补充 PDF <input type="file" name="attachments" accept="application/pdf,.pdf" multiple></label>
+                <p class="helper-note">在预览页选中随论文公开的附件。</p>
+                {% endif %}
+                <button type="submit">{{ '保存草稿' if full_admin else 'Add Publication' }}</button>
             </form>
         </div>
     </details>
 
     {% for item in articles %}
-    <details id="article-{{ item.id }}">
+    <details id="article-{{ item.id }}"{% if full_admin %} data-workflow-state="{{ 'draft' if editing_id == item.id and not draft_edit.published else 'published' }}" data-workflow-label="{{ item.title }} {{ item.id }}"{% endif %}{% if editing_id == item.id %} open{% endif %}>
         <summary>{{ item.title }} <span class="mono" style="margin-left:8px;">{{ item.id }}</span></summary>
         <div class="details-body">
             <p class="helper-note">Tracked opens: {{ download_counts.get(item.id, 0) }} | Views: {{ article_view_counts.get(item.id, 0) }} | Unique users: {{ unique_counts.get(item.id, 0) }}</p>
-            <form method="POST" action="{{ url_for(module_endpoint) }}" data-official-free-defaults="1">
+            <form method="POST"{% if full_admin %} enctype="multipart/form-data"{% endif %} action="{{ url_for(module_endpoint) }}" data-official-free-defaults="1">
+                {{ csrf() }}
+                {{ revision(revisions.get(item.id, 0)) }}
                 <input type="hidden" name="action" value="edit">
                 <input type="hidden" name="item_type" value="article">
                 <input type="hidden" name="id" value="{{ item.id }}">
-                <input type="hidden" name="featured_on_home_manual" value="0">
-                <input type="hidden" name="home_top_pinned_manual" value="0">
+                <input type="hidden" name="featured_on_home_manual" value="{{ '1' if full_admin and item.official_free_access_url else '0' }}">
+                <input type="hidden" name="home_top_pinned_manual" value="{{ '1' if full_admin and item.official_free_access_url else '0' }}">
                 <label>Title</label>
                 <input name="title" value="{{ item.title }}" required>
                 <label>Authors</label>
-                <input name="authors" value="{{ item.authors|join(', ') }}" required>
+                <input name="authors" value="{{ item.authors|join(', ') }}"{% if not full_admin %} required{% endif %}>
                 <label>Authors Display Count</label>
                 <input name="authors_display_count" type="number" min="1" value="{{ item.authors_display_count or 1 }}">
                 <label>Venue</label>
-                <input name="venue" value="{{ item.venue }}" required>
+                <input name="venue" value="{{ item.venue }}"{% if not full_admin %} required{% endif %}>
                 <label>Year</label>
-                <input name="year" type="number" value="{{ item.year }}" min="2000" max="2035" required>
+                <input name="year" type="number" value="{{ item.year or '' }}" min="2000" max="2035"{% if not full_admin %} required{% endif %}>
                 <label>Abstract</label>
-                <textarea name="abstract" rows="5" required>{{ item.abstract }}</textarea>
+                <textarea name="abstract" rows="5"{% if not full_admin %} required{% endif %}>{{ item.abstract }}</textarea>
                 <label>Chinese Summary (ZH)</label>
                 <textarea name="abstract_zh" rows="5">{{ item.abstract_zh }}</textarea>
                 <div class="checkbox-grid">
@@ -158,12 +238,21 @@
                     <label><input type="checkbox" name="home_top_pinned" {% if item.home_top_pinned %}checked{% endif %}> Pin to carousel slot 01</label>
                     <label><input type="checkbox" name="is_starred" {% if item.is_starred %}checked{% endif %}> Star on Publications</label>
                 </div>
+                {% if full_admin %}
+                <label>替换缩略图 <input type="file" name="thumbnail" accept="image/png,image/jpeg,image/gif,image/webp"></label>
+                <label>添加补充 PDF <input type="file" name="attachments" accept="application/pdf,.pdf" multiple></label>
+                {% endif %}
                 <div class="inline-actions">
-                    <button type="submit">Save Publication</button>
+                    <button type="submit">{{ '保存草稿' if full_admin else 'Save Publication' }}</button>
+                    {% if not full_admin %}
                     <a href="{{ url_for(module_endpoint, action='delete', item_type='article', id=item.id) }}" class="btn-link btn-danger" onclick="return confirm('Delete this publication?')">Delete</a>
+                    {% endif %}
                 </div>
+                {% if not full_admin %}
                 <p class="helper-note">Thumbnail uploads moved to the Assets workspace.</p>
+                {% endif %}
             </form>
+            {% if full_admin %}{{ record_links('article', item.id, revisions.get(item.id, 0)) }}{% endif %}
         </div>
     </details>
     {% endfor %}
@@ -173,14 +262,15 @@
 <details id="people-section" {% if active_section == 'people' %}open{% endif %}>
     <summary>👥 People</summary>
     <div class="details-body">
-    <details>
-        <summary>Add New Person</summary>
+    <details{% if new_record and active_section == 'people' %} open{% endif %}>
+        <summary>{{ '新建人员' if full_admin else 'Add New Person' }}</summary>
         <div class="details-body">
             <form method="POST" enctype="multipart/form-data" action="{{ url_for(module_endpoint) }}">
+                {{ csrf() }}
                 <input type="hidden" name="action" value="add">
                 <input type="hidden" name="item_type" value="person">
                 <label>Name</label>
-                <input name="name" required>
+                <input name="name"{% if not full_admin %} required{% endif %}>
                 <label>Name (ZH)</label>
                 <input name="name_zh">
                 <label>Category</label>
@@ -211,21 +301,23 @@
                     <label><input type="checkbox" name="person_tags" value="{{ tag }}"> {{ tag }}</label>
                     {% endfor %}
                 </div>
-                <button type="submit">Add Person</button>
+                <button type="submit">{{ '保存草稿' if full_admin else 'Add Person' }}</button>
             </form>
         </div>
     </details>
 
     {% for person in people %}
-    <details id="person-{{ person.id }}">
-        <summary>{{ person.name }} <span class="mono" style="margin-left:8px;">{{ person.id }}</span></summary>
+    <details id="person-{{ person.id }}"{% if full_admin %} data-workflow-state="{{ 'draft' if editing_id == person.id and not draft_edit.published else 'published' }}" data-workflow-label="{{ person.name_zh }} {{ person.name }} {{ person.id }}"{% endif %}{% if editing_id == person.id %} open{% endif %}>
+        <summary>{{ person.name or (person.name_zh if full_admin else '') }} <span class="mono" style="margin-left:8px;">{{ person.id }}</span></summary>
         <div class="details-body">
             <form method="POST" enctype="multipart/form-data" action="{{ url_for(module_endpoint) }}">
+                {{ csrf() }}
+                {{ revision(revisions.get(person.id, 0)) }}
                 <input type="hidden" name="action" value="edit">
                 <input type="hidden" name="item_type" value="person">
                 <input type="hidden" name="id" value="{{ person.id }}">
                 <label>Name</label>
-                <input name="name" value="{{ person.name }}" required>
+                <input name="name" value="{{ person.name }}"{% if not full_admin %} required{% endif %}>
                 <label>Name (ZH)</label>
                 <input name="name_zh" value="{{ person.name_zh }}">
                 <label>Category</label>
@@ -234,7 +326,7 @@
                 <input name="email" value="{{ person.email }}">
                 <label>Replace Photo</label>
                 <input type="file" name="photo" accept="image/png,image/jpeg,image/jpg,image/gif">
-                {% if people_photo_info[person.id].exists %}
+                {% if people_photo_info.get(person.id, {}).exists %}
                 <p class="helper-note">Current photo: <span class="mono">{{ people_photo_info[person.id].filename }}</span></p>
                 {% endif %}
                 <label>Bio</label>
@@ -257,10 +349,13 @@
                     {% endfor %}
                 </div>
                 <div class="inline-actions">
-                    <button type="submit">Save Person</button>
+                    <button type="submit">{{ '保存草稿' if full_admin else 'Save Person' }}</button>
+                    {% if not full_admin %}
                     <a href="{{ url_for(module_endpoint, action='delete', item_type='person', id=person.id) }}" class="btn-link btn-danger" onclick="return confirm('Delete this person?')">Delete</a>
+                    {% endif %}
                 </div>
             </form>
+            {% if full_admin %}{{ record_links('person', person.id, revisions.get(person.id, 0)) }}{% endif %}
         </div>
     </details>
     {% endfor %}
@@ -270,14 +365,15 @@
 <details id="news-section" {% if active_section == 'news' %}open{% endif %}>
     <summary>📰 News</summary>
     <div class="details-body">
-    <details>
-        <summary>Add News Item</summary>
+    <details{% if new_record and active_section == 'news' %} open{% endif %}>
+        <summary>{{ '新建新闻' if full_admin else 'Add News Item' }}</summary>
         <div class="details-body">
             <form method="POST" enctype="multipart/form-data" action="{{ url_for(module_endpoint) }}">
+                {{ csrf() }}
                 <input type="hidden" name="action" value="add">
                 <input type="hidden" name="item_type" value="news">
                 <label>Title</label>
-                <input name="title" required>
+                <input name="title"{% if not full_admin %} required{% endif %}>
                 <label>Title (ZH)</label>
                 <input name="title_zh">
                 <label>Date</label>
@@ -287,29 +383,35 @@
                 <label>Summary (ZH)</label>
                 <textarea name="summary_zh" rows="3"></textarea>
                 <label>Content</label>
-                <textarea name="content" rows="6" required></textarea>
+                <textarea name="content" rows="6"{% if not full_admin %} required{% endif %}></textarea>
                 <label>Content (ZH)</label>
                 <textarea name="content_zh" rows="6"></textarea>
                 <div class="checkbox-grid">
                     <label><input type="checkbox" name="pinned"> Pin to top of News</label>
                     <label><input type="checkbox" name="hide_from_home"> Hide from homepage Latest News</label>
                 </div>
+                {% if full_admin %}
+                <label>新闻配图 <input type="file" name="image" accept="image/png,image/jpeg,image/gif,image/webp"></label>
+                {% else %}
                 <p class="helper-note">News images are managed in the Assets workspace after the news item is created.</p>
-                <button type="submit">Add News</button>
+                {% endif %}
+                <button type="submit">{{ '保存草稿' if full_admin else 'Add News' }}</button>
             </form>
         </div>
     </details>
 
     {% for item in news_items %}
-    <details id="news-{{ item.id }}">
-        <summary>{{ item.title }} <span class="mono" style="margin-left:8px;">{{ item.id }}</span></summary>
+    <details id="news-{{ item.id }}"{% if full_admin %} data-workflow-state="{{ 'draft' if editing_id == item.id and not draft_edit.published else 'published' }}" data-workflow-label="{{ item.title_zh }} {{ item.title }} {{ item.id }}"{% endif %}{% if editing_id == item.id %} open{% endif %}>
+        <summary>{{ item.title or (item.title_zh if full_admin else '') }} <span class="mono" style="margin-left:8px;">{{ item.id }}</span></summary>
         <div class="details-body">
             <form method="POST" enctype="multipart/form-data" action="{{ url_for(module_endpoint) }}">
+                {{ csrf() }}
+                {{ revision(revisions.get(item.id, 0)) }}
                 <input type="hidden" name="action" value="edit">
                 <input type="hidden" name="item_type" value="news">
                 <input type="hidden" name="id" value="{{ item.id }}">
                 <label>Title</label>
-                <input name="title" value="{{ item.title }}" required>
+                <input name="title" value="{{ item.title }}"{% if not full_admin %} required{% endif %}>
                 <label>Title (ZH)</label>
                 <input name="title_zh" value="{{ item.title_zh }}">
                 <label>Date</label>
@@ -319,7 +421,7 @@
                 <label>Summary (ZH)</label>
                 <textarea name="summary_zh" rows="3">{{ item.summary_zh }}</textarea>
                 <label>Content</label>
-                <textarea name="content" rows="6" required>{{ item.content }}</textarea>
+                <textarea name="content" rows="6"{% if not full_admin %} required{% endif %}>{{ item.content }}</textarea>
                 <label>Content (ZH)</label>
                 <textarea name="content_zh" rows="6">{{ item.content_zh }}</textarea>
                 <div class="checkbox-grid">
@@ -329,12 +431,19 @@
                 {% if item.image_filename %}
                 <p class="helper-note">Current image: <span class="mono">{{ item.image_filename }}</span></p>
                 {% endif %}
+                {% if full_admin %}
+                <label>替换新闻配图 <input type="file" name="image" accept="image/png,image/jpeg,image/gif,image/webp"></label>
+                {% else %}
                 <p class="helper-note">Replace news images in <a href="{{ url_for('admin_assets', section='news-images') }}#news-image-{{ item.id }}">Manage Assets</a>.</p>
+                {% endif %}
                 <div class="inline-actions">
-                    <button type="submit">Save News</button>
+                    <button type="submit">{{ '保存草稿' if full_admin else 'Save News' }}</button>
+                    {% if not full_admin %}
                     <a href="{{ url_for(module_endpoint, action='delete', item_type='news', id=item.id) }}" class="btn-link btn-danger" onclick="return confirm('Delete this news item?')">Delete</a>
+                    {% endif %}
                 </div>
             </form>
+            {% if full_admin %}{{ record_links('news', item.id, revisions.get(item.id, 0)) }}{% endif %}
         </div>
     </details>
     {% endfor %}
@@ -343,6 +452,32 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+  const query = document.querySelector('#workflow-query');
+  const status = document.querySelector('#workflow-status');
+  const results = document.querySelector('#workflow-results');
+  if (query && status && results) {
+    function filterRecords() {
+      const phrase = query.value.trim().toLocaleLowerCase();
+      const state = status.value;
+      let count = 0;
+      document.querySelectorAll('[data-workflow-state]').forEach(function (row) {
+        const matching = (!state || state === row.dataset.workflowState)
+          && (!phrase || row.dataset.workflowLabel.toLocaleLowerCase().includes(phrase));
+        row.hidden = !matching;
+        if (matching) {
+          count += 1;
+          if (phrase || state) {
+            const section = row.parentElement.closest('details');
+            if (section) section.open = true;
+          }
+        }
+      });
+      results.textContent = phrase || state ? `匹配 ${count} 条` : '';
+    }
+    query.addEventListener('input', filterRecords);
+    status.addEventListener('change', filterRecords);
+  }
+
   document.querySelectorAll('form[data-official-free-defaults="1"]').forEach(function (form) {
     const officialFreeInput = form.querySelector('input[name="official_free_access_url"]');
     const featuredCheckbox = form.querySelector('input[name="featured_on_home"]');

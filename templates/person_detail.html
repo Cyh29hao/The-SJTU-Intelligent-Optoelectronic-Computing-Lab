@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ person_name(person) }} - {{ lang_value(site_cfg_global, 'lab_name_short') }}{% endblock %}
 {% block content %}
+{% if preview_record %}{% include 'admin_record_controls.html' %}{% endif %}
 <h2>{{ person_name(person) }}</h2>
 {% if secondary_person_name(person) %}
 <p style="text-align:center; margin-top:-10px; color:#7f8c8d;">{{ secondary_person_name(person) }}</p>
@@ -8,7 +9,7 @@
 
 <div class="person-detail-layout" style="max-width: 800px; margin: 0 auto; display: grid; grid-template-columns: 220px 1fr; gap: 24px; align-items: start;">
   <div class="person-detail-body">
-    <img src="{{ asset_image_url('people', person.photo_filename) }}" alt="{{ person_name(person) }}" class="person-detail-photo" width="200" height="200" fetchpriority="high" decoding="async" style="width: 200px; height: 200px; object-fit: cover; border-radius: 8px;">
+    <img src="{{ url_for('news_editor.record_file', kind=preview_record.kind, record_id=preview_record.id, filename=preview_record.image) if preview_record and preview_record.image else asset_image_url('people', person.photo_filename) }}" alt="{{ person_name(person) }}" class="person-detail-photo" width="200" height="200" fetchpriority="high" decoding="async" style="width: 200px; height: 200px; object-fit: cover; border-radius: 8px;">
   </div>
   <div>
     {% if person.tags %}

@@ -1,0 +1,84 @@
+{% extends 'news_editor/layout.html' %}
+{% block title %}{{ '编辑新闻' if entry else '新建新闻' }}{% endblock %}
+
+{% block body %}
+<a class="editor-back-link" href="{{ url_for('news_editor.dashboard') }}">← 返回新闻列表</a>
+<header class="editor-heading">
+  <h1>{{ '编辑新闻' if entry else '新建新闻' }}</h1>
+  <p class="editor-muted">保存草稿后可用官网样式预览。发布须填写日期，并至少提供一套完整的中文或英文标题和正文。</p>
+</header>
+
+<form class="editor-stack" method="post" enctype="multipart/form-data" action="{{ url_for('news_editor.edit', news_id=entry.id) if entry else url_for('news_editor.create') }}">
+  <input type="hidden" name="csrf_token" value="{{ editor_csrf_token() }}">
+  {% if entry %}<input type="hidden" name="revision" value="{{ entry.revision }}">{% endif %}
+  <section class="editor-panel" aria-labelledby="body-heading">
+    <div class="editor-section-heading">
+      <h2 id="body-heading">内容</h2>
+      <label class="editor-field editor-date">
+        <span>新闻日期</span>
+        <input name="date" type="date" value="{{ values.get('date', '') }}">
+      </label>
+    </div>
+    <div class="editor-bilingual">
+      {% for suffix, language in [('_zh', '中文'), ('', '英文')] %}
+      <fieldset class="editor-language">
+        <legend>{{ language }}</legend>
+        <label class="editor-field">
+          <span>{{ language }}标题</span>
+          <input name="title{{ suffix }}" value="{{ values.get('title' ~ suffix, '') }}">
+        </label>
+        <label class="editor-field">
+          <span>{{ language }}摘要 <small>选填</small></span>
+          <textarea name="summary{{ suffix }}" rows="2">{{ values.get('summary' ~ suffix, '') }}</textarea>
+        </label>
+        <label class="editor-field">
+          <span>{{ language }}正文</span>
+          <textarea name="content{{ suffix }}" rows="8">{{ values.get('content' ~ suffix, '') }}</textarea>
+        </label>
+      </fieldset>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="editor-panel editor-stack" aria-labelledby="options-heading">
+    <h2 id="options-heading">配图与展示</h2>
+    {% if values.get('image_filename') %}
+    <figure class="editor-image-preview">
+      <img src="{{ editor_image_url(values.image_filename) }}" alt="当前新闻配图" width="200" height="120">
+      <figcaption>当前配图</figcaption>
+    </figure>
+    {% endif %}
+    <label class="editor-field">
+      <span>{{ '替换配图' if values.get('image_filename') else '上传配图' }} <small>选填</small></span>
+      <input name="image" type="file" accept="image/png,image/jpeg,image/webp" aria-describedby="image-formats">
+      <span class="editor-field-hint" id="image-formats">PNG、JPEG 或 WebP，最大 5 MB。</span>
+    </label>
+    <div class="editor-checks">
+      <label><input type="checkbox" name="pinned" value="1"{% if values.get('pinned') in (true, '1', 'on', 'true') %} checked{% endif %}> 在新闻列表置顶</label>
+      <label><input type="checkbox" name="hide_from_home" value="1"{% if values.get('hide_from_home') in (true, '1', 'on', 'true') %} checked{% endif %}> 从首页「最新动态」隐藏</label>
+    </div>
+  </section>
+
+  <div class="editor-form-actions">
+    <button class="editor-button editor-button-primary" type="submit">保存草稿</button>
+    {% if entry %}
+    <a class="editor-button editor-button-secondary" href="{{ url_for('news_editor.preview', news_id=entry.id) }}">预览已保存的草稿</a>
+    {% endif %}
+  </div>
+</form>
+
+{% if entry and entry.published %}
+<section class="editor-panel editor-published-panel" aria-labelledby="published-heading">
+  <div>
+    <h2 id="published-heading">已发布</h2>
+    <p class="editor-muted">撤回会从公开页面移除此新闻，并保留草稿。</p>
+  </div>
+  <form method="post" action="{{ url_for('news_editor.change_publication', news_id=entry.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ editor_csrf_token() }}">
+    <input type="hidden" name="action" value="withdraw">
+    <input type="hidden" name="revision" value="{{ entry.revision }}">
+    <button class="editor-button editor-button-danger" type="submit">撤回发布</button>
+  </form>
+</section>
+{% endif %}
+{% endblock %}

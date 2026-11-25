@@ -60,12 +60,12 @@
             color: white;
             border-color: #2d7ff0;
         }
-        .quick-actions a.warning {
+        .quick-actions .warning {
             background: #f39c12;
             color: white;
             border-color: #f39c12;
         }
-        .quick-actions a.danger {
+        .quick-actions .danger {
             background: #e74c3c;
             color: white;
             border-color: #e74c3c;
@@ -254,6 +254,19 @@
         .btn-danger {
             background: #e74c3c;
         }
+        .workflow-inline-form {
+            display: inline-flex;
+            margin: 0;
+        }
+        .workflow-item-actions {
+            margin-bottom: 10px;
+        }
+        [data-workflow-state][hidden] {
+            display: none;
+        }
+        .workflow-search {
+            margin-bottom: 16px;
+        }
         details {
             margin-bottom: 14px;
             overflow: hidden;
@@ -344,8 +357,23 @@
         {% if active_module != 'home' %}
         <a href="{{ url_for('admin_dashboard') }}" class="home">Back to Admin Home</a>
         {% endif %}
+        {% if config.ADMIN_HANDOFF_PREVIEW %}
+        <a href="{{ url_for('admin_content') }}#drafts">草稿和回收站</a>
+        {% if admin_role == 'owner' %}
+        <a href="{{ url_for('news_editor.access') }}">脚本凭证</a>
+        {% endif %}
+        <form action="{{ url_for('news_editor.view_as_visitor') }}" method="post">
+            <input type="hidden" name="csrf_token" value="{{ preview_csrf_token() }}">
+            <button class="warning" type="submit">以访客身份查看</button>
+        </form>
+        <form action="{{ url_for('news_editor.logout') }}" method="post">
+            <input type="hidden" name="csrf_token" value="{{ preview_csrf_token() }}">
+            <button class="danger" type="submit">退出</button>
+        </form>
+        {% else %}
         <a href="{{ url_for('admin_view_as_user') }}" class="warning">View as User</a>
         <a href="{{ url_for('admin_logout') }}" class="danger">Logout</a>
+        {% endif %}
     </div>
 
     {% if admin_notice %}

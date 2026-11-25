@@ -2,6 +2,7 @@
 {% block title %}{{ item.title }} - {{ lang_value(site_cfg_global, 'lab_name_short') }}{% endblock %}
 {% block content %}
 <div class="paper-detail-page" style="text-align: left; max-width: 750px; margin: 0 auto; background: var(--card-bg); padding: 24px; border-radius: 18px; border: 1px solid var(--border);">
+  {% if preview_record %}{% include 'admin_record_controls.html' %}{% endif %}
   <div class="paper-detail-header">
     <h2 class="paper-detail-title">&#128196; {{ item.title }}</h2>
     <span class="paper-download-inline">{{ t('opened_times', count=open_count) }}</span>
@@ -12,9 +13,9 @@
   <p style="margin: 2px 0; color: #999; font-size: 0.9em;">{{ t('last_edited') }}: {{ item.last_edited }}</p>
   {% endif %}
 
-  {% if item.thumbnail_filename %}
+  {% if (preview_record and preview_record.image) or item.thumbnail_filename %}
   <div style="margin: 20px 0; text-align: center;">
-    <img src="{{ asset_image_url('articles', item.thumbnail_filename) }}" alt="{{ item.title }}" fetchpriority="high" decoding="async" style="max-width: 100%; max-height: 300px; width: auto; height: auto; border-radius: 12px; border: 1px solid var(--border);">
+    <img src="{{ url_for('news_editor.record_file', kind=preview_record.kind, record_id=preview_record.id, filename=preview_record.image) if preview_record and preview_record.image else asset_image_url('articles', item.thumbnail_filename) }}" alt="{{ item.title }}" fetchpriority="high" decoding="async" style="max-width: 100%; max-height: 300px; width: auto; height: auto; border-radius: 12px; border: 1px solid var(--border);">
   </div>
   {% endif %}
 
@@ -23,6 +24,21 @@
     <p style="margin: 0; white-space: pre-wrap; text-align: left; color: var(--text);">{{ detail_abstract }}</p>
   </div>
 
+  {% if preview_record %}
+  {% if item.paper_url or item.official_free_access_url or item.resource_url %}
+  <dl>
+    {% for key, label in [('paper_url', t('paper_link')), ('official_free_access_url', t('official_free_access')), ('resource_url', t('resources_link'))] if item[key] %}
+    {% set link = item[key] %}
+    <dt>{{ label }}</dt>
+    <dd style="overflow-wrap:anywhere;">
+      {% if link.lower().startswith('https://') or link.lower().startswith('http://') %}
+      <a href="{{ link }}" target="_blank" rel="noopener noreferrer">{{ link }}</a>
+      {% else %}{{ link }}{% endif %}
+    </dd>
+    {% endfor %}
+  </dl>
+  {% endif %}
+  {% else %}
   <div class="paper-action-row" style="margin-top: 24px; display: flex; gap: 12px; justify-content: center; flex-direction: column; align-items: center;">
     {% if item.official_free_access_url %}
       <a href="{{ url_for('open_link', link_type='official_free_access', resource_id=item.id) }}" class="btn btn-emphasis" target="_blank" rel="noopener">{{ t('official_free_access') }}</a>
@@ -40,7 +56,19 @@
   </div>
   {% endif %}
 
-  {% if item.paper_url or item.resource_url %}
+  {% if config.ADMIN_HANDOFF_PREVIEW and item.attachments %}
+  <section aria-label="{{ '补充 PDF' if current_lang == 'zh' else 'Supplementary PDFs' }}">
+    <h3>{{ '补充 PDF' if current_lang == 'zh' else 'Supplementary PDFs' }}</h3>
+    <ul>
+      {% for attachment in item.attachments %}
+      <li><a href="{{ url_for('published_attachment', filename=attachment.filename) }}">{{ attachment.name }}</a></li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+  {% endif %}
+
+  {% if not preview_record and (item.paper_url or item.resource_url) %}
   <div class="paper-links-row" style="margin-top: 24px; display: flex; gap: 15px; justify-content: center; font-size: 0.95em; flex-wrap: wrap;">
     {% if item.paper_url and item.official_free_access_url %}
       <a href="{{ url_for('open_link', link_type='paper', resource_id=item.id) }}" target="_blank" rel="noopener" style="color:#2c3e50; text-decoration: none;">{{ t('paper_link') }} &#8599;</a>
@@ -53,7 +81,7 @@
   </div>
   {% endif %}
 
-  {% if site_cfg_global.show_external_access_note %}
+  {% if not preview_record and site_cfg_global.show_external_access_note %}
   <p style="margin-top: 12px; text-align:center; color:#7f8c8d; font-size: 0.88em;">
     {{ t('external_access_note') }}
   </p>

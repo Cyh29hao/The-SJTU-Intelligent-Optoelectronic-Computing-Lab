@@ -1,0 +1,47 @@
+{% extends 'news_editor/layout.html' %}
+{% block title %}新闻列表{% endblock %}
+
+{% block body %}
+<header class="editor-heading editor-heading-actions">
+  <div>
+    <h1>新闻列表</h1>
+    <p class="editor-muted">从这里找到人工或脚本保存的新闻草稿。</p>
+  </div>
+  <a class="editor-button editor-button-primary" href="{{ url_for('news_editor.create') }}">新建新闻</a>
+</header>
+
+{% if entries %}
+<ul class="editor-panel editor-news-list" aria-label="新闻">
+  {% for entry in entries %}
+  {% set draft = entry.draft %}
+  {% set title = draft.title_zh or draft.title or '未命名新闻' %}
+  <li class="editor-news-row">
+    <div class="editor-news-info">
+      <h2><a href="{{ url_for('news_editor.edit', news_id=entry.id) }}">{{ title }}</a></h2>
+      <div class="editor-news-meta">
+        {% if draft.date %}<time datetime="{{ draft.date }}">{{ draft.date }}</time>{% endif %}
+        {% if entry.published %}
+        <span class="editor-status editor-status-live">已发布</span>
+        {% if draft != entry.published %}<span class="editor-status editor-status-pending">有待发布的修改</span>{% endif %}
+        {% else %}
+        <span class="editor-status editor-status-draft">草稿</span>
+        {% endif %}
+      </div>
+    </div>
+    <div class="editor-row-actions">
+      <a class="editor-button editor-button-secondary" href="{{ url_for('news_editor.edit', news_id=entry.id) }}" aria-label="编辑：{{ title }}">编辑</a>
+      <a class="editor-button editor-button-secondary" href="{{ url_for('news_editor.preview', news_id=entry.id) }}" aria-label="预览：{{ title }}">预览</a>
+      {% if entry.published %}
+      <a class="editor-public-link" href="{{ url_for('news_detail', id=entry.id) }}" aria-label="查看公开页面：{{ title }}">公开页面</a>
+      {% endif %}
+    </div>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<section class="editor-panel editor-empty">
+  <h2>还没有新闻</h2>
+  <p class="editor-muted">点击「新建新闻」保存第一条草稿。</p>
+</section>
+{% endif %}
+{% endblock %}

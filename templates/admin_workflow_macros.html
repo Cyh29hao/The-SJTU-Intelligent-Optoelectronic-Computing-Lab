@@ -1,0 +1,27 @@
+{% macro csrf() -%}
+{% if config.ADMIN_HANDOFF_PREVIEW %}
+<input type="hidden" name="csrf_token" value="{{ preview_csrf_token() }}">
+{% endif %}
+{%- endmacro %}
+
+{% macro revision(value) -%}
+{% if config.ADMIN_HANDOFF_PREVIEW %}
+<input type="hidden" name="revision" value="{{ value }}">
+{% endif %}
+{%- endmacro %}
+
+{% macro transition(kind, id, rev, action, label, style='') -%}
+<form class="workflow-inline-form" method="post" action="{{ url_for('news_editor.record_action', kind=kind, record_id=id) }}">
+    {{ csrf() }}
+    {{ revision(rev) }}
+    <input type="hidden" name="action" value="{{ action }}">
+    <button type="submit"{% if style %} class="{{ style }}"{% endif %}>{{ label }}</button>
+</form>
+{%- endmacro %}
+
+{% macro record_links(kind, id, rev) -%}
+<div class="inline-actions workflow-item-actions">
+    <a class="btn-link btn-secondary" href="{{ url_for('news_editor.record_preview', kind=kind, record_id=id) }}">预览与发布</a>
+    {{ transition(kind, id, rev, 'archive', '移至回收站', 'btn-danger') }}
+</div>
+{%- endmacro %}

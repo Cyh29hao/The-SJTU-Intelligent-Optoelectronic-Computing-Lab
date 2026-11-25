@@ -17,8 +17,9 @@ import subprocess
 import sys
 import threading
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from urllib.parse import urlencode
-from flask import Flask, abort, render_template, request, redirect, url_for, send_file, session
+from flask import Flask, abort, g, render_template, request, redirect, url_for, send_file, session
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 
@@ -54,6 +55,8 @@ def _resolve_app_mode():
 APP_MODE, IS_LOCAL = _resolve_app_mode()
 PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
 CONTENT_ROOT = (os.environ.get('CONTENT_ROOT') or os.path.join(PROJECT_ROOT, 'site_content')).strip()
+CONTENT_GIT_ROOT = Path(os.environ.get('CONTENT_GIT_ROOT') or PROJECT_ROOT).resolve()
+CONTENT_GIT_OFFLINE = os.environ.get('CONTENT_GIT_OFFLINE') == '1'
 LEGACY_CONTENT_ROOT = os.path.join(PROJECT_ROOT, 'render_data')
 LOCAL_HOST = (os.environ.get('LOCAL_HOST', '127.0.0.1') or '127.0.0.1').strip()
 LOCAL_PORT = int(os.environ.get('LOCAL_PORT') or os.environ.get('PORT') or 5000)
@@ -803,11 +806,19 @@ def _normalize_person_tags(items):
     return normalized or list(DEFAULT_PERSON_TAGS)
 
 def _run_git_command(args):
-    """Run a git command in the project root and capture stdout/stderr safely."""
+    """Run Git in the repository that owns the published content."""
+    env = None
+    if CONTENT_GIT_OFFLINE:
+        from scripts.preview_content_git import offline_git_env
+
+        if not (CONTENT_GIT_ROOT / '.git').is_dir():
+            return _content_git_error()
+        env = offline_git_env()
     try:
         result = subprocess.run(
             ['git', *args],
-            cwd=PROJECT_ROOT,
+            cwd=CONTENT_GIT_ROOT,
+            env=env,
             capture_output=True,
             text=True,
             encoding='utf-8',
@@ -827,6 +838,19 @@ def _run_git_command(args):
             'stderr': str(exc)
         }
 
+
+def _content_git_path():
+    try:
+        relative = Path(CONTENT_ROOT).resolve().relative_to(CONTENT_GIT_ROOT)
+    except ValueError:
+        return None
+    return relative.as_posix() if relative.parts else None
+
+
+def _content_git_error():
+    message = 'Configure a Git checkout that contains the site content directory.'
+    return {'ok': False, 'code': -1, 'stdout': '', 'stderr': message}
+
 def _parse_git_status_lines(raw_status_output):
     changed_files = []
     if not raw_status_output:
@@ -843,11 +867,14 @@ def _parse_git_status_lines(raw_status_output):
 
 def _get_local_cms_status():
     """Collect a lightweight snapshot of the local CMS + git workspace status."""
-    content_rel = os.path.relpath(CONTENT_ROOT, PROJECT_ROOT)
-    status_result = _run_git_command(['status', '--short', '--', content_rel])
-    branch_result = _run_git_command(['rev-parse', '--abbrev-ref', 'HEAD'])
-    last_commit_result = _run_git_command(['log', '-1', '--pretty=format:%h | %ad | %s', '--date=format-local:%Y-%m-%d %H:%M'])
-    remote_result = _run_git_command(['remote', 'get-url', 'origin'])
+    content_rel = _content_git_path()
+    if content_rel is None:
+        status_result = branch_result = last_commit_result = remote_result = _content_git_error()
+    else:
+        status_result = _run_git_command(['status', '--short', '--', content_rel])
+        branch_result = _run_git_command(['rev-parse', '--abbrev-ref', 'HEAD'])
+        last_commit_result = _run_git_command(['log', '-1', '--pretty=format:%h | %ad | %s', '--date=format-local:%Y-%m-%d %H:%M'])
+        remote_result = _run_git_command(['remote', 'get-url', 'origin'])
 
     changed_files = _parse_git_status_lines(status_result['stdout'] if status_result['ok'] else '')
 
@@ -869,14 +896,20 @@ def _get_local_cms_status():
 
 def _publish_site_content(commit_message):
     """Commit and push git-tracked site_content/ changes from the local CMS."""
-    content_rel = os.path.relpath(CONTENT_ROOT, PROJECT_ROOT)
-    status_result = _run_git_command(['status', '--short', '--', content_rel])
+    content_rel = _content_git_path()
+    status_result = _content_git_error() if content_rel is None else _run_git_command(['status', '--short', '--', content_rel])
     if not status_result['ok']:
         return {
             'kind': 'error',
             'message': 'Git status failed before publishing.',
             'details': status_result['stderr'] or status_result['stdout']
         }
+    if app.config.get('CONTENT_WORKFLOW') is not None:
+        ahead = _run_git_command(['diff', '--name-only', '@{upstream}..HEAD'])
+        files = ahead['stdout'].splitlines()
+        if not ahead['ok'] or any(path != content_rel and not path.startswith(content_rel + '/') for path in files):
+            return {'kind': 'error', 'message': 'Only content commits can be pushed from this workspace.',
+                    'details': ahead['stderr'] or '\n'.join(files)}
     if not status_result['stdout']:
         return {
             'kind': 'info',
@@ -958,10 +991,13 @@ def _publish_site_content(commit_message):
     }
 
 def _get_sync_from_github_status(fetch_remote=False):
-    content_rel = os.path.relpath(CONTENT_ROOT, PROJECT_ROOT).replace('\\', '/')
-    branch_result = _run_git_command(['rev-parse', '--abbrev-ref', 'HEAD'])
-    remote_result = _run_git_command(['remote', 'get-url', 'origin'])
-    local_status_result = _run_git_command(['status', '--short', '--', content_rel])
+    content_rel = _content_git_path()
+    if content_rel is None:
+        branch_result = remote_result = local_status_result = _content_git_error()
+    else:
+        branch_result = _run_git_command(['rev-parse', '--abbrev-ref', 'HEAD'])
+        remote_result = _run_git_command(['remote', 'get-url', 'origin'])
+        local_status_result = _run_git_command(['status', '--short', '--', content_rel])
 
     if not branch_result['ok'] or not remote_result['ok']:
         return {
@@ -995,7 +1031,16 @@ def _get_sync_from_github_status(fetch_remote=False):
 
     local_changes = _parse_git_status_lines(local_status_result['stdout'] if local_status_result['ok'] else '')
 
-    ahead_behind_result = _run_git_command(['rev-list', '--left-right', '--count', f'HEAD...origin/{branch_name}'])
+    remote_target = f'origin/{branch_name}'
+    checked_commit = None
+    if app.config.get('CONTENT_WORKFLOW') is not None:
+        resolved = _run_git_command(['rev-parse', '--verify', remote_target])
+        if not resolved['ok'] or not re.fullmatch(r'[0-9a-f]{40,64}', resolved['stdout']):
+            return {'available': False, 'can_sync': False, 'kind': 'error', 'branch': branch_name,
+                    'message': 'Could not determine the fetched content revision.', 'details': resolved['stderr'],
+                    'incoming_content_files': [], 'incoming_code_files': [], 'local_changes': local_changes}
+        checked_commit = remote_target = resolved['stdout']
+    ahead_behind_result = _run_git_command(['rev-list', '--left-right', '--count', f'HEAD...{remote_target}'])
     ahead_count = 0
     behind_count = 0
     if ahead_behind_result['ok']:
@@ -1008,7 +1053,7 @@ def _get_sync_from_github_status(fetch_remote=False):
                 ahead_count = 0
                 behind_count = 0
 
-    diff_result = _run_git_command(['diff', '--name-only', f'HEAD..origin/{branch_name}'])
+    diff_result = _run_git_command(['diff', '--name-only', f'HEAD..{remote_target}'])
     remote_changed_files = []
     if diff_result['ok'] and diff_result['stdout']:
         remote_changed_files = [line.strip().replace('\\', '/') for line in diff_result['stdout'].splitlines() if line.strip()]
@@ -1081,6 +1126,7 @@ def _get_sync_from_github_status(fetch_remote=False):
         'can_sync': True,
         'kind': 'success',
         'message': 'GitHub has newer content-only changes that can be fast-forwarded into this server.',
+        'checked_commit': checked_commit,
         'details': '',
         'incoming_content_files': incoming_content_files,
         'incoming_code_files': incoming_code_files,
@@ -1143,7 +1189,11 @@ def _sync_site_content_from_github():
         }
 
     branch_name = sync_status.get('branch') or 'main'
-    pull_result = _run_git_command(['pull', '--ff-only', 'origin', branch_name])
+    checked_commit = sync_status.get('checked_commit')
+    if checked_commit:
+        pull_result = _run_git_command(['merge', '--ff-only', checked_commit])
+    else:
+        pull_result = _run_git_command(['pull', '--ff-only', 'origin', branch_name])
     if not pull_result['ok']:
         return {
             'kind': 'error',
@@ -1201,7 +1251,7 @@ def load_people_data():
             normalized.append(record)
             if record != item:
                 changed = True
-    if changed:
+    if changed and app.config.get('CONTENT_WORKFLOW') is None:
         save_json_data('people.json', normalized)
     return normalized
 
@@ -1251,6 +1301,21 @@ def _news_sort_key(item):
     return (1 if item.get('pinned') else 0, (item.get('date') or ''), (item.get('last_edited') or ''), item.get('id', ''))
 
 def load_news_data():
+    workflow = app.config.get('CONTENT_WORKFLOW')
+    if workflow is not None:
+        from news_editor import news_for_display
+
+        records = [news_for_display({**item, **_normalize_news_record(item)}) for item in workflow.published('news')]
+        return sorted(records, key=_news_sort_key, reverse=True)
+    store = app.config.get('NEWS_EDITOR_STORE')
+    if store is not None:
+        from news_editor import news_for_display
+
+        return [news_for_display(item) for item in store.list_published()]
+    return _load_legacy_news_data()
+
+
+def _load_legacy_news_data():
     path = os.path.join(CONTENT_ROOT, 'news.json')
     if not os.path.exists(path):
         seed = _default_news_items()
@@ -1376,6 +1441,11 @@ def load_site_config():
         return fallback
 
 def save_site_config(cfg):
+    if app.config.get('CONTENT_WORKFLOW') is not None:
+        from content_workflow import atomic_write
+
+        atomic_write(Path(SITE_CONFIG_PATH), json.dumps(cfg, ensure_ascii=False, indent=2).encode('utf-8'))
+        return
     try:
         with open(SITE_CONFIG_PATH, 'w', encoding='utf-8') as f:
             json.dump(cfg, f, ensure_ascii=False, indent=2)
@@ -1553,7 +1623,7 @@ def load_articles_data():
     articles, changed = _normalize_article_records(articles)
     if _normalize_home_carousel_flags(articles):
         changed = True
-    if changed:
+    if changed and app.config.get('CONTENT_WORKFLOW') is None:
         save_json_data('articles.json', articles)
     return articles
 
@@ -2130,7 +2200,8 @@ def submit_register():
         return "❌ Please confirm the academic-use consent to proceed.", 400
 
     # === Admin verification ===
-    if (name == ADMIN_CREDENTIALS['name'] and
+    if (not app.config.get('NEWS_EDITOR_STORE') and
+        name == ADMIN_CREDENTIALS['name'] and
         affiliation == ADMIN_CREDENTIALS['affiliation'] and
         email == ADMIN_CREDENTIALS['email']):
         session['is_admin'] = True
@@ -2466,7 +2537,7 @@ def _build_admin_content_context():
         item_id = row.get('resource_id')
         if item_id:
             unique_downloaders.setdefault(item_id, set()).add((row.get('name',''), row.get('affiliation',''), row.get('email','')))
-    return {
+    context = {
         'articles': articles,
         'people': people,
         'news_items': news_items,
@@ -2477,6 +2548,11 @@ def _build_admin_content_context():
         'article_view_counts': analytics['article_view_counts'],
         **_build_people_photo_context(people)
     }
+    if app.config.get('CONTENT_WORKFLOW') is not None:
+        from news_editor import add_workflow_admin_context
+
+        add_workflow_admin_context(context)
+    return context
 
 def _build_admin_assets_context():
     articles = load_articles_data()
@@ -2495,6 +2571,18 @@ def _build_admin_settings_context():
     }
 
 def _handle_admin_actions(default_module):
+    workflow = app.config.get('CONTENT_WORKFLOW')
+    if workflow is not None and request.method == 'POST':
+        if request.form.get('action') in ('add', 'edit'):
+            from news_editor import save_legacy_record
+
+            return save_legacy_record()
+        with workflow.content_write():
+            return _dispatch_admin_actions(default_module)
+    return _dispatch_admin_actions(default_module)
+
+
+def _dispatch_admin_actions(default_module):
     action = request.form.get('action') or request.args.get('action')
     item_type = request.form.get('item_type') or request.args.get('item_type')
     if not action:
@@ -2640,9 +2728,15 @@ def _handle_admin_actions(default_module):
 
     return None
 
+def _legacy_admin_can_read():
+    if app.config.get('NEWS_EDITOR_STORE') is not None:
+        return g.get('preview_owner_admin_read', False)
+    return bool(session.get('is_admin'))
+
+
 @app.route('/admin', methods=['GET', 'POST'])
 def admin_dashboard():
-    if not session.get('is_admin'):
+    if not _legacy_admin_can_read():
         return redirect(url_for('register'))
     response = _handle_admin_actions('home')
     if response:
@@ -2657,7 +2751,7 @@ def admin_dashboard():
 
 @app.route('/admin/content', methods=['GET', 'POST'])
 def admin_content():
-    if not session.get('is_admin'):
+    if not _legacy_admin_can_read():
         return redirect(url_for('register'))
     response = _handle_admin_actions('content')
     if response:
@@ -2672,7 +2766,7 @@ def admin_content():
 
 @app.route('/admin/analytics', methods=['GET', 'POST'])
 def admin_analytics():
-    if not session.get('is_admin'):
+    if not _legacy_admin_can_read():
         return redirect(url_for('register'))
     response = _handle_admin_actions('analytics')
     if response:
@@ -2686,7 +2780,7 @@ def admin_analytics():
 
 @app.route('/admin/assets')
 def admin_assets():
-    if not session.get('is_admin'):
+    if not _legacy_admin_can_read():
         return redirect(url_for('register'))
     return render_template(
         'admin_assets.html',
@@ -2697,7 +2791,7 @@ def admin_assets():
 
 @app.route('/admin/settings', methods=['GET', 'POST'])
 def admin_settings():
-    if not session.get('is_admin'):
+    if not _legacy_admin_can_read():
         return redirect(url_for('register'))
     response = _handle_admin_actions('settings')
     if response:
@@ -2786,6 +2880,10 @@ def admin_upload_file(file_type, resource_id):
 
 @app.route('/admin/upload-thumb/<article_id>', methods=['POST'])
 def admin_upload_thumbnail(article_id):
+    if app.config.get('CONTENT_WORKFLOW') is not None:
+        from news_editor import save_legacy_asset
+
+        return save_legacy_asset('article', article_id, 'thumbnail')
     if not session.get('is_admin'):
         return "Unauthorized", 403
     articles = load_articles_data()
@@ -2824,6 +2922,10 @@ def admin_upload_thumbnail(article_id):
 
 @app.route('/admin/upload-person-photo/<person_id>', methods=['POST'])
 def admin_upload_person_photo(person_id):
+    if app.config.get('CONTENT_WORKFLOW') is not None:
+        from news_editor import save_legacy_asset
+
+        return save_legacy_asset('person', person_id, 'photo')
     if not session.get('is_admin'):
         return "Unauthorized", 403
 
@@ -2851,6 +2953,10 @@ def admin_upload_person_photo(person_id):
 
 @app.route('/admin/upload-news-image/<news_id>', methods=['POST'])
 def admin_upload_news_image(news_id):
+    if app.config.get('CONTENT_WORKFLOW') is not None:
+        from news_editor import save_legacy_asset
+
+        return save_legacy_asset('news', news_id, 'image')
     if not session.get('is_admin'):
         return "Unauthorized", 403
     news_items = load_news_data()
@@ -2884,7 +2990,15 @@ def admin_upload_news_image(news_id):
 
 @app.route('/admin/upload-site-image/<slot>', methods=['POST'])
 def admin_upload_site_image(slot):
-    if not session.get('is_admin'):
+    workflow = app.config.get('CONTENT_WORKFLOW')
+    if workflow is not None:
+        with workflow.content_write():
+            return _save_site_image(slot)
+    return _save_site_image(slot)
+
+
+def _save_site_image(slot):
+    if not _legacy_admin_can_read():
         return "Unauthorized", 403
 
     image = request.files.get('image')
@@ -2964,6 +3078,8 @@ def _send_cached_asset(path, max_age=ASSET_CACHE_MAX_AGE, immutable=True):
 
 @app.route('/assets/people/<filename>')
 def asset_people(filename):
+    if app.config.get('CONTENT_WORKFLOW') is not None and filename.startswith('wf-'):
+        return _send_workflow_image('person', filename)
     path = os.path.join(PEOPLE_IMAGES_DIR, filename)
     if not os.path.exists(path):
         return abort(404)
@@ -2971,6 +3087,8 @@ def asset_people(filename):
 
 @app.route('/assets/articles/<filename>')
 def asset_article_thumb(filename):
+    if app.config.get('CONTENT_WORKFLOW') is not None and filename.startswith('wf-'):
+        return _send_workflow_image('article', filename)
     path = os.path.join(ARTICLE_IMAGES_DIR, filename)
     if not os.path.exists(path):
         return abort(404)
@@ -2978,6 +3096,17 @@ def asset_article_thumb(filename):
 
 @app.route('/assets/news/<filename>')
 def asset_news_image(filename):
+    workflow = app.config.get('CONTENT_WORKFLOW')
+    if workflow is not None:
+        if filename.startswith('wf-'):
+            return _send_workflow_image('news', filename)
+        if filename.startswith('managed-'):
+            abort(404)
+    store = app.config.get('NEWS_EDITOR_STORE')
+    if store is not None and filename.startswith('managed-'):
+        from news_editor import send_news_image
+
+        return send_news_image(store.get_image(filename))
     path = os.path.join(NEWS_IMAGES_DIR, filename)
     if not os.path.exists(path):
         fallback = os.path.join(app.static_folder, 'images', 'placeholder-news.svg')
@@ -2985,6 +3114,25 @@ def asset_news_image(filename):
             return _send_cached_asset(fallback, max_age=3600, immutable=False)
         return abort(404)
     return _send_cached_asset(path)
+
+
+def _send_workflow_image(kind, filename):
+    path = app.config['CONTENT_WORKFLOW'].public_image(kind, filename)
+    if path is None:
+        abort(404)
+    return _send_cached_asset(path, max_age=0, immutable=False)
+
+
+@app.get('/assets/publication-files/<filename>')
+def published_attachment(filename):
+    workflow = app.config.get('CONTENT_WORKFLOW')
+    path = workflow.public_file(filename) if workflow else None
+    if path is None:
+        abort(404)
+    response = send_file(path, mimetype='application/pdf', as_attachment=True, max_age=0)
+    response.headers['Cache-Control'] = 'private, no-store'
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    return response
 
 @app.route('/assets/site/<filename>')
 def asset_site_image(filename):
@@ -2999,7 +3147,7 @@ def asset_site_image(filename):
 @app.route('/admin/download-site-content.zip')
 def download_site_content_zip():
     """Package the git-tracked site_content folder and download as ZIP."""
-    if not session.get('is_admin'):
+    if not _legacy_admin_can_read():
         return "Unauthorized", 403
     import io, zipfile
     buf = io.BytesIO()
@@ -3012,6 +3160,19 @@ def download_site_content_zip():
                 zf.write(fpath, arcname=rel)
     buf.seek(0)
     return send_file(buf, as_attachment=True, download_name='site_content_bundle.zip', mimetype='application/zip')
+
+
+@app.get('/admin/download-handoff.zip')
+def admin_handoff_backup():
+    if not _legacy_admin_can_read():
+        abort(403)
+    workflow = app.config.get('CONTENT_WORKFLOW')
+    if workflow is None:
+        abort(404)
+    from handoff_backup import build_handoff_backup
+
+    return send_file(build_handoff_backup(workflow), as_attachment=True,
+                     download_name='opticom_handoff_backup.zip', mimetype='application/zip')
 
 @app.route('/admin/download-logs.csv')
 def download_logs_csv():
@@ -3130,7 +3291,7 @@ def _csv_bytes(fieldnames, rows):
     return io.BytesIO(text_buffer.getvalue().encode('utf-8-sig'))
 
 def _download_logs_csv_supabase_only():
-    if not session.get('is_admin'):
+    if not _legacy_admin_can_read():
         return "Unauthorized", 403
     rows = _load_resource_open_rows()
     return send_file(
@@ -3144,7 +3305,7 @@ def _download_logs_csv_supabase_only():
     )
 
 def _download_page_views_csv_supabase_only():
-    if not session.get('is_admin'):
+    if not _legacy_admin_can_read():
         return "Unauthorized", 403
     rows = _load_page_view_rows()
     return send_file(
@@ -3158,7 +3319,7 @@ def _download_page_views_csv_supabase_only():
     )
 
 def _download_analytics_bundle_supabase_only():
-    if not session.get('is_admin'):
+    if not _legacy_admin_can_read():
         return "Unauthorized", 403
     import zipfile
 
@@ -3187,7 +3348,7 @@ def _download_analytics_bundle_supabase_only():
     )
 
 def _upload_runtime_bundle_retired():
-    if not session.get('is_admin'):
+    if not _legacy_admin_can_read():
         return "Unauthorized", 403
     session['admin_notice'] = {
         'kind': 'info',
@@ -3203,7 +3364,7 @@ def _download_file_compat(file_type, resource_id):
     return redirect(url_for('open_link', link_type=file_type, resource_id=resource_id))
 
 def _admin_upload_file_retired(file_type, resource_id):
-    if not session.get('is_admin'):
+    if not _legacy_admin_can_read():
         return "Unauthorized", 403
     redirect_module = request.args.get('redirect_module') or request.form.get('redirect_module') or 'assets'
     session['admin_notice'] = {
@@ -3220,6 +3381,19 @@ app.view_functions['upload_render_data_zip'] = _upload_runtime_bundle_retired
 app.view_functions['open_link'] = _open_link_supabase_only
 app.view_functions['download_file'] = _download_file_compat
 app.view_functions['admin_upload_file'] = _admin_upload_file_retired
+
+if os.environ.get('NEWS_EDITOR_PREVIEW') == '1':
+    if not IS_LOCAL or LOCAL_HOST != '127.0.0.1':
+        raise RuntimeError('The news editor preview requires local mode on 127.0.0.1.')
+
+    from news_editor import configure_news_editor
+
+    configure_news_editor(app, _load_legacy_news_data(), {
+        'resolve_article_flags': _resolve_article_form_flags,
+        'normalize_person_tags': _normalize_selected_tags,
+        'normalize_carousel': _normalize_home_carousel_flags,
+        'asset_image_url': asset_image_url,
+    })
 
 
 # ==============================================================================
