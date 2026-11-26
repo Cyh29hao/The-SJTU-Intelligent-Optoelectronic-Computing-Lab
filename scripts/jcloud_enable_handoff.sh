@@ -9,7 +9,8 @@ config_dir=/etc/lab-web-handoff
 override_dir=/etc/systemd/system/lab-web.service.d
 env_file=$config_dir/env
 override_file=$override_dir/90-admin-handoff.conf
-site=https://opticompt-lab.sjtu.edu.cn
+site_host=opticompt-lab.sjtu.edu.cn
+origin=http://$site_host
 
 fail() {
   printf '%s\n' "$1" >&2
@@ -86,16 +87,19 @@ finish() {
   exit "$result"
 }
 
-public_request() {
-  curl --silent --show-error --head --max-time 8 --output /dev/null --write-out "$2" "$site$1"
+origin_request() {
+  curl --silent --show-error --head --max-time 5 --noproxy '*' \
+    --resolve "$site_host:80:127.0.0.1" --output /dev/null --write-out "$2" "$origin$1"
 }
 
-verify_public_routes() {
+admin_origin_redirect() {
+  origin_request /admin '%{http_code} %{redirect_url}'
+}
+
+verify_origin_routes() {
   local redirect_target=$1 response
-  response=$(public_request / '%{http_code}') && [[ $response == 200 ]] || return 1
-  response=$(public_request /admin '%{http_code} %{redirect_url}') &&
-    [[ $response == "302 $site$redirect_target" ]] || return 1
-  response=$(public_request "$redirect_target" '%{http_code}') && [[ $response == 200 ]]
+  response=$(admin_origin_redirect) && [[ $response == "302 $origin$redirect_target" ]] || return 1
+  response=$(origin_request "$redirect_target" '%{http_code}') && [[ $response == 200 ]]
 }
 
 transaction=$(mktemp -d "$config_dir/.update.XXXXXXXX")
@@ -109,6 +113,11 @@ if [[ -e $override_file ]]; then cp -p -- "$override_file" "$transaction/overrid
 
 if [[ $mode == enable ]]; then
   [[ -t 0 ]] || fail 'Run this command in an interactive cloud console or SSH terminal.'
+  response=$(admin_origin_redirect) || fail 'Local Nginx is not reachable. The current service configuration was retained.'
+  case "$response" in
+    "302 $origin/register"|"302 $origin/editor/login") ;;
+    *) fail 'Local Nginx did not return the expected admin redirect. The current service configuration was retained.' ;;
+  esac
   unset owner_password editor_password
   owner_password=$(read_password owner)
   editor_password=$(read_password editor)
@@ -173,12 +182,13 @@ fi
 systemctl daemon-reload
 systemctl restart "$service"
 for attempt in 1 2 3 4; do
-  if systemctl is-active --quiet "$service" && verify_public_routes "$redirect_target"; then
+  if systemctl is-active --quiet "$service" && verify_origin_routes "$redirect_target"; then
     restore_on_exit=0
-    printf 'Service active and public homepage responds. /admin now leads to %s.\n' "$redirect_target"
+    printf 'Local Nginx and service verified. /admin now leads to %s.\n' "$redirect_target"
+    printf 'Verify the public site from a browser outside this host: https://%s/admin\n' "$site_host"
     exit 0
   fi
   if (( attempt < 4 )); then sleep 2; fi
 done
 
-fail 'The expected public routes could not be verified. Check the service journal and school proxy connectivity.'
+fail 'The local Nginx admin routes could not be verified. Check the lab-web.service journal.'
