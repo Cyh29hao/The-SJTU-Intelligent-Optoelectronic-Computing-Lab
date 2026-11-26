@@ -141,6 +141,8 @@ class FullAdminWorkflowTests(unittest.TestCase):
             self.assertEqual(anon.get('/admin', base_url='http://192.0.2.1').status_code, 403)
             self.assertEqual(anon.get('/editor/login', base_url='https://other.example.edu').status_code, 403)
             self.assertEqual(anon.get('/admin', base_url=https).location, '/editor/login')
+            self.assertEqual(anon.head('/admin', base_url=https).location, '/editor/login')
+            self.assertEqual(anon.head('/editor/login', base_url=https).status_code, 200)
             for role in ('editor', 'owner'):
                 with self.subTest(role=role):
                     client = module.app.test_client()

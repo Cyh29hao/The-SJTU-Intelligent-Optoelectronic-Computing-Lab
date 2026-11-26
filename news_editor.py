@@ -297,7 +297,7 @@ def login():
         next_record = (record_kind, record_id)
     login_target = dict(preview_id=preview_id, record_kind=record_kind if next_record else None,
                         record_id=record_id if next_record else None)
-    if request.method == 'GET':
+    if request.method != 'POST':
         role = _role()
         if role:
             return redirect(_editor_destination(role, preview_id, next_record))

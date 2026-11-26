@@ -98,8 +98,16 @@ admin_origin_redirect() {
 
 verify_origin_routes() {
   local redirect_target=$1 response
-  response=$(admin_origin_redirect) && [[ $response == "302 $origin$redirect_target" ]] || return 1
-  response=$(origin_request "$redirect_target" '%{http_code}') && [[ $response == 200 ]]
+  response=$(admin_origin_redirect) || return 1
+  if [[ $response != "302 $origin$redirect_target" ]]; then
+    printf '/admin returned %s, expected a redirect to %s.\n' "$response" "$redirect_target" >&2
+    return 1
+  fi
+  response=$(origin_request "$redirect_target" '%{http_code}') || return 1
+  if [[ $response != 200 ]]; then
+    printf '%s returned HTTP %s, expected 200.\n' "$redirect_target" "$response" >&2
+    return 1
+  fi
 }
 
 transaction=$(mktemp -d "$config_dir/.update.XXXXXXXX")
@@ -182,7 +190,9 @@ fi
 systemctl daemon-reload
 systemctl restart "$service"
 for attempt in 1 2 3 4; do
-  if systemctl is-active --quiet "$service" && verify_origin_routes "$redirect_target"; then
+  if ! systemctl is-active --quiet "$service"; then
+    printf '%s is not active.\n' "$service" >&2
+  elif verify_origin_routes "$redirect_target"; then
     restore_on_exit=0
     printf 'Local Nginx and service verified. /admin now leads to %s.\n' "$redirect_target"
     printf 'Verify the public site from a browser outside this host: https://%s/admin\n' "$site_host"
