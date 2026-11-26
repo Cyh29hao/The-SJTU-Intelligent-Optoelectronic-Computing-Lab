@@ -7,7 +7,7 @@
   {% if asset_image_url is defined %}
   <link rel="icon" type="image/png" href="{{ asset_image_url('site', 'favicon-32.png') }}">
   {% endif %}
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/news_editor.css') }}">
+  <link rel="stylesheet" href="{{ static_asset_url('css/news_editor.css') }}">
 </head>
 <body>
   <header class="editor-header">
@@ -20,7 +20,7 @@
       </a>
       <nav class="editor-nav" aria-label="后台导航">
         {% if editor_role %}
-        <a href="{{ url_for('news_editor.dashboard') }}"{% if request.endpoint == 'news_editor.dashboard' %} aria-current="page"{% endif %}>新闻列表</a>
+        <a href="{{ url_for('news_editor.dashboard') }}"{% if request.endpoint == 'news_editor.dashboard' %} aria-current="page"{% endif %}>{{ '后台总览' if config.CONTENT_WORKFLOW else '新闻列表' }}</a>
         {% if editor_role == 'owner' %}
         <a href="{{ url_for('news_editor.access') }}"{% if request.endpoint == 'news_editor.access' %} aria-current="page"{% endif %}>脚本凭证</a>
         {% endif %}

@@ -24,16 +24,22 @@ editor = Blueprint('news_editor', __name__, url_prefix='/editor')
 SESSION_SECONDS = 8 * 60 * 60
 TEXT_FIELDS = ('title', 'title_zh', 'date', 'summary', 'summary_zh', 'content', 'content_zh')
 FLAG_FIELDS = ('pinned', 'hide_from_home')
-OWNER_ADMIN_READ_ENDPOINTS = frozenset({
+EDITOR_ADMIN_READ_ENDPOINTS = frozenset({
     'admin_dashboard', 'admin_content', 'admin_assets', 'admin_settings', 'admin_analytics',
-    'download_site_content_zip', 'download_logs_csv', 'download_page_views_csv', 'download_render_data_zip',
-    'admin_handoff_backup',
+    'download_logs_csv', 'download_page_views_csv', 'download_render_data_zip',
 })
-EDITOR_ADMIN_READ_ENDPOINTS = {'admin_dashboard', 'admin_content', 'admin_assets'}
+OWNER_ADMIN_READ_ENDPOINTS = EDITOR_ADMIN_READ_ENDPOINTS | {
+    'admin_operations', 'download_site_content_zip', 'admin_handoff_backup',
+}
 CONTENT_ACTIONS = {'add', 'edit', 'edit_site_welcome', 'edit_join_us'}
 SITE_WRITES = {'edit_site_branding', 'edit_friend_links', 'edit_research_highlights', 'edit_person_tags'}
-ANALYTICS_WRITES = {'publish_content_to_github', 'sync_content_from_github', 'clear_supabase_analytics'}
-RECORD_UPLOADS = {'admin_upload_thumbnail', 'admin_upload_person_photo', 'admin_upload_news_image'}
+OPERATIONS_WRITES = {'publish_content_to_github', 'sync_content_from_github', 'clear_supabase_analytics', 'edit_site_version'}
+CONTENT_UPLOADS = {'admin_upload_thumbnail', 'admin_upload_person_photo', 'admin_upload_news_image', 'admin_upload_site_image'}
+BRANDING_FIELDS = {
+    'lab_name_short', 'lab_name_short_zh', 'lab_name_full', 'lab_name_full_zh',
+    'footer_copyright', 'footer_copyright_zh', 'footer_icp_record',
+    '_show_external_access_note_present', 'show_external_access_note',
+}
 HOME_FIELDS = {'hero_summary', 'hero_summary_zh', 'home_welcome', 'home_welcome_zh', 'home_note', 'home_note_zh'}
 JOIN_FIELDS = {
     'admissions_title', 'admissions_title_zh', 'admissions_intro', 'admissions_intro_zh',
@@ -162,13 +168,20 @@ def _authorize_legacy_request(role):
         elif request.form.get('item_type') not in ('article', 'person', 'news'):
             abort(400)
         return
-    if endpoint in RECORD_UPLOADS:
+    if endpoint in CONTENT_UPLOADS:
+        return
+    if endpoint == 'admin_settings' and action in SITE_WRITES:
+        if action == 'edit_site_branding':
+            _require_fields(BRANDING_FIELDS)
+        elif 'site_version' in request.form:
+            abort(403, '网站版本在站点运维中维护。')
         return
     if role == 'owner' and (
-        (endpoint == 'admin_settings' and action in SITE_WRITES)
-        or (endpoint == 'admin_analytics' and action in ANALYTICS_WRITES)
-        or endpoint in ('admin_upload_site_image', 'admin_upload_file', 'upload_render_data_zip')
+        (endpoint == 'admin_operations' and action in OPERATIONS_WRITES)
+        or endpoint in ('admin_upload_file', 'upload_render_data_zip')
     ):
+        if action == 'edit_site_version':
+            _require_fields({'site_version'})
         return
     abort(403)
 
@@ -615,9 +628,6 @@ def record_action(kind, record_id):
                 'rebase': '已确认最新公开版本，可以继续修改草稿。'}
     if action not in messages:
         abort(400)
-    if action == 'restore' and _role() != 'owner':
-        abort(403)
-
     def normalize_carousel(items, _record_id):
         current_app.config['CONTENT_RECORD_HELPERS']['normalize_carousel'](items)
 

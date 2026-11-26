@@ -22,8 +22,8 @@ bash scripts/jcloud_enable_handoff.sh
 
 从[网站后台](https://opticompt-lab.sjtu.edu.cn/admin)登录。用两个浏览器会话分别查验账号。
 
-- `owner` 是站长账号。核对内容、素材、设置和统计入口，以及 Git 和备份功能。
-- `editor` 用于学姐日常维护。核对论文、人员和新闻的草稿预览，以及首页和招生文案入口。在这个会话直接进入 `/admin/settings` 或 `/admin/analytics` 应收到拒绝访问。
+- `owner` 是站长账号。核对四个日常模块，以及「站点运维」里的 Git 同步、脚本凭证、整站备份和统计清空。
+- `editor` 用于日常维护。核对内容、素材、展示设置、统计和原始日志导出。直接进入 `/admin/operations` 应收到拒绝访问。
 
 把后台地址、`editor` 账号和学姐的说明书发给学姐。密码另用私密渠道交接。可以请她先保存一条真实待更新的草稿并打开预览，核对内容后再决定是否公开。
 

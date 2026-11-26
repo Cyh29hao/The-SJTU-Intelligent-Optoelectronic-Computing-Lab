@@ -1,16 +1,22 @@
 {% extends "admin_layout.html" %}
 {% from "admin_workflow_macros.html" import csrf, revision with context %}
 
+{% block admin_title %}{{ 'Manage Assets' if config.ADMIN_HANDOFF_ENABLED else super() }}{% endblock %}
+{% block admin_header %}{{ 'Manage Assets' if config.ADMIN_HANDOFF_ENABLED else super() }}{% endblock %}
+
 {% block admin_body %}
 {% set active_section = request.args.get('section', '') %}
 {% set full_admin = config.ADMIN_HANDOFF_ENABLED %}
 {% set revisions = draft_revisions|default({}) %}
-
+{% set site_image_types = 'image/png,image/jpeg,image/gif,image/webp' %}
 {% if not full_admin or admin_role == 'owner' %}
+    {% set site_image_types = site_image_types ~ ',image/svg+xml' %}
+{% endif %}
+
 <details id="site-images" {% if active_section in ('', 'site-images') %}open{% endif %}>
     <summary>🧩 Site Images</summary>
     <div class="details-body">
-    <p class="helper-note">Header logo, hero brand strip, and footer-link icons live in git-tracked <code>site_content/images/</code>.</p>
+    <p class="helper-note">Upload a PNG, JPEG, GIF, or WebP image{% if not full_admin or admin_role == 'owner' %}. SVG is also supported{% endif %}.</p>
 
     <div class="asset-grid">
         <div class="asset-card">
@@ -21,7 +27,7 @@
             </div>
             <form method="POST" enctype="multipart/form-data" action="{{ url_for('admin_upload_site_image', slot='logo', redirect_module='assets') }}">
                 {{ csrf() }}
-                <input type="file" name="image" accept="image/png,image/jpeg,image/jpg,image/gif,image/svg+xml,image/webp" required>
+                <input type="file" name="image" accept="{{ site_image_types }}" required>
                 <button type="submit">Upload Logo</button>
             </form>
         </div>
@@ -34,7 +40,7 @@
             </div>
             <form method="POST" enctype="multipart/form-data" action="{{ url_for('admin_upload_site_image', slot='hero-brand', redirect_module='assets') }}">
                 {{ csrf() }}
-                <input type="file" name="image" accept="image/png,image/jpeg,image/jpg,image/gif,image/svg+xml,image/webp" required>
+                <input type="file" name="image" accept="{{ site_image_types }}" required>
                 <button type="submit">Upload Hero Brand Strip</button>
             </form>
         </div>
@@ -55,7 +61,7 @@
             </div>
             <form method="POST" enctype="multipart/form-data" action="{{ url_for('admin_upload_site_image', slot='friend-' ~ loop.index, redirect_module='assets') }}">
                 {{ csrf() }}
-                <input type="file" name="image" accept="image/png,image/jpeg,image/jpg,image/gif,image/svg+xml,image/webp" required>
+                <input type="file" name="image" accept="{{ site_image_types }}" required>
                 <button type="submit">Upload Link Image</button>
             </form>
         </div>
@@ -63,9 +69,8 @@
     </div>
     </div>
 </details>
-{% endif %}
 
-<details id="people-photos" {% if active_section == 'people-photos' or (full_admin and admin_role == 'editor' and not active_section) %}open{% endif %}>
+<details id="people-photos" {% if active_section == 'people-photos' %}open{% endif %}>
     <summary>👤 People Photos</summary>
     <div class="details-body">
     <p class="helper-note">Upload and replace member headshots here while keeping profile text editing in the Content workspace.</p>

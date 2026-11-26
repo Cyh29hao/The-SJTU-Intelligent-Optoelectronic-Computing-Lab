@@ -1,11 +1,54 @@
-{% extends 'news_editor/layout.html' %}
+{% extends 'admin_layout.html' if config.CONTENT_WORKFLOW else 'news_editor/layout.html' %}
+{% set active_module = 'credentials' %}
 {% block title %}脚本凭证{% endblock %}
+{% block admin_title %}脚本凭证{% endblock %}
+{% block admin_header %}脚本凭证{% endblock %}
+
+{% macro credential_action(action, label, style) %}
+<form method="post" action="{{ url_for('news_editor.access') }}">
+  <input type="hidden" name="csrf_token" value="{{ editor_csrf_token() }}">
+  <input type="hidden" name="action" value="{{ action }}">
+  <button class="{{ style }}" type="submit">{{ label }}</button>
+</form>
+{% endmacro %}
+
+{% block admin_body %}
+<main class="operations-page">
+  {% for notice in get_flashed_messages() %}
+  <p class="admin-notice success" role="status">{{ notice }}</p>
+  {% endfor %}
+  <section class="section-card" aria-labelledby="draft-api-title">
+    <div class="inline-actions operations-heading">
+      <h2 id="draft-api-title">草稿接口</h2>
+      <span class="sync-pill {{ 'success' if token_configured else 'info' }}">{{ '已有有效凭证' if token_configured else '尚无凭证' }}</span>
+    </div>
+    <ol class="helper-note credential-steps">
+      <li>站长生成凭证并复制保存，凭证只在生成时显示。</li>
+      <li>在本机终端运行上传脚本，按隐藏输入提示粘贴凭证，或通过环境变量 <code>OPTICOM_DRAFT_TOKEN</code> 提供凭证。</li>
+      <li>从脚本回执打开草稿预览链接，由内容编辑核对后发布。</li>
+    </ol>
+    {% if issued_token %}
+    <label for="issued-draft-token">新凭证</label>
+    <input id="issued-draft-token" class="editor-token" type="text" value="{{ issued_token }}" readonly autocomplete="off" spellcheck="false">
+    {% endif %}
+    {% if token_configured %}
+    <p class="helper-note">生成新凭证时，原凭证立即失效。</p>
+    {% endif %}
+    <div class="inline-actions">
+      {{ credential_action('issue', '生成新凭证', 'btn-secondary') }}
+      {% if token_configured %}
+      {{ credential_action('revoke', '撤销当前凭证', 'btn-danger') }}
+      {% endif %}
+    </div>
+  </section>
+</main>
+{% endblock %}
 
 {% block body %}
-<a class="editor-back-link" href="{{ url_for('news_editor.dashboard') }}">← {{ '返回后台总览' if config.CONTENT_WORKFLOW else '返回新闻列表' }}</a>
+<a class="editor-back-link" href="{{ url_for('news_editor.dashboard') }}">← 返回新闻列表</a>
 <header class="editor-heading">
   <h1>脚本凭证</h1>
-  <p class="editor-muted">脚本可以用此凭证提交{{ '论文和新闻' if config.CONTENT_WORKFLOW else '新闻' }}草稿。内容编辑在后台预览后发布。</p>
+  <p class="editor-muted">脚本可以用此凭证提交新闻草稿。内容编辑在后台预览后发布。</p>
 </header>
 
 <section class="editor-panel editor-stack" aria-labelledby="token-heading">
@@ -30,17 +73,9 @@
   <p class="editor-muted">生成新凭证时，原凭证立即失效。</p>
   {% endif %}
   <div class="editor-form-actions">
-    <form method="post" action="{{ url_for('news_editor.access') }}">
-      <input type="hidden" name="csrf_token" value="{{ editor_csrf_token() }}">
-      <input type="hidden" name="action" value="issue">
-      <button class="editor-button editor-button-primary" type="submit">生成新凭证</button>
-    </form>
+    {{ credential_action('issue', '生成新凭证', 'editor-button editor-button-primary') }}
     {% if token_configured %}
-    <form method="post" action="{{ url_for('news_editor.access') }}">
-      <input type="hidden" name="csrf_token" value="{{ editor_csrf_token() }}">
-      <input type="hidden" name="action" value="revoke">
-      <button class="editor-button editor-button-danger" type="submit">撤销当前凭证</button>
-    </form>
+    {{ credential_action('revoke', '撤销当前凭证', 'editor-button editor-button-danger') }}
     {% endif %}
   </div>
 </section>

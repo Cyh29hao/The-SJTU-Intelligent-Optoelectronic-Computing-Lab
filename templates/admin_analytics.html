@@ -1,6 +1,9 @@
 {% extends "admin_layout.html" %}
 {% from "admin_workflow_macros.html" import csrf with context %}
 
+{% block admin_title %}{{ 'View Analytics' if config.ADMIN_HANDOFF_ENABLED else super() }}{% endblock %}
+{% block admin_header %}{{ 'View Analytics' if config.ADMIN_HANDOFF_ENABLED else super() }}{% endblock %}
+
 {% block admin_body %}
 <div class="stats-grid">
     <div class="stat-card">
@@ -40,6 +43,7 @@
     <div class="insight-card">
         <h3>Top Pages</h3>
         {% if top_pages %}
+        <div class="analytics-table-scroll">
         <table>
             <thead>
                 <tr><th>Page</th><th>Views</th><th>Path</th></tr>
@@ -54,6 +58,7 @@
                 {% endfor %}
             </tbody>
         </table>
+        </div>
         {% else %}
         <p class="helper-note">No page-view data yet. Browse a few public pages and refresh this workspace.</p>
         {% endif %}
@@ -61,6 +66,7 @@
     <div class="insight-card">
         <h3>Top Publications by Views</h3>
         {% if top_articles_by_views %}
+        <div class="analytics-table-scroll">
         <table>
             <thead>
                 <tr><th>Publication</th><th>Views</th><th>Opens</th><th>CVR</th></tr>
@@ -76,6 +82,7 @@
                 {% endfor %}
             </tbody>
         </table>
+        </div>
         {% else %}
         <p class="helper-note">Publication-detail views will appear here after visitors open paper pages.</p>
         {% endif %}
@@ -101,13 +108,20 @@
     </div>
     <div class="insight-card">
         <h3>Analytics Export</h3>
-        <p class="helper-note">Everything here now comes from Supabase. No runtime disk backup or upload flow is needed anymore.</p>
+        <p class="helper-note">
+            {% if config.ADMIN_HANDOFF_PREVIEW %}
+            本机预览导出隔离的数据。正式站的访问日志保存在 Supabase。
+            {% else %}
+            Export page views and resource opens from the site's analytics data.
+            {% endif %}
+        </p>
         <div class="inline-actions" style="margin-top:16px;">
             <a href="{{ url_for('download_logs_csv') }}" class="btn-link btn-secondary">Download resource_opens.csv</a>
             <a href="{{ url_for('download_page_views_csv') }}" class="btn-link btn-secondary">Download page_views.csv</a>
             <a href="{{ url_for('download_render_data_zip') }}" class="btn-link btn-muted">Download analytics_export_bundle.zip</a>
         </div>
 
+        {% if not config.ADMIN_HANDOFF_ENABLED %}
         <div id="analytics-danger-zone" style="margin-top:26px; padding-top:20px; border-top:1px solid #f0c2c2;">
             <h3 style="margin-top:0; color:#8b2f2f;">Danger Zone: Clear Analytics Data</h3>
             <p class="helper-note">This clears the Supabase analytics tables <code>page_views</code> and <code>resource_opens</code>. Download a backup first if you need to preserve the current data.</p>
@@ -120,109 +134,15 @@
                 <button type="submit" class="btn-danger" onclick="return confirm('Clear all Supabase analytics data? This cannot be undone from the website.')">Clear Supabase Analytics Data</button>
             </form>
         </div>
-
-        <div id="git-sync" style="margin-top:26px; padding-top:20px; border-top:1px solid #e3eaf2;">
-            <h3 style="margin-top:0;">Git Sync Up</h3>
-            {% if config.ADMIN_HANDOFF_PREVIEW %}
-            <p class="helper-note">将 <code>site_content/</code> 的改动提交并推送到本机隔离远端。</p>
-            {% else %}
-            <p class="helper-note">Commit and push the current <code>site_content/</code> changes from this server to GitHub. This keeps online edits and the repository in sync.</p>
-            {% endif %}
-
-            <div class="helper-note" style="margin-bottom:12px;">
-                <strong>Branch:</strong> {{ local_cms_status.branch }}<br>
-                <strong>Remote:</strong> <span class="mono">{{ local_cms_status.remote or 'No origin remote detected' }}</span>
-            </div>
-
-            {% if local_cms_status.has_changes %}
-            <p class="helper-note" style="margin-bottom:8px;"><strong>Pending content changes</strong></p>
-            <ul style="margin:0 0 16px 18px; color:#5e7389; line-height:1.8;">
-                {% for file in local_cms_status.changed_files[:12] %}
-                <li><strong>{{ file.status }}</strong> <span class="mono">{{ file.path }}</span></li>
-                {% endfor %}
-                {% if local_cms_status.changed_files|length > 12 %}
-                <li>...and {{ local_cms_status.changed_files|length - 12 }} more files.</li>
-                {% endif %}
-            </ul>
-            {% else %}
-            <p class="helper-note" style="margin-bottom:16px;">No unpublished <code>site_content/</code> changes were detected right now.</p>
-            {% endif %}
-
-            {% if local_cms_status.allow_publish %}
-            <form method="POST" action="{{ url_for('admin_analytics') }}">
-                {{ csrf() }}
-                <input type="hidden" name="action" value="publish_content_to_github">
-                <input type="hidden" name="item_type" value="site">
-                <label>Commit Message</label>
-                <input name="commit_message" placeholder="Update site content from admin">
-                <button type="submit" {% if not local_cms_status.has_changes %}disabled style="opacity:0.55; cursor:not-allowed;"{% endif %}>{{ '推送内容到本机远端' if config.ADMIN_HANDOFF_PREVIEW else 'Publish site_content to GitHub' }}</button>
-            </form>
-            {% else %}
-            <p class="helper-note">Git sync is unavailable because the repository branch or remote could not be detected on this server.</p>
-            {% endif %}
-        </div>
-
-        <div id="git-sync-down" style="margin-top:26px; padding-top:20px; border-top:1px solid #e3eaf2;">
-            <h3 style="margin-top:0;">Git Sync Down</h3>
-            {% if config.ADMIN_HANDOFF_PREVIEW %}
-            <p class="helper-note">从本机隔离远端检查更新。同步须为快进，并且变更仅限 <code>site_content/</code>。</p>
-            {% else %}
-            <p class="helper-note">Fetch GitHub first, then only allow a fast-forward sync when the incoming changes are limited to <code>site_content/</code>.</p>
-            {% endif %}
-
-            <div class="helper-note" style="margin-bottom:12px;">
-                <strong>Branch:</strong> {{ sync_down_status.branch }}<br>
-                <strong>Status:</strong> {{ sync_down_status.message }}
-            </div>
-
-            {% if sync_down_status.incoming_content_files %}
-            <p class="helper-note" style="margin-bottom:8px;"><strong>Incoming content files</strong></p>
-            <ul style="margin:0 0 16px 18px; color:#5e7389; line-height:1.8;">
-                {% for file in sync_down_status.incoming_content_files[:12] %}
-                <li><span class="mono">{{ file }}</span></li>
-                {% endfor %}
-                {% if sync_down_status.incoming_content_files|length > 12 %}
-                <li>...and {{ sync_down_status.incoming_content_files|length - 12 }} more files.</li>
-                {% endif %}
-            </ul>
-            {% endif %}
-
-            {% if sync_down_status.incoming_code_files %}
-            <p class="helper-note" style="margin-bottom:8px;"><strong>Incoming non-content files</strong></p>
-            <ul style="margin:0 0 16px 18px; color:#b04b4b; line-height:1.8;">
-                {% for file in sync_down_status.incoming_code_files[:12] %}
-                <li><span class="mono">{{ file }}</span></li>
-                {% endfor %}
-                {% if sync_down_status.incoming_code_files|length > 12 %}
-                <li>...and {{ sync_down_status.incoming_code_files|length - 12 }} more files.</li>
-                {% endif %}
-            </ul>
-            {% endif %}
-
-            {% if sync_down_status.local_changes %}
-            <p class="helper-note" style="margin-bottom:8px;"><strong>Local content changes</strong></p>
-            <ul style="margin:0 0 16px 18px; color:#b07c3a; line-height:1.8;">
-                {% for file in sync_down_status.local_changes[:12] %}
-                <li><strong>{{ file.status }}</strong> <span class="mono">{{ file.path }}</span></li>
-                {% endfor %}
-                {% if sync_down_status.local_changes|length > 12 %}
-                <li>...and {{ sync_down_status.local_changes|length - 12 }} more files.</li>
-                {% endif %}
-            </ul>
-            {% endif %}
-
-            <form method="POST" action="{{ url_for('admin_analytics') }}">
-                {{ csrf() }}
-                <input type="hidden" name="action" value="sync_content_from_github">
-                <input type="hidden" name="item_type" value="site">
-                <button type="submit" {% if not sync_down_status.can_sync %}disabled style="opacity:0.55; cursor:not-allowed;"{% endif %}>{{ '从本机远端同步内容' if config.ADMIN_HANDOFF_PREVIEW else 'Sync site_content from GitHub' }}</button>
-            </form>
-        </div>
+        {% set git_module_endpoint = 'admin_analytics' %}
+        {% include 'admin_git_sync.html' %}
+        {% endif %}
     </div>
 </div>
 
 <div class="section-card">
     <h3>Publication Funnel Snapshot</h3>
+    <div class="analytics-table-scroll">
     <table>
         <thead>
             <tr>
@@ -255,5 +175,6 @@
             {% endfor %}
         </tbody>
     </table>
+    </div>
 </div>
 {% endblock %}

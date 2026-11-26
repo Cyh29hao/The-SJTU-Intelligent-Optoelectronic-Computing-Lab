@@ -46,7 +46,7 @@ def _text_fields(values, current, fields):
     return {key: _text(values.get(key, current.get(key)), label, limit) for key, (label, limit) in fields.items()}
 
 
-def _link(value, label, *, allow_mailto=False):
+def validate_link(value, label, *, allow_mailto=False):
     value = _text(value, label)
     if not value:
         return ""
@@ -95,7 +95,7 @@ def _resource_kinds(values):
 def _article_fields(values, current, authors):
     return {
         **_text_fields(values, current, ARTICLE_TEXT),
-        **{key: _link(values.get(key, current.get(key)), label) for key, label in ARTICLE_URLS.items()},
+        **{key: validate_link(values.get(key, current.get(key)), label) for key, label in ARTICLE_URLS.items()},
         "authors": _authors(authors),
         "year": _integer(values.get("year", current.get("year")), "年份", minimum=1000, maximum=9999, empty=""),
         "authors_display_count": _integer(values.get("authors_display_count", current.get("authors_display_count")),
@@ -125,7 +125,7 @@ def _person_form(form, record, normalize_person_tags):
     links = []
     for index in range(1, 4):
         label = _text(form.get(f"link_name_{index}"), "个人链接名称", 220)
-        url = _link(form.get(f"link_url_{index}"), "个人链接", allow_mailto=True)
+        url = validate_link(form.get(f"link_url_{index}"), "个人链接", allow_mailto=True)
         if label and url:
             links.append({"name": label, "url": url})
     person["links"] = links if any(key.startswith(("link_name_", "link_url_")) for key in form) else record.get("links", [])

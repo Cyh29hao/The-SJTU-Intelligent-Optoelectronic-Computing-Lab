@@ -74,6 +74,24 @@ class CMSFeatureTests(unittest.TestCase):
         )
         self.assertEqual(featured_articles[0]["id"], "art_001")
 
+    def test_home_records_visits_without_loading_the_page_view_history(self):
+        with mock.patch.object(self.module, "_supabase_logs_ready", return_value=True), \
+                mock.patch.object(self.module, "_write_supabase_page_view", return_value=True) as write, \
+                mock.patch.object(self.module, "_load_page_view_rows", side_effect=AssertionError("unused read")):
+            self.assertEqual(self.client.get("/").status_code, 200)
+        write.assert_called_once()
+
+    def test_article_detail_requests_an_exact_count_for_that_article(self):
+        result = mock.Mock(headers={"Content-Range": "0-0/42"})
+        with mock.patch.object(self.module, "_supabase_request", return_value=result) as request_count:
+            page = self.client.get("/article/art_001")
+        self.assertIn("Opened 42 times", page.get_data(as_text=True))
+        request_count.assert_called_once_with(
+            "HEAD", "resource_opens",
+            params={"select": "resource_id", "resource_id": "eq.art_001", "limit": 1},
+            prefer="count=exact",
+        )
+
     def test_supabase_resource_export_formats_created_at_as_beijing_time(self):
         with mock.patch.object(self.module, "_supabase_logs_ready", return_value=True):
             with mock.patch.object(

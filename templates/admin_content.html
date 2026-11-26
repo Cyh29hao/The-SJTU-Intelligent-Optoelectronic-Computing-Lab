@@ -1,6 +1,9 @@
 {% extends "admin_layout.html" %}
 {% from "admin_workflow_macros.html" import csrf, revision, transition, record_links with context %}
 
+{% block admin_title %}{{ 'Edit Content' if config.ADMIN_HANDOFF_ENABLED else super() }}{% endblock %}
+{% block admin_header %}{{ 'Edit Content' if config.ADMIN_HANDOFF_ENABLED else super() }}{% endblock %}
+
 {% block admin_body %}
 {% set active_section = request.args.get('section', '') %}
 {% set full_admin = config.ADMIN_HANDOFF_ENABLED %}
@@ -48,11 +51,7 @@
         {% for entry in draft_rows|default([]) if entry.archived %}
         <div class="inline-actions workflow-item-actions" data-workflow-state="archived" data-workflow-label="{{ entry.draft.title_zh|default('') }} {{ entry.draft.title|default('') }} {{ entry.draft.name_zh|default('') }} {{ entry.draft.name|default('') }} {{ entry.id }}">
             <strong>{{ kind_names[entry.kind] }} · {{ entry.draft.title_zh or entry.draft.title or entry.draft.name_zh or entry.draft.name or entry.id }}</strong>
-            {% if admin_role == 'owner' %}
             {{ transition(entry.kind, entry.id, entry.revision, 'restore', '恢复草稿') }}
-            {% else %}
-            <span class="helper-note">站长可恢复为草稿</span>
-            {% endif %}
         </div>
         {% else %}
         <p class="helper-note">回收站为空。</p>

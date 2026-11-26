@@ -5,12 +5,8 @@
     <strong>草稿预览{% if config.ADMIN_HANDOFF_PREVIEW %} · 本机演示{% endif %}</strong>
     {% if preview_error %}<p role="alert">{{ preview_error }}</p>{% endif %}
     {% if preview_record.archived %}
-    {% if admin_role == 'owner' %}
     <p>这条内容在回收站中，恢复后可继续编辑。</p>
     {{ transition(preview_record.kind, preview_record.id, preview_record.revision, 'restore', '恢复草稿') }}
-    {% else %}
-    <p>这条内容在回收站中，站长可以恢复。</p>
-    {% endif %}
     {% elif preview_record.conflicted %}
     <p role="alert">草稿保存后，公开内容发生了变化。草稿已保留，请先核对当前公开版本，再决定是否继续发布。</p>
     <div class="inline-actions">

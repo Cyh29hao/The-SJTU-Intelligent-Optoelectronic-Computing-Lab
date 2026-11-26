@@ -1,6 +1,9 @@
 {% extends "admin_layout.html" %}
 {% from "admin_workflow_macros.html" import csrf with context %}
 
+{% block admin_title %}{{ 'Site Settings' if config.ADMIN_HANDOFF_ENABLED else super() }}{% endblock %}
+{% block admin_header %}{{ 'Site Settings' if config.ADMIN_HANDOFF_ENABLED else super() }}{% endblock %}
+
 {% block admin_body %}
 {% set active_section = request.args.get('section', '') %}
 
@@ -19,8 +22,10 @@
         <input name="lab_name_full" value="{{ site_cfg.lab_name_full }}">
         <label>Lab Name (Homepage / Full, ZH)</label>
         <input name="lab_name_full_zh" value="{{ site_cfg.lab_name_full_zh }}">
+        {% if not config.ADMIN_HANDOFF_ENABLED %}
         <label>Site Version</label>
         <input name="site_version" value="{{ site_cfg.site_version }}">
+        {% endif %}
         <label>Footer Copyright Text</label>
         <input name="footer_copyright" value="{{ site_cfg.footer_copyright }}">
         <label>Footer Copyright Text (ZH)</label>

@@ -58,6 +58,17 @@ def _validate_kind(kind):
         raise WorkflowError('未知的内容类型。', 404)
 
 
+def raster_image_extension(body):
+    if (isinstance(body, bytes) and 13 <= len(body) <= MAX_IMAGE_BYTES
+            and body.startswith((b'GIF87a', b'GIF89a')) and body.endswith(b';')):
+        return 'gif'
+    try:
+        extension, _ = _image_type(body)
+        return extension
+    except StoreError as error:
+        raise WorkflowError(str(error), error.status) from error
+
+
 def _name(value):
     clean = str(value).replace('\\', '/').rsplit('/', 1)[-1]
     clean = ''.join(ch for ch in clean if ch.isprintable()).strip()
@@ -213,15 +224,7 @@ class ContentWorkflow:
         return filename
 
     def _store_image(self, body):
-        if (isinstance(body, bytes) and 13 <= len(body) <= MAX_IMAGE_BYTES
-                and body.startswith((b'GIF87a', b'GIF89a')) and body.endswith(b';')):
-            extension = 'gif'
-        else:
-            try:
-                extension, _ = _image_type(body)
-            except StoreError as error:
-                raise WorkflowError(str(error), error.status) from error
-        return self._store_file(extension, body)
+        return self._store_file(raster_image_extension(body), body)
 
     def _store_attachment(self, original_name, body):
         if (not isinstance(body, bytes) or not 15 <= len(body) <= MAX_PDF_BYTES

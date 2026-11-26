@@ -1,0 +1,70 @@
+{% extends "admin_layout.html" %}
+{% from "admin_workflow_macros.html" import csrf with context %}
+
+{% block admin_title %}站点运维{% endblock %}
+{% block admin_header %}站点运维{% endblock %}
+
+{% block admin_body %}
+<div class="operations-page">
+    <section class="section-card" aria-labelledby="operations-version">
+        <div class="inline-actions operations-heading">
+            <h2 id="operations-version">版本与 Git 同步</h2>
+            <span class="sync-pill {{ git_sync_summary.kind }}">{{ git_sync_summary.label }}</span>
+        </div>
+        <p class="helper-note">{{ git_sync_summary.description|replace('GitHub', 'the local preview remote') if config.ADMIN_HANDOFF_PREVIEW else git_sync_summary.description }}</p>
+        <p class="helper-note">内容库最近提交 <span class="mono">{{ local_cms_status.last_commit|default('暂无', true) }}</span></p>
+        <form class="operations-version-form" method="post" action="{{ url_for(module_endpoint) }}">
+            {{ csrf() }}
+            <input type="hidden" name="action" value="edit_site_version">
+            <input type="hidden" name="item_type" value="site">
+            <label for="site-version">页脚版本标记</label>
+            <input id="site-version" name="site_version" value="{{ site_cfg.site_version }}">
+            <button type="submit">保存版本</button>
+        </form>
+        {% set git_module_endpoint = module_endpoint %}
+        {% include "admin_git_sync.html" %}
+        <p class="helper-note operations-deploy-note">代码部署及回退使用 GitHub 与交大云控制台。 <a href="https://github.com/Cyh29hao/The-SJTU-Intelligent-Optoelectronic-Computing-Lab/blob/main/docs/jcloud-handoff.md" target="_blank" rel="noopener">查看部署说明</a></p>
+    </section>
+
+    <div class="operations-grid">
+        <section class="section-card" aria-labelledby="operations-access">
+            <h2 id="operations-access">账号与脚本凭证</h2>
+            <p class="helper-note">生成或撤销供脚本提交草稿的凭证。</p>
+            <a class="btn-link btn-secondary" href="{{ url_for('news_editor.access') }}">管理脚本凭证</a>
+            <p class="helper-note">编辑账号的密码轮换在主机上处理，操作见部署说明。</p>
+        </section>
+
+        <section class="section-card" aria-labelledby="operations-backup">
+            <h2 id="operations-backup">整站备份与恢复</h2>
+            <p class="helper-note">完整恢复包包含站点内容、草稿及附件。</p>
+            <div class="inline-actions">
+                <a class="btn-link btn-secondary" href="{{ url_for('admin_handoff_backup') }}">下载完整恢复包</a>
+                <a class="btn-link btn-muted" href="{{ url_for('download_site_content_zip') }}">下载内容 ZIP</a>
+            </div>
+            <details class="operations-restore-notes">
+                <summary>查看整站恢复说明</summary>
+                <div class="details-body helper-note">
+                    <p>在项目目录执行下列命令，把恢复包解到一个新目录。先在本机预览验证恢复结果，再由站长决定正式站的恢复方式。</p>
+                    <code>python -X utf8 -m scripts.restore_handoff_backup "opticom_handoff_backup.zip" --state-dir "restored-site"</code>
+                </div>
+            </details>
+        </section>
+    </div>
+
+    <details class="operations-danger" id="analytics-danger-zone">
+        <summary>统计数据维护</summary>
+        <div class="details-body">
+            <h2>清空全部访问统计</h2>
+            <p class="helper-note">这项操作会清空页面访问和资源打开记录。如需留存，请先从 <a href="{{ url_for('admin_analytics') }}">View Analytics</a> 下载日志。</p>
+            <form method="post" action="{{ url_for(module_endpoint) }}">
+                {{ csrf() }}
+                <input type="hidden" name="action" value="clear_supabase_analytics">
+                <input type="hidden" name="item_type" value="site">
+                <label for="clear-confirmation">输入 CLEAR 确认</label>
+                <input id="clear-confirmation" name="clear_confirmation" placeholder="CLEAR" autocomplete="off" required>
+                <button type="submit" class="btn-danger" onclick="return confirm('确认清空全部访问统计？')">清空全部访问统计</button>
+            </form>
+        </div>
+    </details>
+</div>
+{% endblock %}

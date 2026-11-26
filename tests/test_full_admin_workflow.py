@@ -20,6 +20,7 @@ from scripts.run_news_preview import prepare_preview
 
 ROOT = Path(__file__).resolve().parents[1]
 IMAGE = ROOT / 'site_content/images/news/news_003.jpg'
+SVG = ROOT / 'site_content/images/friend_link_mail.svg'
 PDF_ONE = b'%PDF-1.4\n% first attachment fixture\n%%EOF\n'
 PDF_TWO = b'%PDF-1.4\n% second attachment fixture\n%%EOF\n'
 
@@ -79,28 +80,87 @@ class FullAdminWorkflowTests(unittest.TestCase):
             if content is not None:
                 self.assertEqual(response.get_data(), content)
 
-    def test_legacy_panels_and_editor_field_permissions(self):
+    def test_workspaces_share_content_and_analytics_but_not_operations(self):
         owner, _ = self.sign_in('owner')
         editor, _ = self.sign_in('editor')
         reader = self.app.test_client()
-        for url in ('/admin', '/admin/content', '/admin/assets', '/admin/settings', '/admin/analytics'):
+        shared = ('/admin/content', '/admin/assets', '/admin/settings', '/admin/analytics')
+        for url in ('/admin', *shared):
             with self.subTest(url=url):
-                result = owner.get(url)
-                self.assertEqual(result.status_code, 200)
-                self.assertIn('no-store', result.headers['Cache-Control'])
+                for client in (owner, editor):
+                    response = client.get(url)
+                    self.assertEqual(response.status_code, 200)
+                    self.assertIn('no-store', response.headers['Cache-Control'])
                 self.assertEqual(reader.get(url).location, '/editor/login')
-        for url in ('/admin', '/admin/content', '/admin/assets'):
-            self.assertEqual(editor.get(url).status_code, 200)
-        for url in ('/admin/settings', '/admin/analytics', '/admin/download-logs.csv', '/editor/access'):
-            self.assertEqual(editor.get(url).status_code, 403)
-        with patch.object(self.module, '_load_resource_open_rows', side_effect=AssertionError('editor read analytics')):
+
+        for role, client in (('owner', owner), ('editor', editor)):
+            with self.subTest(role=role):
+                dashboard = client.get('/admin').get_data(as_text=True)
+                for url in shared:
+                    self.assertIn(f'href="{url}"', dashboard)
+                self.assertEqual('href="/admin/operations"' in dashboard, role == 'owner')
+                self.assertNotIn('href="/admin/download-handoff.zip"', dashboard)
+
+                analytics = client.get('/admin/analytics').get_data(as_text=True)
+                for url in ('/admin/download-logs.csv', '/admin/download-page-views.csv', '/admin/download-render-data.zip'):
+                    self.assertIn(f'href="{url}"', analytics)
+                for action in ('publish_content_to_github', 'sync_content_from_github', 'clear_supabase_analytics'):
+                    self.assertNotIn(f'value="{action}"', analytics)
+
+        for url in ('/admin/operations', '/admin/download-site-content.zip', '/admin/download-handoff.zip', '/editor/access'):
+            with self.subTest(url=url):
+                self.assertEqual(editor.get(url).status_code, 403)
+        self.assertEqual(reader.get('/admin/operations').location, '/editor/login')
+        operations = owner.get('/admin/operations')
+        self.assertEqual(operations.status_code, 200)
+        ops_html = operations.get_data(as_text=True)
+        self.assertIn('href="/editor/access"', ops_html)
+        self.assertIn('href="/admin/download-handoff.zip"', ops_html)
+        owner_csrf = field_value(operations, 'csrf_token')
+        editor_csrf = self.admin_form(editor)
+        for action in ('publish_content_to_github', 'sync_content_from_github', 'clear_supabase_analytics', 'edit_site_version'):
+            self.assertIn(f'value="{action}"', ops_html)
+            self.assertEqual(editor.post('/admin/operations', data={'action': action, 'csrf_token': editor_csrf}).status_code, 403)
+            self.assertEqual(owner.post('/admin/analytics', data={'action': action, 'csrf_token': owner_csrf}).status_code, 403)
+        self.assertEqual(editor.post('/editor/access', data={'action': 'issue', 'csrf_token': editor_csrf}).status_code, 403)
+        with patch.object(self.module, '_clear_supabase_analytics_tables', return_value={'kind': 'success'}) as clear:
+            clear_action = {'action': 'clear_supabase_analytics', 'csrf_token': owner_csrf}
+            response = owner.post('/admin/operations', data=clear_action)
+            self.assertIn(response.status_code, (302, 303))
+            self.assertTrue(response.location.startswith('/admin/operations'))
+            clear.assert_not_called()
+            response = owner.post('/admin/operations', data=dict(clear_action, clear_confirmation='CLEAR'))
+            self.assertIn(response.status_code, (302, 303))
+            clear.assert_called_once_with()
+
+        with patch.object(self.module, '_load_resource_open_rows', side_effect=AssertionError('content page loaded analytics')):
             content_page = editor.get('/admin/content').get_data(as_text=True)
         self.assertNotIn('Tracked opens:', content_page)
         self.assertIn('Tracked opens:', owner.get('/admin/content').get_data(as_text=True))
         with ZipFile(BytesIO(owner.get('/admin/download-site-content.zip').data)) as backup:
             self.assertTrue({'articles.json', 'people.json', 'news.json', 'site.json'} <= set(backup.namelist()))
-        self.assertEqual(owner.get('/admin/download-logs.csv').status_code, 200)
 
+        with patch.object(self.module, '_load_resource_open_rows', return_value=[
+            {'time': '2026-11-26 16:40:00', 'name': 'Preview visitor', 'affiliation': 'Local fixture',
+             'email': 'visitor@example.test', 'resource_id': 'art_001', 'article_title': 'Fixture paper',
+             'type': 'article', 'target_url': 'https://example.test/paper'},
+        ]):
+            for client in (owner, editor):
+                with client.get('/admin/download-logs.csv') as downloaded:
+                    self.assertEqual(downloaded.status_code, 200)
+                    self.assertEqual(downloaded.mimetype, 'text/csv')
+                    self.assertIn('Preview visitor,Local fixture,visitor@example.test', downloaded.get_data(as_text=True))
+                self.assert_download(client, '/admin/download-page-views.csv', 'text/csv')
+                with client.get('/admin/download-render-data.zip') as downloaded:
+                    self.assertEqual(downloaded.status_code, 200)
+                    with ZipFile(BytesIO(downloaded.get_data())) as bundle:
+                        self.assertEqual(set(bundle.namelist()), {'resource_opens.csv', 'page_views.csv'})
+                        self.assertIn(b'visitor@example.test', bundle.read('resource_opens.csv'))
+        self.assertEqual(reader.get('/admin/download-logs.csv').location, '/editor/login')
+
+    def test_editor_can_change_display_settings_but_only_owner_can_set_version(self):
+        owner, _ = self.sign_in('owner')
+        editor, _ = self.sign_in('editor')
         config_path = self.content / 'site.json'
         original = config_path.read_bytes()
         try:
@@ -109,9 +169,15 @@ class FullAdminWorkflowTests(unittest.TestCase):
             self.assertEqual(editor.post('/admin/content', data=update).status_code, 400)
             escalation = dict(update, csrf_token=csrf, lab_name_short='Blocked setting')
             self.assertEqual(editor.post('/admin/content', data=escalation).status_code, 403)
-            self.assertEqual(editor.post('/admin/settings', data={
-                'action': 'edit_site_branding', 'csrf_token': csrf, 'lab_name_short': 'Blocked setting',
-            }).status_code, 403)
+            for client in (owner, editor):
+                settings = client.get('/admin/settings')
+                self.assertEqual(settings.status_code, 200)
+                self.assertNotIn('name="site_version"', settings.get_data(as_text=True))
+                settings_csrf = field_value(settings, 'csrf_token')
+                self.assertEqual(client.post('/admin/settings', data={
+                    'action': 'edit_site_branding', 'csrf_token': settings_csrf,
+                    'lab_name_short': 'Blocked setting', 'site_version': '8.8.8',
+                }).status_code, 403)
             self.assertEqual(config_path.read_bytes(), original)
             self.assertIn(editor.post('/admin/content', data=dict(update, csrf_token=csrf)).status_code, (302, 303))
             self.assertIn(editor.post('/admin/content', data={
@@ -120,14 +186,24 @@ class FullAdminWorkflowTests(unittest.TestCase):
             }).status_code, (302, 303))
             self.assertEqual(editor.get('/admin/content?action=delete&item_type=news&id=news_003').status_code, 403)
 
-            owner_csrf = self.admin_form(owner, '/admin/settings')
+            self.assertIn(editor.post('/admin/settings', data={
+                'action': 'edit_site_branding', 'csrf_token': csrf, 'footer_copyright': 'Editor branding',
+            }).status_code, (302, 303))
+            owner_csrf = self.admin_form(owner, '/admin/operations')
             self.assertIn(owner.post('/admin/settings', data={
                 'action': 'edit_site_branding', 'csrf_token': owner_csrf, 'lab_name_short': 'Owner branding',
             }).status_code, (302, 303))
+            changed = owner.post('/admin/operations', data={
+                'action': 'edit_site_version', 'csrf_token': owner_csrf, 'site_version': '2.9.5',
+            })
+            self.assertIn(changed.status_code, (302, 303))
+            self.assertTrue(changed.location.startswith('/admin/operations'))
             config = json.loads(config_path.read_text(encoding='utf-8'))
             self.assertEqual(config['home_note'], 'Editor-managed home note')
             self.assertEqual(config['admissions_title'], 'Editor-managed recruiting')
             self.assertEqual(config['lab_name_short'], 'Owner branding')
+            self.assertEqual(config['footer_copyright'], 'Editor branding')
+            self.assertEqual(config['site_version'], '2.9.5')
         finally:
             config_path.write_bytes(original)
 
@@ -154,7 +230,9 @@ class FullAdminWorkflowTests(unittest.TestCase):
                     self.assertEqual(signed_in.location, '/admin')
                     self.assertIn('Secure; HttpOnly;', signed_in.headers['Set-Cookie'])
                     self.assertIn('SameSite=Lax', signed_in.headers['Set-Cookie'])
-                    self.assertEqual(client.get('/admin/settings', base_url=https).status_code,
+                    self.assertEqual(client.get('/admin/settings', base_url=https).status_code, 200)
+                    self.assertEqual(client.get('/admin/analytics', base_url=https).status_code, 200)
+                    self.assertEqual(client.get('/admin/operations', base_url=https).status_code,
                                      200 if role == 'owner' else 403)
                     if role == 'editor':
                         content = client.get('/admin/content', base_url=https)
@@ -182,14 +260,23 @@ class FullAdminWorkflowTests(unittest.TestCase):
         owner_csrf = self.admin_form(owner, '/admin/assets')
         image = IMAGE.read_bytes()
         logo_url = '/admin/upload-site-image/logo'
-        self.assertEqual(editor.post(logo_url, data={
+        self.assertIn(editor.post(logo_url, data={
             'csrf_token': editor_csrf, 'image': (BytesIO(image), IMAGE.name),
-        }).status_code, 403)
-        self.assertIn(owner.post(logo_url, data={
-            'csrf_token': owner_csrf, 'image': (BytesIO(image), IMAGE.name),
         }).status_code, (302, 303))
         configured = json.loads((self.content / 'site.json').read_text(encoding='utf-8'))
-        self.assert_download(reader, '/assets/site/' + configured['logo_filename'], 'image/jpeg', image)
+        logo_path = '/assets/site/' + configured['logo_filename']
+        self.assert_download(reader, logo_path, 'image/jpeg', image)
+        svg = SVG.read_bytes()
+        for filename, body in ((SVG.name, svg), (IMAGE.name, svg)):
+            with self.subTest(filename=filename):
+                rejected = editor.post(logo_url, data={'csrf_token': editor_csrf, 'image': (BytesIO(body), filename)})
+                self.assertIn(rejected.status_code, (400, 403))
+                self.assert_download(reader, logo_path, 'image/jpeg', image)
+        self.assertIn(owner.post('/admin/upload-site-image/friend-1', data={
+            'csrf_token': owner_csrf, 'image': (BytesIO(svg), SVG.name),
+        }).status_code, (302, 303))
+        footer_icon = json.loads((self.content / 'site.json').read_text(encoding='utf-8'))['friend_links'][0]['image_filename']
+        self.assert_download(reader, '/assets/site/' + footer_icon, 'image/svg+xml', svg)
 
         article = next(row for row in json.loads((self.content / 'articles.json').read_text(encoding='utf-8'))
                        if row.get('thumbnail_filename'))
@@ -293,12 +380,13 @@ class FullAdminWorkflowTests(unittest.TestCase):
                 self.assertEqual(editor.post(transition_url, data={
                     'action': 'archive', 'revision': revision, 'csrf_token': editor_csrf,
                 }).status_code, 303)
-                revision = field_value(owner.get(preview_url), 'revision')
-                self.assertEqual(editor.post(transition_url, data={
-                    'action': 'restore', 'revision': revision, 'csrf_token': editor_csrf,
-                }).status_code, 403)
-                self.assertEqual(owner.post(transition_url, data={
-                    'action': 'restore', 'revision': revision, 'csrf_token': owner_csrf,
+                restorer, restore_csrf = (owner, owner_csrf) if kind == 'person' else (editor, editor_csrf)
+                archived = restorer.get(preview_url)
+                self.assertEqual(archived.status_code, 200)
+                self.assertIn('value="restore"', archived.get_data(as_text=True))
+                revision = field_value(archived, 'revision')
+                self.assertEqual(restorer.post(transition_url, data={
+                    'action': 'restore', 'revision': revision, 'csrf_token': restore_csrf,
                 }).status_code, 303)
                 self.assertIn(revised_title, editor.get(preview_url).get_data(as_text=True))
                 self.assertEqual(reader.get(public_url).status_code, 404)
@@ -385,7 +473,7 @@ class FullAdminWorkflowTests(unittest.TestCase):
         self.assertEqual(caller.get(public_base + selected).status_code, 404)
         self.assert_download(editor, private, 'application/pdf', PDF_ONE)
 
-    def test_owner_legacy_git_up_and_down_routes_stay_in_the_local_content_checkout(self):
+    def test_owner_operations_sync_stays_in_the_local_content_checkout(self):
         owner, _ = self.sign_in('owner')
         editor, _ = self.sign_in('editor')
         checkout = self.content.parent
@@ -395,13 +483,15 @@ class FullAdminWorkflowTests(unittest.TestCase):
             return subprocess.run(['git', *args], cwd=directory, env=offline_git_env(), check=True,
                                   text=True, encoding='utf-8', capture_output=True).stdout.strip()
 
-        csrf = self.admin_form(owner, '/admin/settings')
+        csrf = self.admin_form(owner, '/admin/operations')
         self.assertIn(owner.post('/admin/settings', data={
             'csrf_token': csrf, 'action': 'edit_site_branding', 'lab_name_short': 'Owner local sync',
         }).status_code, (302, 303))
         up = {'csrf_token': csrf, 'action': 'publish_content_to_github', 'commit_message': 'Test local content sync'}
-        self.assertEqual(editor.post('/admin/analytics', data=dict(up, csrf_token=self.admin_form(editor))).status_code, 403)
-        self.assertIn(owner.post('/admin/analytics', data=up).status_code, (302, 303))
+        self.assertEqual(editor.post('/admin/operations', data=dict(up, csrf_token=self.admin_form(editor))).status_code, 403)
+        pushed = owner.post('/admin/operations', data=up)
+        self.assertIn(pushed.status_code, (302, 303))
+        self.assertTrue(pushed.location.startswith('/admin/operations'))
         self.assertEqual(git(checkout, 'rev-parse', 'HEAD'), git(remote, 'rev-parse', 'refs/heads/preview'))
         self.assertEqual(git(checkout, 'log', '-1', '--format=%s'), up['commit_message'])
 
@@ -417,7 +507,9 @@ class FullAdminWorkflowTests(unittest.TestCase):
                 'commit', '-m', 'Local incoming site content')
             git(incoming, 'push', 'origin', 'preview')
             down = {'csrf_token': csrf, 'action': 'sync_content_from_github'}
-            self.assertIn(owner.post('/admin/analytics', data=down).status_code, (302, 303))
+            pulled = owner.post('/admin/operations', data=down)
+            self.assertIn(pulled.status_code, (302, 303))
+            self.assertTrue(pulled.location.startswith('/admin/operations'))
             self.assertEqual(git(incoming, 'rev-parse', 'HEAD'), git(checkout, 'rev-parse', 'HEAD'))
             actual = json.loads((self.content / 'site.json').read_text(encoding='utf-8'))
             self.assertEqual(actual['home_note'], site['home_note'])

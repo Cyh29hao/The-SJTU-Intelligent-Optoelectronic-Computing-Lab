@@ -244,7 +244,7 @@ DEFAULT_ADMISSIONS_DIRECTIONS = [
         'summary_zh': '软硬件兼顾，面向智能光电系统应用。'
     }
 ]
-DEFAULT_SITE_VERSION = '1.4.2'
+DEFAULT_SITE_VERSION = '1.4.3'
 DEFAULT_FRIEND_LINKS = [
     {
         'title': 'SJTU',
@@ -1339,44 +1339,16 @@ def _load_legacy_news_data():
         save_json_data('news.json', normalized)
     return normalized
 
-def _read_download_log_summary():
-    download_counts = {}
-    unique_downloaders = {}
-    last_download_times = {}
-    for row in _load_resource_open_rows():
-        item_id = row.get('resource_id') or ''
-        if not item_id:
-            continue
-        download_counts[item_id] = download_counts.get(item_id, 0) + 1
-        key_triplet = (row.get('name', ''), row.get('affiliation', ''), row.get('email', ''))
-        unique_downloaders.setdefault(item_id, set()).add(key_triplet)
-        stamp = _parse_log_datetime(row.get('time', ''))
-        if stamp:
-            previous = last_download_times.get(item_id)
-            if previous is None or stamp > previous:
-                last_download_times[item_id] = stamp
-
-    return {
-        'download_counts': download_counts,
-        'unique_downloaders': unique_downloaders,
-        'last_download_times': last_download_times,
-        'total_downloads': sum(download_counts.values())
-    }
-
-def _read_page_view_log_summary():
-    total_views = 0
-    article_view_counts = {}
-    for row in _load_page_view_rows():
-        total_views += 1
-        if (row.get('page_type') or '') == 'article_detail':
-            article_id = row.get('item_id') or ''
-            if article_id:
-                article_view_counts[article_id] = article_view_counts.get(article_id, 0) + 1
-
-    return {
-        'total_views': total_views,
-        'article_view_counts': article_view_counts
-    }
+def _article_open_count(article_id):
+    response = _supabase_request(
+        'HEAD', 'resource_opens',
+        params={'select': 'resource_id', 'resource_id': f'eq.{article_id}', 'limit': 1},
+        prefer='count=exact',
+    )
+    if response is None:
+        return 0
+    _, _, count = response.headers.get('Content-Range', '').partition('/')
+    return int(count) if count.isascii() and count.isdecimal() else 0
 
 def load_site_config():
     os.makedirs(CONTENT_ROOT, exist_ok=True)
@@ -2078,14 +2050,12 @@ def index():
         key=_home_carousel_sort_key
     )[:5]
     log_page_view('home', title='Home')
-    page_view_summary = _read_page_view_log_summary()
     return render_template(
         'index.html',
         site_cfg=site_cfg,
         article_count=len(articles),
         people_count=len(people),
         featured_articles=featured_articles,
-        total_page_views=page_view_summary['total_views'],
         latest_news=latest_news
     )
 
@@ -2138,12 +2108,11 @@ def article_detail(id):
     if not article:
         return "Article not found", 404
 
-    download_summary = _read_download_log_summary()
     log_page_view('article_detail', item_id=id, title=article.get('title', id))
     return render_template(
         'article_detail.html',
         item=article,
-        open_count=download_summary['download_counts'].get(id, 0)
+        open_count=_article_open_count(id)
     )
 
 @app.route('/person/<id>')
@@ -2287,6 +2256,7 @@ def _admin_module_endpoint(module_name):
         'analytics': 'admin_analytics',
         'assets': 'admin_assets',
         'settings': 'admin_settings',
+        'operations': 'admin_operations',
     }
     return mapping.get(module_name, 'admin_dashboard')
 
@@ -2305,23 +2275,20 @@ def _admin_text_value(form, key, current_value, default_value=''):
         return value if value else default_value
     return current_value if current_value is not None else default_value
 
-def _build_admin_common_context(pop_notice=False):
+def _build_admin_common_context(pop_notice=False, *, include_git=False):
     site_cfg = load_site_config()
-    owner_access = g.get('handoff_role') != 'editor'
     return {
         'start_time': START_TIME,
         'admin_login_time': session.get('admin_login_at') or START_TIME,
         'content_last_modified': _latest_content_modified_time(),
         'lab_name': site_cfg.get('lab_name_full', LAB_NAME),
         'site_cfg': site_cfg,
-        'local_cms_status': _get_local_cms_status() if owner_access else None,
-        'analytics_backend': ('Supabase only' if _supabase_logs_ready() else 'Supabase not configured') if owner_access else None,
+        'local_cms_status': _get_local_cms_status() if include_git else None,
+        'analytics_backend': 'Supabase only' if _supabase_logs_ready() else 'Supabase not configured',
         'admin_notice': session.pop('admin_notice', None) if pop_notice else session.get('admin_notice'),
     }
 
 def _build_admin_home_context(local_cms_status=None):
-    if g.get('handoff_role') == 'editor':
-        return {}
     sync_down_status = _get_sync_from_github_status(fetch_remote=True)
     return {
         'git_sync_summary': _build_git_sync_summary(local_cms_status, sync_down_status),
@@ -2455,12 +2422,13 @@ def _build_admin_analytics_context():
             'downloads_width': 0 if max_downloads_in_trend == 0 else max(8, round(downloads / max_downloads_in_trend * 100))
         })
 
+    unique_counts = {article_id: len(users) for article_id, users in unique_downloaders.items()}
     article_metrics = []
     for article in articles:
         article_id = article['id']
         view_total = article_view_counts.get(article_id, 0)
         download_total = download_counts.get(article_id, 0)
-        unique_user_total = len(unique_downloaders.get(article_id, set()))
+        unique_user_total = unique_counts.get(article_id, 0)
         conversion_rate = (download_total / view_total * 100.0) if view_total else None
         article_metrics.append({
             'id': article_id,
@@ -2488,11 +2456,10 @@ def _build_admin_analytics_context():
         'publication_conversion_rate': publication_conversion_rate
     }
 
-    sync_down_status = _get_sync_from_github_status(fetch_remote=True)
-
     return {
         'total_downloads': total_downloads,
         'download_counts': download_counts,
+        'unique_counts': unique_counts,
         'last_download_times': last_download_times,
         'page_view_stats': page_view_stats,
         'trend_data': trend_data,
@@ -2500,7 +2467,6 @@ def _build_admin_analytics_context():
         'top_articles_by_views': top_articles_by_views,
         'article_view_counts': article_view_counts,
         'article_metrics': article_metrics,
-        'sync_down_status': sync_down_status,
     }
 
 def _build_people_photo_context(people):
@@ -2542,15 +2508,10 @@ def _build_admin_content_context():
     }
     if g.get('handoff_role') != 'editor':
         analytics = _build_admin_analytics_context()
-        unique_downloaders = {}
-        for row in _load_resource_open_rows():
-            item_id = row.get('resource_id')
-            if item_id:
-                unique_downloaders.setdefault(item_id, set()).add((row.get('name', ''), row.get('affiliation', ''), row.get('email', '')))
         context.update(
             download_counts=analytics['download_counts'],
             article_view_counts=analytics['article_view_counts'],
-            unique_counts={aid: len(unique_downloaders.get(aid, set())) for aid in analytics['download_counts']},
+            unique_counts=analytics['unique_counts'],
         )
     if app.config.get('CONTENT_WORKFLOW') is not None:
         from news_editor import add_workflow_admin_context
@@ -2591,6 +2552,14 @@ def _dispatch_admin_actions(default_module):
     item_type = request.form.get('item_type') or request.args.get('item_type')
     if not action:
         return None
+
+    if action == 'edit_site_version' and default_module == 'operations':
+        cfg = load_site_config()
+        cfg['site_version'] = _admin_text_value(request.form, 'site_version', cfg.get('site_version', ''),
+                                               DEFAULT_SITE_CONFIG['site_version'])
+        save_site_config(cfg)
+        session['admin_notice'] = {'kind': 'success', 'message': '网站版本已保存。'}
+        return redirect(_admin_module_url('operations'))
 
     if action == 'publish_content_to_github':
         publish_result = _publish_site_content(request.form.get('commit_message', ''))
@@ -2660,7 +2629,8 @@ def _dispatch_admin_actions(default_module):
             cfg['lab_name_short_zh'] = _admin_text_value(request.form, 'lab_name_short_zh', cfg.get('lab_name_short_zh', ''), DEFAULT_SITE_CONFIG['lab_name_short_zh'])
             cfg['lab_name_full'] = _admin_text_value(request.form, 'lab_name_full', cfg.get('lab_name_full', ''), DEFAULT_SITE_CONFIG['lab_name_full'])
             cfg['lab_name_full_zh'] = _admin_text_value(request.form, 'lab_name_full_zh', cfg.get('lab_name_full_zh', ''), DEFAULT_SITE_CONFIG['lab_name_full_zh'])
-            cfg['site_version'] = _admin_text_value(request.form, 'site_version', cfg.get('site_version', ''), DEFAULT_SITE_CONFIG['site_version'])
+            if not app.config.get('ADMIN_HANDOFF_ENABLED'):
+                cfg['site_version'] = _admin_text_value(request.form, 'site_version', cfg.get('site_version', ''), DEFAULT_SITE_CONFIG['site_version'])
             if '_show_external_access_note_present' in request.form:
                 cfg['show_external_access_note'] = (request.form.get('show_external_access_note') == 'on')
             cfg['footer_copyright'] = _admin_text_value(request.form, 'footer_copyright', cfg.get('footer_copyright', ''), DEFAULT_SITE_CONFIG['footer_copyright'])
@@ -2690,13 +2660,22 @@ def _dispatch_admin_actions(default_module):
             cfg['admissions_directions'] = _normalize_admissions_directions(directions)
         if action in ('edit_site_content', 'edit_friend_links'):
             friend_links = []
-            for index, default_item in enumerate(DEFAULT_FRIEND_LINKS, start=1):
+            for index, _ in enumerate(DEFAULT_FRIEND_LINKS, start=1):
                 current_links = cfg.get('friend_links') or []
                 current = current_links[index - 1] if index - 1 < len(current_links) and isinstance(current_links[index - 1], dict) else {}
+                url_field = f'friend_url_{index}'
+                link_url = _admin_text_value(request.form, url_field, current.get('url', ''), '')
+                if app.config.get('ADMIN_HANDOFF_ENABLED') and url_field in request.form:
+                    from record_forms import FormError, validate_link
+
+                    try:
+                        link_url = validate_link(link_url, f'第 {index} 项友情链接', allow_mailto=True)
+                    except FormError as error:
+                        abort(error.status, str(error))
                 friend_links.append({
                     'title': _admin_text_value(request.form, f'friend_title_{index}', current.get('title', ''), ''),
                     'caption': _admin_text_value(request.form, f'friend_caption_{index}', current.get('caption', ''), ''),
-                    'url': _admin_text_value(request.form, f'friend_url_{index}', current.get('url', ''), ''),
+                    'url': link_url,
                     'image_filename': (current.get('image_filename') or '').strip()
                 })
             cfg['friend_links'] = _normalize_friend_links(friend_links)
@@ -2746,12 +2725,14 @@ def admin_dashboard():
     response = _handle_admin_actions('home')
     if response:
         return response
-    common_context = _build_admin_common_context(pop_notice=True)
+    legacy_layout = not app.config.get('ADMIN_HANDOFF_ENABLED')
+    common_context = _build_admin_common_context(pop_notice=True, include_git=legacy_layout)
+    git_context = _build_admin_home_context(common_context['local_cms_status']) if legacy_layout else {}
     return render_template(
         'admin_home.html',
         active_module='home',
         **common_context,
-        **_build_admin_home_context(common_context['local_cms_status'])
+        **git_context
     )
 
 @app.route('/admin/content', methods=['GET', 'POST'])
@@ -2776,11 +2757,16 @@ def admin_analytics():
     response = _handle_admin_actions('analytics')
     if response:
         return response
+    legacy_layout = not app.config.get('ADMIN_HANDOFF_ENABLED')
+    common_context = _build_admin_common_context(pop_notice=True, include_git=legacy_layout)
+    git_context = _build_admin_home_context(common_context['local_cms_status']) if legacy_layout else {}
     return render_template(
         'admin_analytics.html',
         active_module='analytics',
-        **_build_admin_common_context(pop_notice=True),
-        **_build_admin_analytics_context()
+        module_endpoint='admin_analytics',
+        **common_context,
+        **_build_admin_analytics_context(),
+        **git_context
     )
 
 @app.route('/admin/assets')
@@ -2808,6 +2794,25 @@ def admin_settings():
         **_build_admin_common_context(pop_notice=True),
         **_build_admin_settings_context()
     )
+
+@app.route('/admin/operations', methods=['GET', 'POST'])
+def admin_operations():
+    if app.config.get('CONTENT_WORKFLOW') is None:
+        abort(404)
+    if not _legacy_admin_can_read():
+        abort(403)
+    response = _handle_admin_actions('operations')
+    if response:
+        return response
+    common_context = _build_admin_common_context(pop_notice=True, include_git=True)
+    return render_template(
+        'admin_operations.html',
+        active_module='operations',
+        module_endpoint='admin_operations',
+        **common_context,
+        **_build_admin_home_context(common_context['local_cms_status'])
+    )
+
 
 @app.route('/admin/view-as-user')
 def admin_view_as_user():
@@ -3013,6 +3018,17 @@ def _save_site_image(slot):
     ext = os.path.splitext(secure_filename(image.filename))[1].lower()
     if ext not in ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp']:
         return "File type not allowed for site image", 400
+
+    if g.get('handoff_role') == 'editor':
+        from content_workflow import MAX_IMAGE_BYTES, WorkflowError, raster_image_extension
+
+        if ext == '.svg':
+            abort(400, '请选择 PNG、JPEG、GIF 或 WebP 图片。')
+        try:
+            ext = '.' + raster_image_extension(image.stream.read(MAX_IMAGE_BYTES + 1))
+        except WorkflowError as error:
+            abort(error.status, str(error))
+        image.stream.seek(0)
 
     cfg = load_site_config()
     os.makedirs(SITE_IMAGES_DIR, exist_ok=True)
