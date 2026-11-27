@@ -31,6 +31,18 @@ bash scripts/jcloud_enable_handoff.sh
 
 后续代码更新通常只需在 `/opt/lab-web` 执行 `git pull --ff-only`，随后执行 `systemctl restart lab-web.service` 并检查公开首页和后台。已有正式账号继续使用原密码。
 
+### 启用新版统计汇总
+
+在网站当前使用的 Supabase 项目的 SQL Editor 中执行 [统计汇总 SQL](../scripts/supabase_analytics_summary.sql)。它只安装一个读取统计的函数，原始日志继续保存在原表里。SQL Editor 报成功后，在交大云的 root 终端运行下面一行。
+
+```bash
+cd /opt/lab-web && git pull --ff-only && bash scripts/jcloud_analytics_summary.sh
+```
+
+脚本先用网站现有的配置读取一次汇总，成功后启用独立的 systemd 配置并重启服务，再检查本机后台登录页。看到 `Analytics summary enabled: 1` 后，在浏览器打开官网首页，用 Editor 看统计页并试导出两份 CSV。
+
+如果想先只上线图片优化，走普通更新流程即可。统计回退用 `bash scripts/jcloud_analytics_summary.sh --disable`，它会撤下这项配置并重启。原有账号、权限、网站内容和日志保持可用。
+
 如需撤下新版登录，在 `/opt/lab-web` 的 root 终端执行：
 
 ```bash

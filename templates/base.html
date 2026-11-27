@@ -16,11 +16,19 @@
       {% set sjtu_link = site_cfg_global.friend_links[0] if site_cfg_global.friend_links and site_cfg_global.friend_links|length > 0 else None %}
       {% if sjtu_link and sjtu_link.url %}
       <a href="{{ sjtu_link.url }}" class="site-topbar-badge" target="_blank" rel="noopener" title="{{ sjtu_link.caption or sjtu_link.title }}">
-        <img src="{{ asset_image_url('site', sjtu_link.image_filename) }}" alt="{{ sjtu_link.title }}" class="site-topbar-badge-image" width="26" height="26" loading="lazy" decoding="async">
+        {% set badge_display = display_image('site', sjtu_link.image_filename) %}
+        <picture>
+          {% if badge_display %}<source type="image/webp" srcset="{{ badge_display.srcset }}" sizes="26px">{% endif %}
+          <img src="{{ asset_image_url('site', sjtu_link.image_filename) }}" alt="{{ sjtu_link.title }}" class="site-topbar-badge-image" width="26" height="26" loading="lazy" decoding="async">
+        </picture>
       </a>
       {% endif %}
       <a href="/" class="site-brand">
-        <img src="{{ asset_image_url('site', site_cfg_global.logo_filename) }}" alt="Lab Logo" class="site-brand-logo" width="60" height="60" fetchpriority="high" decoding="async">
+        {% set logo_display = display_image('site', site_cfg_global.logo_filename) %}
+        <picture>
+          {% if logo_display %}<source type="image/webp" srcset="{{ logo_display.srcset }}" sizes="60px">{% endif %}
+          <img src="{{ asset_image_url('site', site_cfg_global.logo_filename) }}" alt="Lab Logo" class="site-brand-logo" width="60" height="60" fetchpriority="high" decoding="async">
+        </picture>
         <span class="site-brand-text">
           <span class="site-brand-name">{{ lang_value(site_cfg_global, 'lab_name_short') }}</span>
           <span class="site-brand-subtitle">{{ lang_value(site_cfg_global, 'lab_name_full') }}</span>
@@ -77,7 +85,11 @@
           {% set hover_text = item.caption if item.caption else item.title %}
           <a href="{{ item.url }}" class="footer-link-card" title="{{ hover_text }}" aria-label="{{ hover_text }}" target="{{ '_blank' if not item.url.startswith('mailto:') else '_self' }}" rel="{{ 'noopener' if not item.url.startswith('mailto:') else '' }}">
             {% if item.image_filename %}
-            <img src="{{ asset_image_url('site', item.image_filename) }}" alt="{{ item.title }}" class="footer-link-image" width="26" height="26" loading="lazy" decoding="async">
+            {% set icon_display = display_image('site', item.image_filename) %}
+            <picture>
+              {% if icon_display %}<source type="image/webp" srcset="{{ icon_display.srcset }}" sizes="26px">{% endif %}
+              <img src="{{ asset_image_url('site', item.image_filename) }}" alt="{{ item.title }}" class="footer-link-image" width="26" height="26" loading="lazy" decoding="async">
+            </picture>
             {% else %}
             <span class="footer-link-fallback">{{ item.title[:4] }}</span>
             {% endif %}

@@ -8,17 +8,23 @@
       <div class="portal-hero-copy">
         {% set hero_lab_short = lang_value(site_cfg, 'lab_name_short') %}
         {% set hero_brand_filename = site_cfg.get('hero_brand_filename', 'hero_brand_strip.png') %}
+        {% set hero_display = display_image('site', hero_brand_filename) %}
         <div class="portal-hero-brand-visual" aria-label="OPTICompt Lab brand visual">
           <a href="{{ url_for('index') }}" class="portal-hero-brand-link">
-            <img
-              src="{{ asset_image_url('site', hero_brand_filename) }}"
-              alt="OPTICompt Lab brand visual"
-              class="portal-hero-brand-image"
-              width="1717"
-              height="916"
-              fetchpriority="high"
-              decoding="async"
-            >
+            <picture>
+              {# The CSS switches to the text-only brand at this same breakpoint. #}
+              <source media="(max-width: 820px)" srcset="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+              {% if hero_display %}<source type="image/webp" srcset="{{ hero_display.srcset }}" sizes="520px">{% endif %}
+              <img
+                src="{{ asset_image_url('site', hero_brand_filename) }}"
+                alt="OPTICompt Lab brand visual"
+                class="portal-hero-brand-image"
+                width="{{ hero_display.width if hero_display else 1717 }}"
+                height="{{ hero_display.height if hero_display else 916 }}"
+                fetchpriority="high"
+                decoding="async"
+              >
+            </picture>
           </a>
         </div>
         <div class="portal-hero-brand-fallback">
@@ -123,15 +129,19 @@
           </div>
         </div>
         <div class="portal-slide-media">
-          <img
-            src="{{ asset_image_url('articles', article.thumbnail_filename) }}"
-            alt="{{ article.title }}"
-            class="portal-slide-image"
-            width="960"
-            height="540"
-            decoding="async"
-            {% if loop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %}
-          >
+          {% set thumbnail_display = display_image('articles', article.thumbnail_filename) %}
+          <picture>
+            {% if thumbnail_display %}<source type="image/webp" srcset="{{ thumbnail_display.srcset }}" sizes="(max-width: 820px) calc(100vw - 64px), 360px">{% endif %}
+            <img
+              src="{{ asset_image_url('articles', article.thumbnail_filename) }}"
+              alt="{{ article.title }}"
+              class="portal-slide-image"
+              width="960"
+              height="540"
+              decoding="async"
+              {% if loop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %}
+            >
+          </picture>
         </div>
       </article>
       {% endfor %}

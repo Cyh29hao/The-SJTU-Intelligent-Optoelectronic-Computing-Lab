@@ -18,10 +18,12 @@ import sys
 import threading
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from time import perf_counter
 from urllib.parse import urlencode
-from flask import Flask, abort, g, render_template, request, redirect, url_for, send_file, session
+from flask import Flask, abort, g, has_request_context, render_template, request, redirect, url_for, send_file, session
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
+from display_images import register_display_images
 
 # ==============================================================================
 # 2. Configuration & Setup
@@ -68,6 +70,7 @@ PAGE_VIEWS_CSV_PATH = ''
 SUPABASE_URL = (os.environ.get('SUPABASE_URL') or '').strip()
 SUPABASE_SECRET_KEY = (os.environ.get('SUPABASE_SECRET_KEY') or '').strip()
 SUPABASE_LOGS_ENABLED = (os.environ.get('SUPABASE_LOGS_ENABLED') or '0').strip().lower() in ('1', 'true', 'yes', 'on')
+SUPABASE_ANALYTICS_SUMMARY_ENABLED = os.environ.get('SUPABASE_ANALYTICS_SUMMARY_ENABLED') == '1'
 SUPABASE_REST_ROOT = f"{SUPABASE_URL.rstrip('/')}/rest/v1" if SUPABASE_URL else ''
 BEIJING_TZ = timezone(timedelta(hours=8))
 LINK_OPEN_WINDOW_SECONDS = 60
@@ -114,14 +117,25 @@ ADMIN_CREDENTIALS = {
 app = Flask(__name__)
 app.config['ENV'] = 'development' if IS_LOCAL else 'production'
 app.config['DEBUG'] = bool(IS_LOCAL)
+app.config['SITE_TIMING_ENABLED'] = os.environ.get('SITE_TIMING_ENABLED') == '1'
 
 ASSET_CACHE_MAX_AGE = 31536000
+
+
+@app.before_request
+def start_site_timing():
+    if app.config['SITE_TIMING_ENABLED']:
+        g.site_timing = {'started': perf_counter(), 'supabase': {}}
 
 
 @app.after_request
 def apply_static_asset_cache_policy(response):
     if request.endpoint == 'static' and request.args.get('v') and response.status_code < 400:
         response.headers['Cache-Control'] = f'public, max-age={ASSET_CACHE_MAX_AGE}, immutable'
+    timing = g.get('site_timing')
+    if timing is not None:
+        entries = {**timing['supabase'], 'app': (perf_counter() - timing['started']) * 1000}
+        response.headers['Server-Timing'] = ', '.join(f'{name};dur={value:.1f}' for name, value in entries.items())
     return response
 
 # --- Security Configuration ---
@@ -432,6 +446,15 @@ def _supabase_headers(prefer=None):
 def _supabase_request(method, table_name, params=None, payload=None, prefer=None, timeout=10):
     if not _supabase_logs_ready():
         return None
+    timing = g.get('site_timing') if has_request_context() else None
+    label = {
+        ('POST', 'page_views'): 'view-write',
+        ('HEAD', 'resource_opens'): 'article-count',
+        ('POST', 'rpc/opticompt_analytics_summary'): 'analytics-summary',
+        ('GET', 'page_views'): 'page-rows',
+        ('GET', 'resource_opens'): 'resource-rows',
+    }.get((method, table_name)) if timing is not None else None
+    started = perf_counter() if label else None
     try:
         response = requests.request(
             method=method,
@@ -448,6 +471,10 @@ def _supabase_request(method, table_name, params=None, payload=None, prefer=None
     except Exception as exc:
         print(f"Supabase request failed for {table_name}: {exc}")
         return None
+    finally:
+        if label:
+            values = timing['supabase']
+            values[label] = values.get(label, 0) + (perf_counter() - started) * 1000
 
 def _normalize_log_datetime_text(raw_value):
     value = str(raw_value or '').strip().translate(_DASH_TRANSLATION)
@@ -1849,6 +1876,7 @@ ASSET_IMAGE_KINDS = {
     'news': ('asset_news_image', NEWS_IMAGES_DIR, 'images/placeholder-news.svg'),
     'site': ('asset_site_image', SITE_IMAGES_DIR, 'images/placeholder-site.svg'),
 }
+register_display_images(app, {'site': SITE_IMAGES_DIR, 'articles': ARTICLE_IMAGES_DIR}, static_asset_url)
 
 def _versioned_asset_url(endpoint, filename, path):
     version = _file_version_token(path)
@@ -2295,12 +2323,8 @@ def _build_admin_home_context(local_cms_status=None):
         'sync_down_status': sync_down_status,
     }
 
-def _build_admin_analytics_context():
-    now = datetime.now()
+def _collect_admin_analytics_rows(now, trend_keys):
     today = now.date()
-    trend_dates = [today - timedelta(days=offset) for offset in range(6, -1, -1)]
-    trend_keys = {d.strftime("%Y-%m-%d"): {'date': d, 'views': 0, 'downloads': 0} for d in trend_dates}
-
     # Load download counts and unique downloaders
     download_counts = {}
     unique_downloaders = {}
@@ -2328,9 +2352,6 @@ def _build_admin_analytics_context():
                 prev = last_download_times.get(item_id)
                 if (prev is None) or (t > prev):
                     last_download_times[item_id] = t
-
-    articles = load_articles_data()
-    article_titles = {item['id']: item.get('title', item['id']) for item in articles}
 
     # Load page view stats
     page_view_counts = {}
@@ -2389,9 +2410,106 @@ def _build_admin_analytics_context():
             if viewed_at and (prev is None or viewed_at > prev):
                 article_last_view_times[item_id] = viewed_at
 
+    return {
+        'download_counts': download_counts,
+        'unique_counts': {item_id: len(users) for item_id, users in unique_downloaders.items()},
+        'last_download_times': last_download_times,
+        'page_view_meta': page_view_meta,
+        'article_view_counts': article_view_counts,
+        'article_last_view_times': article_last_view_times,
+        'page_view_stats': {
+            'total_views': sum(page_view_counts.values()),
+            'unique_visitors': len(unique_visitors),
+            'views_last_7_days': views_last_7_days,
+            'views_today': views_today,
+            'unique_visitors_last_7_days': len(unique_visitors_last_7_days),
+            'article_detail_views': article_detail_views,
+            'downloads_last_7_days': downloads_last_7_days,
+            'downloads_today': downloads_today,
+        },
+    }
+
+
+def _read_admin_analytics_summary(now, trend_keys):
+    if not SUPABASE_ANALYTICS_SUMMARY_ENABLED or not _supabase_logs_ready():
+        return None
+    response = _supabase_request(
+        'POST', 'rpc/opticompt_analytics_summary',
+        payload={'reference_time': now.isoformat()}, timeout=4,
+    )
+    if response is None:
+        return None
+
+    try:
+        data = response.json()
+        if data['version'] != 1:
+            return None
+        totals = data['page_totals']
+        page_view_stats = {key: int(totals[key]) for key in (
+            'total_views', 'unique_visitors', 'views_last_7_days', 'views_today',
+            'unique_visitors_last_7_days', 'article_detail_views',
+        )}
+        trend = {row['day']: (int(row['views']), int(row['downloads'])) for row in data['trend']}
+        if trend.keys() != trend_keys.keys():
+            return None
+        page_view_stats['downloads_last_7_days'] = sum(row[1] for row in trend.values())
+        page_view_stats['downloads_today'] = trend[now.date().isoformat()][1]
+        counts = {
+            'download_counts': {row['id']: int(row['count']) for row in data['resources']},
+            'unique_counts': {row['id']: int(row['unique_count']) for row in data['resources']},
+            'last_download_times': {
+                row['id']: _parse_log_datetime(row['last_downloaded']) for row in data['resources']
+            },
+            'page_view_meta': {
+                row['path']: {
+                    'path': row['path'],
+                    'label': row['title'] or PAGE_TYPE_LABELS.get(
+                        row['page_type'], row['path'] or row['page_type'] or 'Unknown'
+                    ),
+                    'page_type': row['page_type'],
+                    'count': int(row['count']),
+                    'last_viewed': _parse_log_datetime(row['last_viewed']),
+                }
+                for row in data['pages']
+            },
+            'article_view_counts': {row['id']: int(row['count']) for row in data['articles']},
+            'article_last_view_times': {
+                row['id']: _parse_log_datetime(row['last_viewed']) for row in data['articles']
+            },
+            'page_view_stats': page_view_stats,
+        }
+    except (KeyError, TypeError, ValueError):
+        app.logger.warning('Unexpected analytics summary format; using the original statistics path')
+        return None
+
+    for day, (views, downloads) in trend.items():
+        trend_keys[day].update(views=views, downloads=downloads)
+    return counts
+
+
+def _build_admin_analytics_context():
+    now = datetime.now()
+    today = now.date()
+    trend_dates = [today - timedelta(days=offset) for offset in range(6, -1, -1)]
+    trend_keys = {d.strftime("%Y-%m-%d"): {'date': d, 'views': 0, 'downloads': 0} for d in trend_dates}
+
+    counts = _read_admin_analytics_summary(now, trend_keys)
+    if counts is None:
+        counts = _collect_admin_analytics_rows(now, trend_keys)
+
+    download_counts = counts['download_counts']
+    unique_counts = counts['unique_counts']
+    last_download_times = counts['last_download_times']
+    page_view_meta = counts['page_view_meta']
+    article_view_counts = counts['article_view_counts']
+    article_last_view_times = counts['article_last_view_times']
+    page_view_stats = counts['page_view_stats']
+    articles = load_articles_data()
+    article_titles = {item['id']: item.get('title', item['id']) for item in articles}
+
     top_pages = sorted(
         page_view_meta.values(),
-        key=lambda x: (-x['count'], x['label'])
+        key=lambda x: (-x['count'], x['label'], x['path'])
     )[:5]
     top_articles_by_views = []
     for article_id, count in sorted(article_view_counts.items(), key=lambda x: (-x[1], x[0]))[:5]:
@@ -2422,7 +2540,6 @@ def _build_admin_analytics_context():
             'downloads_width': 0 if max_downloads_in_trend == 0 else max(8, round(downloads / max_downloads_in_trend * 100))
         })
 
-    unique_counts = {article_id: len(users) for article_id, users in unique_downloaders.items()}
     article_metrics = []
     for article in articles:
         article_id = article['id']
@@ -2443,18 +2560,10 @@ def _build_admin_analytics_context():
     article_metrics.sort(key=lambda item: (-item['views'], -item['downloads'], item['title']))
 
     total_downloads = sum(download_counts.values())
-    publication_conversion_rate = (total_downloads / article_detail_views * 100.0) if article_detail_views else None
-    page_view_stats = {
-        'total_views': sum(page_view_counts.values()),
-        'unique_visitors': len(unique_visitors),
-        'views_last_7_days': views_last_7_days,
-        'views_today': views_today,
-        'unique_visitors_last_7_days': len(unique_visitors_last_7_days),
-        'article_detail_views': article_detail_views,
-        'downloads_last_7_days': downloads_last_7_days,
-        'downloads_today': downloads_today,
-        'publication_conversion_rate': publication_conversion_rate
-    }
+    article_detail_views = page_view_stats['article_detail_views']
+    page_view_stats['publication_conversion_rate'] = (
+        total_downloads / article_detail_views * 100.0 if article_detail_views else None
+    )
 
     return {
         'total_downloads': total_downloads,

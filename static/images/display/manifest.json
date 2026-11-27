@@ -1,0 +1,150 @@
+{
+  "site/hero_brand_strip.png": {
+    "size": 1261293,
+    "sha256": "633f2457dc1fa1e7229b8398e24170266d40922ffb58187ae47212a8766c839c",
+    "variants": [
+      [
+        "hero_brand_strip-520.webp",
+        520
+      ],
+      [
+        "hero_brand_strip-1040.webp",
+        1040
+      ]
+    ],
+    "width": 2063,
+    "height": 735
+  },
+  "site/site_logo.png": {
+    "size": 323700,
+    "sha256": "8d1bdae90b621aca4b5008897b88dd0d011cbc540d5ebea1afe7d514878b5cd0",
+    "variants": [
+      [
+        "site_logo-120.webp",
+        120
+      ]
+    ],
+    "width": 512,
+    "height": 512
+  },
+  "site/sjtu_logo.png": {
+    "size": 303890,
+    "sha256": "112aa440081904cd37125ccd9b4f383d631461bc570551497ef04afeb41292da",
+    "variants": [
+      [
+        "sjtu_logo-64.webp",
+        64
+      ]
+    ],
+    "width": 2805,
+    "height": 2806
+  },
+  "site/icisee.jpg": {
+    "size": 52174,
+    "sha256": "5c7d9d8ccdf41db8525986db66d1a5d820259b7af360eb1fda7f4b2d8a5a7ae1",
+    "variants": [
+      [
+        "icisee-64.webp",
+        64
+      ]
+    ],
+    "width": 640,
+    "height": 640
+  },
+  "articles/art_001.jpg": {
+    "size": 667500,
+    "sha256": "860dc99cb34db7efb81b6aa5aa2cb9c1ad8315d6751ed8f027dce1b3590d25da",
+    "variants": [
+      [
+        "art_001-480.webp",
+        480
+      ],
+      [
+        "art_001-960.webp",
+        960
+      ]
+    ],
+    "width": 1044,
+    "height": 987
+  },
+  "articles/art_002.jpg": {
+    "size": 325162,
+    "sha256": "b8b858ba95c05a50130608260fe6ee2ef5a80e144f99e1ae95040cc017fcc70a",
+    "variants": [
+      [
+        "art_002-480.webp",
+        480
+      ],
+      [
+        "art_002-960.webp",
+        960
+      ]
+    ],
+    "width": 1032,
+    "height": 663
+  },
+  "articles/art_003.jpg": {
+    "size": 367391,
+    "sha256": "e1bccaa112871657c752204a7896f0b76313f14a1369ca0d804aa451d7e23f3b",
+    "variants": [
+      [
+        "art_003-480.webp",
+        480
+      ],
+      [
+        "art_003-810.webp",
+        810
+      ]
+    ],
+    "width": 810,
+    "height": 768
+  },
+  "articles/art_004.jpg": {
+    "size": 308059,
+    "sha256": "7d85030de38a21fba511b8cb56ed12de8ad6c587255ed67f99e0238126d89e32",
+    "variants": [
+      [
+        "art_004-480.webp",
+        480
+      ],
+      [
+        "art_004-960.webp",
+        960
+      ]
+    ],
+    "width": 1082,
+    "height": 459
+  },
+  "articles/art_005.jpg": {
+    "size": 333943,
+    "sha256": "969a6a030f72085df54a10743d113fa14996f4b986c051174d7e6ca757ba63ff",
+    "variants": [
+      [
+        "art_005-480.webp",
+        480
+      ],
+      [
+        "art_005-960.webp",
+        960
+      ]
+    ],
+    "width": 963,
+    "height": 552
+  },
+  "articles/art_006.jpg": {
+    "size": 890790,
+    "sha256": "0f1ba830df0b21243bbfc94edfd3f6486024da285c61abe5575bc01eec062355",
+    "variants": [
+      [
+        "art_006-480.webp",
+        480
+      ],
+      [
+        "art_006-960.webp",
+        960
+      ]
+    ],
+    "width": 2917,
+    "height": 2357
+  }
+}
